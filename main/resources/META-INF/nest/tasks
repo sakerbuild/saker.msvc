@@ -1,0 +1,5 @@
+saker.msvc.ccompile=saker.msvc.main.ccompile.MSVCCCompileTaskFactory
+saker.msvc.clink=saker.msvc.main.clink.MSVCCLinkTaskFactory
+saker.msvc.coptions.preset=saker.msvc.main.coptions.COptionsPresetTaskFactory
+saker.msvc.sdk=saker.msvc.main.sdk.MSVCSDKTaskFactory
+saker.msvc.sdk.windowskits=saker.msvc.main.sdk.WindowsKitsSDKTaskFactory

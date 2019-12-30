@@ -1,0 +1,4 @@
+build {
+	$compile = saker.msvc.ccompile([*.c, *.cpp])
+	saker.msvc.clink($compile)
+}

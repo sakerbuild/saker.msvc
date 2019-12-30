@@ -1,0 +1,8 @@
+saker.msvc-api
+	classpath: [0)
+saker.standard
+	classpath: [0)
+saker.sdk.support
+	classpath: [0)
+saker.compiler.utils
+	classpath: [0)

@@ -1,0 +1,98 @@
+package saker.msvc.main.ccompile.options;
+
+import java.util.Collection;
+import java.util.Map;
+
+import saker.build.thirdparty.saker.util.ObjectUtils;
+import saker.compiler.utils.main.CompilationIdentifierTaskOption;
+import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
+import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
+import saker.msvc.main.coptions.CommonPresetCOptionsTaskOption;
+import saker.msvc.main.doc.TaskDocs;
+import saker.msvc.main.doc.TaskDocs.ArchitectureType;
+import saker.msvc.main.doc.TaskDocs.CompilationLanguage;
+import saker.msvc.main.doc.TaskDocs.MacroDefinitionKeyOption;
+import saker.msvc.main.doc.TaskDocs.MacroDefinitionValueOption;
+import saker.msvc.main.doc.TaskDocs.SimpleCompilerParameterOption;
+import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
+import saker.nest.scriptinfo.reflection.annot.NestInformation;
+import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
+import saker.sdk.support.main.option.SDKDescriptionTaskOption;
+
+@NestInformation("Represents an options configuration to be used with " + MSVCCCompileTaskFactory.TASK_NAME + "().\n"
+		+ "The described options will be merged with the compilation input configuration based on the option qualifiers. "
+		+ "The Identifier, Language, and Architecture fields are considered to be used as qualifiers for the option merging, "
+		+ "in which case they are tested for mergeability with the input configuration.")
+
+@NestFieldInformation(value = "Identifier",
+		type = @NestTypeUsage(CompilationIdentifierTaskOption.class),
+		info = @NestInformation(TaskDocs.OPTIONS_IDENTIFIER))
+@NestFieldInformation(value = "Language",
+		type = @NestTypeUsage(CompilationLanguage.class),
+		info = @NestInformation(TaskDocs.OPTIONS_LANGUAGE))
+@NestFieldInformation(value = "Architecture",
+		type = @NestTypeUsage(ArchitectureType.class),
+		info = @NestInformation(TaskDocs.OPTIONS_ARCHITECTURE))
+@NestFieldInformation(value = "IncludeDirectories",
+		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludeDirectoryTaskOption.class),
+		info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
+@NestFieldInformation(value = "MacroDefinitions",
+		type = @NestTypeUsage(value = Map.class,
+				elementTypes = { MacroDefinitionKeyOption.class, MacroDefinitionValueOption.class }),
+		info = @NestInformation(TaskDocs.COMPILE_MACRO_DEFINITIONS + "\n"
+				+ "When merging, the macro definitions won't overwrite macro definitions specified previously."))
+@NestFieldInformation(value = "SimpleCompilerParameters",
+		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleCompilerParameterOption.class),
+		info = @NestInformation(TaskDocs.COMPILE_SIMPLE_PARAMETERS + "\n"
+				+ "When merging, duplicate parameters are removed automatically."))
+@NestFieldInformation(value = "SDKs",
+		type = @NestTypeUsage(value = Map.class,
+				elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class, SDKDescriptionTaskOption.class }),
+		info = @NestInformation(TaskDocs.OPTION_SDKS + "\n"
+				+ "When merging, duplicate SDK definitions are not overwritten."))
+public interface MSVCCompilerOptions {
+	public void accept(MSVCCompilerOptionsVisitor visitor);
+
+	public default MSVCCompilerOptions clone() {
+		return new SimpleMSVCCCompilerOptions(this);
+	}
+
+	public default CompilationIdentifierTaskOption getIdentifier() {
+		return null;
+	}
+
+	public default String getLanguage() {
+		return null;
+	}
+
+	public default String getArchitecture() {
+		return null;
+	}
+
+	public default Collection<IncludeDirectoryTaskOption> getIncludeDirectories() {
+		return null;
+	}
+
+	public default Map<String, String> getMacroDefinitions() {
+		return null;
+	}
+
+	public default Collection<String> getSimpleCompilerParameters() {
+		return null;
+	}
+
+	public default Map<String, SDKDescriptionTaskOption> getSDKs() {
+		return null;
+	}
+
+	public static boolean canMergeArchitectures(String targetarch, String optionsarch) {
+		if (ObjectUtils.isNullOrEmpty(optionsarch)) {
+			return true;
+		}
+		return optionsarch.equalsIgnoreCase(targetarch);
+	}
+
+	public static MSVCCompilerOptions valueOf(COptionsPresetTaskOutput preset) {
+		return new CommonPresetCOptionsTaskOption(preset);
+	}
+}

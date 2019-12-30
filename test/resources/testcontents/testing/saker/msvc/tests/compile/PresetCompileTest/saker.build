@@ -1,0 +1,25 @@
+build {
+	$compile = saker.msvc.ccompile(
+		{
+			Files: [*.c, *.cpp],
+		},
+		CompilerOptions: saker.msvc.coptions.preset(console),
+	)
+	$link = saker.msvc.clink(
+		$compile,
+		LinkerOptions: saker.msvc.coptions.preset(console),	
+	)
+}
+buildx86 {
+	$compile = saker.msvc.ccompile(
+		{
+			Files: [*.c, *.cpp],
+		},
+		Architecture: x86,
+		CompilerOptions: saker.msvc.coptions.preset(console),
+	)
+	$link = saker.msvc.clink(
+		$compile,
+		LinkerOptions: saker.msvc.coptions.preset(console),	
+	)
+}

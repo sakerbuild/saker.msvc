@@ -1,0 +1,6 @@
+build {
+	$compile = saker.msvc.ccompile({
+		Files: [*.c, *.cpp],
+		IncludeDirectories: include,
+	})
+}

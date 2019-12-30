@@ -1,0 +1,158 @@
+package testing.saker.msvc.tests;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+import saker.build.thirdparty.saker.util.StringUtils;
+import testing.saker.msvc.tests.mock.CLMockProcess;
+import testing.saker.msvc.tests.mock.MockingMSVCTestMetric;
+import testing.saker.nest.util.RepositoryLoadingVariablesMetricEnvironmentTestCase;
+
+public abstract class MSVCTestCase extends RepositoryLoadingVariablesMetricEnvironmentTestCase {
+	protected static final String LINE_SEPARATOR = System.lineSeparator();
+	protected static final int MULTI_C_X64 = MockingMSVCTestMetric.MOCK_MULTIPLIER_LANGUAGE_C * 64;
+	protected static final int MULTI_C_X86 = MockingMSVCTestMetric.MOCK_MULTIPLIER_LANGUAGE_C * 86;
+	protected static final int MULTI_CPP_X64 = MockingMSVCTestMetric.MOCK_MULTIPLIER_LANGUAGE_CPP * 64;
+	protected static final int MULTI_CPP_X86 = MockingMSVCTestMetric.MOCK_MULTIPLIER_LANGUAGE_CPP * 86;
+
+	protected static final String LANG_C = "c";
+	protected static final String ARCH_X64 = "x64";
+	protected static final String LANG_CPP = "c++";
+	protected static final String ARCH_X86 = "x86";
+
+	protected static final String VER_1_0 = "1.0";
+
+	@Override
+	protected MockingMSVCTestMetric createMetricImpl() {
+		return new MockingMSVCTestMetric(getTestSDKDirectory());
+	}
+
+	protected Path getTestSDKDirectory() {
+		Path basedir = getTestingBaseWorkingDirectory();
+		if (basedir == null) {
+			return null;
+		}
+		return basedir.resolve("testsdk");
+	}
+
+	@Override
+	protected MockingMSVCTestMetric getMetric() {
+		return (MockingMSVCTestMetric) super.getMetric();
+	}
+
+	public static String src(String... lines) {
+		return StringUtils.toStringJoin(LINE_SEPARATOR, lines);
+	}
+
+	public static int langC(int val) {
+		return val * MockingMSVCTestMetric.MOCK_MULTIPLIER_LANGUAGE_C;
+	}
+
+	public static int langCpp(int val) {
+		return val * MockingMSVCTestMetric.MOCK_MULTIPLIER_LANGUAGE_CPP;
+	}
+
+	public static String linkExe(String arch, int... lines) {
+		return linkTypeImpl(VER_1_0, MockingMSVCTestMetric.TYPE_EXE, arch, lines);
+	}
+
+	public static String linkDll(String arch, int... lines) {
+		return linkTypeImpl(VER_1_0, MockingMSVCTestMetric.TYPE_DLL, arch, lines);
+	}
+
+	public static String linkExeVer(String version, String arch, int... lines) {
+		return linkTypeImpl(version, MockingMSVCTestMetric.TYPE_EXE, arch, lines);
+	}
+
+	public static String linkDllVer(String version, String arch, int... lines) {
+		return linkTypeImpl(version, MockingMSVCTestMetric.TYPE_DLL, arch, lines);
+	}
+
+	private static String linkTypeImpl(String version, String type, String arch, int... lines) {
+		int mult = CLMockProcess.getArchitectureMultiplier(arch);
+		List<String> vals = new ArrayList<>();
+		vals.add(MockingMSVCTestMetric.createFileTypeLine(type, arch));
+		vals.add("#version " + version);
+		for (int l : lines) {
+			vals.add(l * mult + "");
+		}
+
+		return StringUtils.toStringJoin(null, LINE_SEPARATOR, vals, LINE_SEPARATOR);
+	}
+
+	public static String compile(String lang, String arch, int... lines) {
+		return compileVer(VER_1_0, lang, arch, lines);
+	}
+
+	public static String compileVer(String version, String lang, String arch, int... lines) {
+		int mult = CLMockProcess.getArchitectureMultiplier(arch) * CLMockProcess.getLanguageMockMultipler(lang);
+		List<String> res = new ArrayList<>();
+		res.add(MockingMSVCTestMetric.createFileTypeLine(MockingMSVCTestMetric.TYPE_OBJ, arch));
+		res.add("#version " + version);
+		for (int l : lines) {
+			res.add(l * mult + "");
+		}
+		return StringUtils.toStringJoin(null, LINE_SEPARATOR, res, LINE_SEPARATOR);
+	}
+
+	public static String binaryX64Exe1_0(BinaryLine... lines) {
+		return binaryImpl(MockingMSVCTestMetric.TYPE_EXE, "x64", "1.0", lines);
+	}
+
+	public static String binaryX86Exe1_0(BinaryLine... lines) {
+		return binaryImpl(MockingMSVCTestMetric.TYPE_EXE, "x86", "1.0", lines);
+	}
+
+	private static String binaryImpl(String type, String arch, String version, BinaryLine... lines) {
+		List<String> vals = new ArrayList<>();
+
+		vals.add(MockingMSVCTestMetric.createFileTypeLine(type, arch));
+		vals.add("#version " + version);
+		for (BinaryLine l : lines) {
+			l.process(vals, arch, version);
+		}
+
+		return StringUtils.toStringJoin(null, LINE_SEPARATOR, vals, LINE_SEPARATOR);
+	}
+
+	public static BinaryLine c(int... vals) {
+		return new BinaryLine() {
+			@Override
+			public void process(List<String> output, String architecture, String version) {
+				for (int val : vals) {
+					output.add(MockingMSVCTestMetric.MOCK_MULTIPLIER_LANGUAGE_C * val
+							* CLMockProcess.getArchitectureMultiplier(architecture) + "");
+				}
+			}
+		};
+	}
+
+	public static BinaryLine cpp(int... vals) {
+		return new BinaryLine() {
+			@Override
+			public void process(List<String> output, String architecture, String version) {
+				for (int val : vals) {
+					output.add(MockingMSVCTestMetric.MOCK_MULTIPLIER_LANGUAGE_CPP * val
+							* CLMockProcess.getArchitectureMultiplier(architecture) + "");
+				}
+			}
+		};
+	}
+
+	public static BinaryLine lib(int... vals) {
+		return new BinaryLine() {
+			@Override
+			public void process(List<String> output, String architecture, String version) {
+				for (int val : vals) {
+					output.add(val + "");
+				}
+			}
+		};
+	}
+
+	@FunctionalInterface
+	public interface BinaryLine {
+		public void process(List<String> output, String architecture, String version);
+	}
+}
