@@ -72,6 +72,7 @@ import saker.build.task.TaskFactory;
 import saker.build.task.TaskFileDeltas;
 import saker.build.task.delta.DeltaType;
 import saker.build.task.delta.FileChangeDelta;
+import saker.build.task.exception.TaskEnvironmentSelectionFailedException;
 import saker.build.task.identifier.TaskIdentifier;
 import saker.build.task.utils.FixedTaskDuplicationPredicate;
 import saker.build.task.utils.TaskUtils;
@@ -201,8 +202,13 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		NavigableMap<String, SDKDescription> compilerinnertasksdkdescriptions = sdkDescriptions;
 		EnvironmentSelectionResult envselectionresult;
 		if (envselector != null) {
-			envselectionresult = taskcontext.getTaskUtilities()
-					.getReportExecutionDependency(new EnvironmentSelectionTestExecutionProperty(envselector));
+			try {
+				envselectionresult = taskcontext.getTaskUtilities()
+						.getReportExecutionDependency(new EnvironmentSelectionTestExecutionProperty(envselector));
+			} catch (Exception e) {
+				throw new TaskEnvironmentSelectionFailedException(
+						"Failed to select a suitable build environment for compilation.", e);
+			}
 			envselector = MSVCUtils.undefaultizeSDKEnvironmentSelector(envselector, envselectionresult);
 			compilerinnertasksdkdescriptions = envselector.getDescriptions();
 		} else {

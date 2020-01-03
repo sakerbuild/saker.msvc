@@ -52,6 +52,7 @@ import saker.build.task.Task;
 import saker.build.task.TaskContext;
 import saker.build.task.TaskExecutionEnvironmentSelector;
 import saker.build.task.TaskFactory;
+import saker.build.task.exception.TaskEnvironmentSelectionFailedException;
 import saker.build.task.identifier.TaskIdentifier;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
@@ -153,14 +154,20 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		SDKBasedExecutionEnvironmentSelector envselector = MSVCUtils.createEnvironmentSelectorForSDKs(sdkDescriptions);
 		NavigableMap<String, SDKDescription> linkerinnertasksdkdescriptions = sdkDescriptions;
 		if (envselector != null) {
-			EnvironmentSelectionResult envselectionresult = taskcontext.getTaskUtilities()
-					.getReportExecutionDependency(new EnvironmentSelectionTestExecutionProperty(envselector));
+			EnvironmentSelectionResult envselectionresult;
+			try {
+				envselectionresult = taskcontext.getTaskUtilities()
+						.getReportExecutionDependency(new EnvironmentSelectionTestExecutionProperty(envselector));
+			} catch (Exception e) {
+				throw new TaskEnvironmentSelectionFailedException(
+						"Failed to select a suitable build environment for linking.", e);
+			}
 			envselector = MSVCUtils.undefaultizeSDKEnvironmentSelector(envselector, envselectionresult);
 			linkerinnertasksdkdescriptions = envselector.getDescriptions();
 		}
 
 		System.out.println("Linking " + inputs.size() + " files.");
-		
+
 		LinkerInnerTaskFactory innertaskfactory = new LinkerInnerTaskFactory(envselector, inputs, libraryPath,
 				linkerinnertasksdkdescriptions, simpleParameters, architecture, outdirpath, passidstr);
 		InnerTaskResults<LinkerInnerTaskFactoryResult> innertaskresults = taskcontext.startInnerTask(innertaskfactory,
