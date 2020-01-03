@@ -2,5 +2,5 @@ saker.msvc-api
 	classpath: [this]
 saker.msvc-proc
 	classpath: (this]
-saker.standard
+saker.standard-api
 	classpath: [0)

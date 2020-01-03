@@ -1,6 +1,7 @@
 saker.msvc-impl
 	classpath: [this]
-saker.compiler.utils
+		compile-transitive: false
+saker.compiler.utils-api
 	classpath: [0)
 saker.sdk.support-api
 	classpath: [0)
