@@ -151,6 +151,10 @@ export(
 				Directory: impl/resources/,
 				Resources: **,
 			},
+			{
+				Files: LICENSE,
+				TargetDirectory: META-INF,
+			},
 		],
 		Manifest: {
 			MainAttributes: {
@@ -167,6 +171,10 @@ export(
 				Directory: [src/main/, proc/src/java/, proc/src/cpp/],
 				Resources: [**/*.java, **/*.cpp],
 			},
+			{
+				Files: LICENSE,
+				TargetDirectory: META-INF,
+			},
 		],
 		Manifest: {
 			MainAttributes: {
@@ -181,6 +189,10 @@ export(
 			{
 				Directory: $compile[procjavac][ClassDirectory],
 				Resources: **,
+			},
+			{
+				Files: LICENSE,
+				TargetDirectory: META-INF,
 			},
 		] + $compile[procdllpaths],
 		Manifest: {
