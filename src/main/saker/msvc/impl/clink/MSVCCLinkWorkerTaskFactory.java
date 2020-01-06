@@ -59,7 +59,7 @@ import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.io.ByteSink;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.build.thirdparty.saker.util.io.StreamUtils;
-import saker.compiler.utils.api.options.CompilationIdentifier;
+import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.ccompile.SDKBasedExecutionEnvironmentSelector;
 import saker.msvc.impl.clink.option.FileLibraryPath;

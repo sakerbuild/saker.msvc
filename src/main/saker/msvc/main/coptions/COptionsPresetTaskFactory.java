@@ -25,7 +25,7 @@ import saker.build.task.ParameterizableTask;
 import saker.build.task.TaskContext;
 import saker.build.task.utils.annot.SakerInput;
 import saker.build.thirdparty.saker.util.ObjectUtils;
-import saker.compiler.utils.api.options.CompilationIdentifier;
+import saker.compiler.utils.api.CompilationIdentifier;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.coptions.preset.COptionPresets;
 import saker.msvc.impl.coptions.preset.PresetCOptions;

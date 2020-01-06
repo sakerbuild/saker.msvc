@@ -27,7 +27,7 @@ import java.util.NavigableSet;
 import saker.build.file.path.SakerPath;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
-import saker.compiler.utils.api.options.CompilationIdentifier;
+import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.api.ccompile.MSVCCompilerWorkerTaskOutput;
 import saker.msvc.impl.MSVCUtils;
 import saker.sdk.support.api.SDKDescription;

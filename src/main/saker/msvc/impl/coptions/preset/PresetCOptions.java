@@ -18,7 +18,7 @@ package saker.msvc.impl.coptions.preset;
 import java.util.Map;
 import java.util.Set;
 
-import saker.compiler.utils.api.options.CompilationIdentifier;
+import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.sdk.support.api.SDKDescription;

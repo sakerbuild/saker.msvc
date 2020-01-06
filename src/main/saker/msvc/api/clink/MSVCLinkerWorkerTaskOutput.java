@@ -16,7 +16,7 @@
 package saker.msvc.api.clink;
 
 import saker.build.file.path.SakerPath;
-import saker.compiler.utils.api.options.CompilationIdentifier;
+import saker.compiler.utils.api.CompilationIdentifier;
 
 /**
  * Provides access to the output of a linking task that was performed using the MSVC toolchain.

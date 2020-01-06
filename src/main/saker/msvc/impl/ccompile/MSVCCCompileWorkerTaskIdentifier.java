@@ -22,7 +22,7 @@ import java.io.ObjectOutput;
 import java.util.Objects;
 
 import saker.build.task.identifier.TaskIdentifier;
-import saker.compiler.utils.api.options.CompilationIdentifier;
+import saker.compiler.utils.api.CompilationIdentifier;
 
 public class MSVCCCompileWorkerTaskIdentifier implements TaskIdentifier, Externalizable {
 	private static final long serialVersionUID = 1L;
