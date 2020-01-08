@@ -26,6 +26,9 @@ public class MissingExecIncludeAdditionTest extends MSVCTestCase {
 
 	@Override
 	protected void runTestImpl() throws Throwable {
+		//create the dir as git doesnt track empty directories
+		files.createDirectories(PATH_WORKING_DIRECTORY.resolve("include"));
+
 		assertException(Exception.class, () -> runScriptTask("build"));
 
 		//no changes, so nothing should be reinvoked
