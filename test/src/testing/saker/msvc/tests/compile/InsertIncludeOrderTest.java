@@ -26,6 +26,9 @@ public class InsertIncludeOrderTest extends MSVCTestCase {
 
 	@Override
 	protected void runTestImpl() throws Throwable {
+		//create the dir as git doesnt track empty directories
+		files.createDirectories(PATH_WORKING_DIRECTORY.resolve("inc1"));
+		
 		runScriptTask("build");
 		assertEquals(files.getAllBytes(PATH_MAINC_OBJ).toString(), compile(LANG_C, ARCH_X64, 123, 456));
 
