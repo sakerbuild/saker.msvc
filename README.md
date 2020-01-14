@@ -1,6 +1,6 @@
 # saker.msvc
 
-![Build status](https://img.shields.io/azure-devops/build/sakerbuild/89658990-239d-4856-973f-f880318c937c/9/master)
+![Build status](https://img.shields.io/azure-devops/build/sakerbuild/89658990-239d-4856-973f-f880318c937c/9/master) [![Latest version](https://mirror.nest.saker.build/badges/saker.msvc/version.svg)](https://nest.saker.build/package/saker.msvc "saker.msvc | saker.nest")
 
 Build tasks for using the MSVC toolchain with the [saker.build system](https://saker.build). The project implements C/C++ compilation and linking support for the build system. It supports proper incremental and distributed compilation of the source files.
 
