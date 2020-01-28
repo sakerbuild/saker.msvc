@@ -146,7 +146,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 	}
 
 	public void setSdkDescriptions(NavigableMap<String, SDKDescription> sdkdescriptions) {
-		ObjectUtils.requireComparator(sdkdescriptions, MSVCUtils.getSDKNameComparator());
+		ObjectUtils.requireComparator(sdkdescriptions, SDKSupportUtils.getSDKNameComparator());
 		this.sdkDescriptions = sdkdescriptions;
 		if (!sdkdescriptions.containsKey(MSVCUtils.SDK_NAME_MSVC)) {
 			throw new IllegalArgumentException("MSVC SDK unspecified for compilation.");
@@ -198,7 +198,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		NavigableMap<String, CompiledFileState> stateexecutioncompiledfiles = new TreeMap<>();
 
-		SDKBasedExecutionEnvironmentSelector envselector = MSVCUtils.createEnvironmentSelectorForSDKs(sdkDescriptions);
+		TaskExecutionEnvironmentSelector envselector = MSVCUtils.createEnvironmentSelectorForSDKs(sdkDescriptions);
 		NavigableMap<String, SDKDescription> compilerinnertasksdkdescriptions = sdkDescriptions;
 		EnvironmentSelectionResult envselectionresult;
 		if (envselector != null) {
@@ -209,8 +209,9 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				throw new TaskEnvironmentSelectionFailedException(
 						"Failed to select a suitable build environment for compilation.", e);
 			}
-			envselector = MSVCUtils.undefaultizeSDKEnvironmentSelector(envselector, envselectionresult);
-			compilerinnertasksdkdescriptions = envselector.getDescriptions();
+			compilerinnertasksdkdescriptions = MSVCUtils.pinSDKSelection(envselectionresult, sdkDescriptions);
+			envselector = new SDKBasedExecutionEnvironmentSelector(
+					ImmutableUtils.makeImmutableNavigableMap(compilerinnertasksdkdescriptions));
 		} else {
 			envselectionresult = null;
 		}
@@ -555,7 +556,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 		files = SerialUtils.readExternalImmutableLinkedHashSet(in);
-		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, MSVCUtils.getSDKNameComparator());
+		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
+				SDKSupportUtils.getSDKNameComparator());
 	}
 
 	@Override
@@ -736,9 +738,9 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		private transient InnerTaskMirrorHandler mirrorHandler = new InnerTaskMirrorHandler();
 		private transient NavigableMap<String, SDKReference> referencedSDKCache = new ConcurrentSkipListMap<>(
-				MSVCUtils.getSDKNameComparator());
+				SDKSupportUtils.getSDKNameComparator());
 		private transient NavigableMap<String, Object> sdkCacheLocks = new ConcurrentSkipListMap<>(
-				MSVCUtils.getSDKNameComparator());
+				SDKSupportUtils.getSDKNameComparator());
 
 		/**
 		 * For RMI transfer.

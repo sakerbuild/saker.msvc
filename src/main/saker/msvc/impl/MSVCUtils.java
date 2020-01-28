@@ -39,6 +39,7 @@ import java.util.function.Predicate;
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.FileEntry;
 import saker.build.file.provider.LocalFileProvider;
+import saker.build.runtime.environment.EnvironmentProperty;
 import saker.build.task.EnvironmentSelectionResult;
 import saker.build.task.TaskExecutionEnvironmentSelector;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
@@ -128,10 +129,6 @@ public class MSVCUtils {
 			return DEFAULT_MSVC_SDK_DESCRIPTION;
 		}
 		return VersionsMSVCSDKDescription.create(regularversions, legacyversions);
-	}
-
-	public static Comparator<String> getSDKNameComparator() {
-		return SDKSupportUtils.getSDKNameComparator();
 	}
 
 	public static Comparator<String> getLinkerParameterIgnoreCaseComparator() {
@@ -247,7 +244,7 @@ public class MSVCUtils {
 		throw new UnsupportedOperationException();
 	}
 
-	public static SDKBasedExecutionEnvironmentSelector createEnvironmentSelectorForSDKs(
+	public static TaskExecutionEnvironmentSelector createEnvironmentSelectorForSDKs(
 			NavigableMap<String, SDKDescription> sdks) {
 		boolean[] clusterable = { true };
 		for (SDKDescription desc : sdks.values()) {
@@ -297,22 +294,33 @@ public class MSVCUtils {
 		return new SDKBasedExecutionEnvironmentSelector(ImmutableUtils.makeImmutableNavigableMap(sdks));
 	}
 
-	public static SDKBasedExecutionEnvironmentSelector undefaultizeSDKEnvironmentSelector(
-			TaskExecutionEnvironmentSelector selector, EnvironmentSelectionResult envselectionresult) {
-		Objects.requireNonNull(selector, "selector");
-		SDKBasedExecutionEnvironmentSelector sdksel = (SDKBasedExecutionEnvironmentSelector) selector;
-		TreeMap<String, SDKDescription> ndescriptions = new TreeMap<>(sdksel.getDescriptions());
+	public static NavigableMap<String, SDKDescription> pinSDKSelection(EnvironmentSelectionResult envselectionresult,
+			NavigableMap<String, SDKDescription> sdkdescriptions) {
+		TreeMap<String, SDKDescription> ndescriptions = new TreeMap<>(sdkdescriptions);
 		for (Entry<String, SDKDescription> entry : ndescriptions.entrySet()) {
 			SDKDescription desc = entry.getValue();
 			if (desc instanceof IndeterminateSDKDescription) {
 				IndeterminateSDKDescription indeterminate = (IndeterminateSDKDescription) desc;
-				SDKReference actualreference = SDKBasedExecutionEnvironmentSelector.getResolvedSDKReference(desc,
-						envselectionresult);
+				SDKReference actualreference = getResolvedSDKReference(desc, envselectionresult);
 				SDKDescription pinneddescription = indeterminate.pinSDKDescription(actualreference);
 				entry.setValue(pinneddescription);
 			}
 		}
-		return new SDKBasedExecutionEnvironmentSelector(ImmutableUtils.makeImmutableNavigableMap(ndescriptions));
+		return ndescriptions;
+	}
+
+	private static SDKReference getResolvedSDKReference(SDKDescription description,
+			EnvironmentSelectionResult selectionresult) {
+		SDKReference[] result = { null };
+		description.accept(new SDKDescriptionVisitor() {
+			@Override
+			public void visit(EnvironmentSDKDescription description) {
+				EnvironmentProperty<? extends SDKReference> envproperty = SDKSupportUtils
+						.getEnvironmentSDKDescriptionReferenceEnvironmentProperty(description);
+				result[0] = (SDKReference) selectionresult.getQualifierEnvironmentProperties().get(envproperty);
+			}
+		});
+		return result[0];
 	}
 
 	public static AbstractVCToolsSDKReference searchMSVCLegacyToolchainInProgramFiles(SakerPath programfiles,

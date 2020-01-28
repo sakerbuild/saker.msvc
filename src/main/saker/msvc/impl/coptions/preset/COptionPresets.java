@@ -23,6 +23,7 @@ import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.msvc.impl.sdk.WindowsKitsSDKReference;
 import saker.msvc.impl.sdk.option.CommonSDKPathReferenceOption;
+import saker.sdk.support.api.SDKSupportUtils;
 
 public class COptionPresets {
 	private static final Collection<SimplePresetCOptions> CONSOLE_PRESETS;
@@ -45,7 +46,7 @@ public class COptionPresets {
 
 		SimplePresetCOptions basepreset = new SimplePresetCOptions();
 		basepreset.setSdks(ImmutableUtils.singletonNavigableMap(MSVCUtils.SDK_NAME_WINDOWS_KITS,
-				MSVCUtils.DEFAULT_WINDOWS_KITS_SDK_DESCRIPTION, MSVCUtils.getSDKNameComparator()));
+				MSVCUtils.DEFAULT_WINDOWS_KITS_SDK_DESCRIPTION, SDKSupportUtils.getSDKNameComparator()));
 		basepreset.setLinkSimpleParameters(
 				ImmutableUtils.makeImmutableNavigableSet(new String[] { "/SUBSYSTEM:CONSOLE" }));
 		basepreset.setIncludeDirectories(ImmutableUtils.makeImmutableLinkedHashSet(new IncludeDirectoryOption[] {
@@ -90,7 +91,7 @@ public class COptionPresets {
 
 		SimplePresetCOptions basepreset = new SimplePresetCOptions();
 		basepreset.setSdks(ImmutableUtils.singletonNavigableMap(MSVCUtils.SDK_NAME_WINDOWS_KITS,
-				MSVCUtils.DEFAULT_WINDOWS_KITS_SDK_DESCRIPTION, MSVCUtils.getSDKNameComparator()));
+				MSVCUtils.DEFAULT_WINDOWS_KITS_SDK_DESCRIPTION, SDKSupportUtils.getSDKNameComparator()));
 		basepreset.setLinkSimpleParameters(
 				ImmutableUtils.makeImmutableNavigableSet(new String[] { "/DLL", "/SUBSYSTEM:WINDOWS" }));
 		basepreset.setIncludeDirectories(ImmutableUtils.makeImmutableLinkedHashSet(new IncludeDirectoryOption[] {

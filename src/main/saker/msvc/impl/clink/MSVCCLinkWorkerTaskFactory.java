@@ -107,7 +107,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 	}
 
 	public void setSdkDescriptions(NavigableMap<String, SDKDescription> sdkDescriptions) {
-		ObjectUtils.requireComparator(sdkDescriptions, MSVCUtils.getSDKNameComparator());
+		ObjectUtils.requireComparator(sdkDescriptions, SDKSupportUtils.getSDKNameComparator());
 		this.sdkDescriptions = sdkDescriptions;
 		if (!sdkDescriptions.containsKey(MSVCUtils.SDK_NAME_MSVC)) {
 			throw new IllegalArgumentException("MSVC SDK unspecified for linking.");
@@ -151,7 +151,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 		SakerPath outdirpath = outdir.getSakerPath();
 
-		SDKBasedExecutionEnvironmentSelector envselector = MSVCUtils.createEnvironmentSelectorForSDKs(sdkDescriptions);
+		TaskExecutionEnvironmentSelector envselector = MSVCUtils.createEnvironmentSelectorForSDKs(sdkDescriptions);
 		NavigableMap<String, SDKDescription> linkerinnertasksdkdescriptions = sdkDescriptions;
 		if (envselector != null) {
 			EnvironmentSelectionResult envselectionresult;
@@ -162,8 +162,9 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 				throw new TaskEnvironmentSelectionFailedException(
 						"Failed to select a suitable build environment for linking.", e);
 			}
-			envselector = MSVCUtils.undefaultizeSDKEnvironmentSelector(envselector, envselectionresult);
-			linkerinnertasksdkdescriptions = envselector.getDescriptions();
+			linkerinnertasksdkdescriptions = MSVCUtils.pinSDKSelection(envselectionresult, sdkDescriptions);
+			envselector = new SDKBasedExecutionEnvironmentSelector(
+					ImmutableUtils.makeImmutableNavigableMap(linkerinnertasksdkdescriptions));
 		}
 
 		System.out.println("Linking " + inputs.size() + " files.");
@@ -200,7 +201,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 		inputs = SerialUtils.readExternalImmutableLinkedHashSet(in);
 		libraryPath = SerialUtils.readExternalImmutableLinkedHashSet(in);
-		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, MSVCUtils.getSDKNameComparator());
+		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
+				SDKSupportUtils.getSDKNameComparator());
 		simpleParameters = SerialUtils.readExternalSortedImmutableNavigableSet(in,
 				MSVCUtils.getLinkerParameterIgnoreCaseComparator());
 	}
@@ -336,7 +338,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 				});
 			}
 
-			NavigableMap<String, SDKReference> referencedsdks = new TreeMap<>(MSVCUtils.getSDKNameComparator());
+			NavigableMap<String, SDKReference> referencedsdks = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());
 
 			SakerEnvironment environment = taskcontext.getExecutionContext().getEnvironment();
 			if (!ObjectUtils.isNullOrEmpty(this.libraryPath)) {
@@ -515,7 +517,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			environmentSelector = (TaskExecutionEnvironmentSelector) in.readObject();
 			inputs = SerialUtils.readExternalImmutableLinkedHashSet(in);
 			libraryPath = SerialUtils.readExternalImmutableLinkedHashSet(in);
-			sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, MSVCUtils.getSDKNameComparator());
+			sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
+					SDKSupportUtils.getSDKNameComparator());
 			simpleParameters = SerialUtils.readExternalSortedImmutableNavigableSet(in,
 					MSVCUtils.getLinkerParameterIgnoreCaseComparator());
 			architecture = (String) in.readObject();

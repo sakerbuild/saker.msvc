@@ -73,6 +73,7 @@ import saker.nest.scriptinfo.reflection.annot.NestTaskInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.nest.utils.FrontendTaskFactory;
 import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKSupportUtils;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 import saker.std.api.file.location.FileLocation;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
@@ -157,7 +158,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 			public Object run(TaskContext taskcontext) throws Exception {
 				List<CompilationInputPassTaskOption> inputpasses = new ArrayList<>();
 				Collection<MSVCCompilerOptions> compileroptions = new ArrayList<>();
-				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(MSVCUtils.getSDKNameComparator());
+				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());
 
 				CompilationIdentifier optionidentifier = this.identifierOption == null ? null
 						: this.identifierOption.clone().getIdentifier();
@@ -213,7 +214,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 				//  as windows has case-insensitive file names, we need to support Main.cpp and main.cpp from different directories
 				NavigableSet<String> outnames = new TreeSet<>(String::compareToIgnoreCase);
 				Set<FileCompilationConfiguration> files = new LinkedHashSet<>();
-				NavigableMap<String, SDKDescription> sdkdescriptions = new TreeMap<>(MSVCUtils.getSDKNameComparator());
+				NavigableMap<String, SDKDescription> sdkdescriptions = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());
 
 				for (Entry<String, SDKDescriptionTaskOption> entry : sdkoptions.entrySet()) {
 					SDKDescriptionTaskOption val = entry.getValue();

@@ -32,8 +32,8 @@ import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.TransformingSortedMap;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
-import saker.msvc.impl.MSVCUtils;
 import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKSupportUtils;
 
 public class CompilerState implements Externalizable {
 	private static final long serialVersionUID = 1L;
@@ -268,7 +268,7 @@ public class CompilerState implements Externalizable {
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 		executionCompiledFiles = SerialUtils.readExternalSortedImmutableNavigableMap(in);
-		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, MSVCUtils.getSDKNameComparator());
+		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, SDKSupportUtils.getSDKNameComparator());
 		environmentSelection = (EnvironmentSelectionResult) in.readObject();
 	}
 

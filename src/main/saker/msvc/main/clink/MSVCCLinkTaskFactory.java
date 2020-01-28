@@ -72,6 +72,7 @@ import saker.nest.scriptinfo.reflection.annot.NestTaskInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.nest.utils.FrontendTaskFactory;
 import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKSupportUtils;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileLocation;
@@ -173,7 +174,8 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				Collection<LinkerInputPassTaskOption> inputtaskoptions = new ArrayList<>();
 				Collection<MSVCLinkerOptions> linkeroptions = new ArrayList<>();
 				Collection<LibraryPathTaskOption> libpathoptions = new ArrayList<>();
-				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(MSVCUtils.getSDKNameComparator());
+				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(
+						SDKSupportUtils.getSDKNameComparator());
 				Collection<String> simpleparamoption = ImmutableUtils.makeImmutableList(this.simpleParametersOption);
 				CompilationIdentifierTaskOption identifieropt = ObjectUtils.clone(this.identifierOption,
 						CompilationIdentifierTaskOption::clone);
@@ -247,9 +249,9 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				Set<LibraryPathOption> librarypath = new LinkedHashSet<>();
 				Map<LibraryPathTaskOption, Collection<LibraryPathOption>> calculatedlibpathoptions = new HashMap<>();
 				NavigableMap<String, SDKDescription> nullablesdkdescriptions = new TreeMap<>(
-						MSVCUtils.getSDKNameComparator());
+						SDKSupportUtils.getSDKNameComparator());
 				NavigableMap<String, SDKDescription> infersdkdescriptions = new TreeMap<>(
-						MSVCUtils.getSDKNameComparator());
+						SDKSupportUtils.getSDKNameComparator());
 				NavigableSet<String> simpleparams = new TreeSet<>(MSVCUtils.getLinkerParameterIgnoreCaseComparator());
 				ObjectUtils.addAll(simpleparams, simpleparamoption);
 

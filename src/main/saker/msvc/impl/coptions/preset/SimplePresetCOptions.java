@@ -26,10 +26,10 @@ import java.util.Set;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
-import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKSupportUtils;
 
 public final class SimplePresetCOptions implements PresetCOptions, Externalizable, Cloneable {
 	private static final long serialVersionUID = 1L;
@@ -137,7 +137,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	public void setSdks(NavigableMap<String, SDKDescription> sdks) {
-		ObjectUtils.requireComparator(sdks, MSVCUtils.getSDKNameComparator());
+		ObjectUtils.requireComparator(sdks, SDKSupportUtils.getSDKNameComparator());
 		this.sdks = sdks;
 	}
 
@@ -175,7 +175,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		architecture = (String) in.readObject();
 		libraryPaths = SerialUtils.readExternalImmutableLinkedHashSet(in);
 		includeDirectories = SerialUtils.readExternalImmutableLinkedHashSet(in);
-		sdks = SerialUtils.readExternalSortedImmutableNavigableMap(in, MSVCUtils.getSDKNameComparator());
+		sdks = SerialUtils.readExternalSortedImmutableNavigableMap(in, SDKSupportUtils.getSDKNameComparator());
 		macroDefinitions = SerialUtils.readExternalImmutableLinkedHashMap(in);
 		linkSimpleParameters = SerialUtils.readExternalImmutableNavigableSet(in);
 		compileSimpleParameters = SerialUtils.readExternalImmutableNavigableSet(in);

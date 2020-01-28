@@ -29,8 +29,8 @@ import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.api.ccompile.MSVCCompilerWorkerTaskOutput;
-import saker.msvc.impl.MSVCUtils;
 import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKSupportUtils;
 
 public class MSVCCompilerWorkerTaskOutputImpl implements MSVCCompilerWorkerTaskOutput, Externalizable {
 	private static final long serialVersionUID = 1L;
@@ -90,7 +90,7 @@ public class MSVCCompilerWorkerTaskOutputImpl implements MSVCCompilerWorkerTaskO
 		objectFilePaths = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 		architecture = (String) in.readObject();
 		compilationIdentifier = (CompilationIdentifier) in.readObject();
-		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, MSVCUtils.getSDKNameComparator());
+		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, SDKSupportUtils.getSDKNameComparator());
 	}
 
 }

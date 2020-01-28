@@ -23,13 +23,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
+import java.util.Set;
 
 import saker.build.runtime.environment.EnvironmentProperty;
 import saker.build.runtime.environment.SakerEnvironment;
 import saker.build.task.EnvironmentSelectionResult;
 import saker.build.task.TaskExecutionEnvironmentSelector;
+import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
-import saker.msvc.impl.MSVCUtils;
 import saker.sdk.support.api.EnvironmentSDKDescription;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKDescriptionVisitor;
@@ -44,8 +45,7 @@ import saker.std.api.environment.qualifier.PropertyEnvironmentQualifier;
 public final class SDKBasedExecutionEnvironmentSelector implements TaskExecutionEnvironmentSelector, Externalizable {
 	private static final long serialVersionUID = 1L;
 
-	//TODO the names are not used.
-	private NavigableMap<String, SDKDescription> descriptions;
+	private Set<SDKDescription> descriptions;
 
 	/**
 	 * For {@link Externalizable}.
@@ -54,17 +54,14 @@ public final class SDKBasedExecutionEnvironmentSelector implements TaskExecution
 	}
 
 	public SDKBasedExecutionEnvironmentSelector(NavigableMap<String, SDKDescription> descriptions) {
-		this.descriptions = descriptions;
-	}
-
-	public NavigableMap<String, SDKDescription> getDescriptions() {
-		return descriptions;
+		//make the set linked, to have deterministic errors if necessary
+		this.descriptions = ImmutableUtils.makeImmutableLinkedHashSet(descriptions.values());
 	}
 
 	@Override
 	public EnvironmentSelectionResult isSuitableExecutionEnvironment(SakerEnvironment environment) {
 		Map<EnvironmentProperty<?>, Object> qualifierproperties = new HashMap<>();
-		for (SDKDescription descr : descriptions.values()) {
+		for (SDKDescription descr : descriptions) {
 			descr.accept(new SDKDescriptionVisitor() {
 				@Override
 				public void visit(EnvironmentSDKDescription description) {
@@ -108,28 +105,14 @@ public final class SDKBasedExecutionEnvironmentSelector implements TaskExecution
 		return new EnvironmentSelectionResult(qualifierproperties);
 	}
 
-	public static SDKReference getResolvedSDKReference(SDKDescription description,
-			EnvironmentSelectionResult selectionresult) {
-		SDKReference[] result = { null };
-		description.accept(new SDKDescriptionVisitor() {
-			@Override
-			public void visit(EnvironmentSDKDescription description) {
-				EnvironmentProperty<? extends SDKReference> envproperty = SDKSupportUtils
-						.getEnvironmentSDKDescriptionReferenceEnvironmentProperty(description);
-				result[0] = (SDKReference) selectionresult.getQualifierEnvironmentProperties().get(envproperty);
-			}
-		});
-		return result[0];
-	}
-
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
-		SerialUtils.writeExternalMap(out, descriptions);
+		SerialUtils.writeExternalCollection(out, descriptions);
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		descriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, MSVCUtils.getSDKNameComparator());
+		descriptions = SerialUtils.readExternalImmutableLinkedHashSet(in);
 	}
 
 	@Override
