@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -39,14 +38,9 @@ import java.util.function.Predicate;
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.FileEntry;
 import saker.build.file.provider.LocalFileProvider;
-import saker.build.runtime.environment.EnvironmentProperty;
-import saker.build.task.EnvironmentSelectionResult;
-import saker.build.task.TaskExecutionEnvironmentSelector;
-import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.StringUtils;
 import saker.build.thirdparty.saker.util.function.Functionals;
-import saker.msvc.impl.ccompile.SDKBasedExecutionEnvironmentSelector;
 import saker.msvc.impl.sdk.AbstractVCToolsSDKReference;
 import saker.msvc.impl.sdk.LegacyLayoutVCToolsSDKReference;
 import saker.msvc.impl.sdk.RegularLayoutVCToolsSDKReference;
@@ -55,18 +49,8 @@ import saker.msvc.impl.sdk.VersionsWindowsKitsSDKDescription;
 import saker.msvc.impl.sdk.WindowsKitsSDKReference;
 import saker.msvc.proc.NativeProcess;
 import saker.nest.bundle.BundleIdentifier;
-import saker.sdk.support.api.EnvironmentSDKDescription;
-import saker.sdk.support.api.IndeterminateSDKDescription;
-import saker.sdk.support.api.ResolvedSDKDescription;
 import saker.sdk.support.api.SDKDescription;
-import saker.sdk.support.api.SDKDescriptionVisitor;
 import saker.sdk.support.api.SDKReference;
-import saker.sdk.support.api.SDKSupportUtils;
-import saker.sdk.support.api.UserSDKDescription;
-import saker.std.api.environment.qualifier.AnyEnvironmentQualifier;
-import saker.std.api.environment.qualifier.EnvironmentQualifier;
-import saker.std.api.environment.qualifier.EnvironmentQualifierVisitor;
-import saker.std.api.environment.qualifier.PropertyEnvironmentQualifier;
 import testing.saker.msvc.TestFlag;
 
 public class MSVCUtils {
@@ -242,85 +226,6 @@ public class MSVCUtils {
 
 	private MSVCUtils() {
 		throw new UnsupportedOperationException();
-	}
-
-	public static TaskExecutionEnvironmentSelector createEnvironmentSelectorForSDKs(
-			NavigableMap<String, SDKDescription> sdks) {
-		boolean[] clusterable = { true };
-		for (SDKDescription desc : sdks.values()) {
-			desc.accept(new SDKDescriptionVisitor() {
-				@Override
-				public void visit(EnvironmentSDKDescription description) {
-					//stay clusterable as true
-				}
-
-				@Override
-				public void visit(ResolvedSDKDescription description) {
-					clusterable[0] = false;
-				}
-
-				@Override
-				public void visit(IndeterminateSDKDescription description) {
-					SDKDescription basesdk = description.getBaseSDKDescription();
-					Objects.requireNonNull(basesdk, "base sdk description");
-					basesdk.accept(this);
-				}
-
-				@Override
-				public void visit(UserSDKDescription description) {
-					EnvironmentQualifier qualifier = description.getQualifier();
-					if (qualifier == null) {
-						//only the local should be used
-						clusterable[0] = false;
-						return;
-					}
-					qualifier.accept(new EnvironmentQualifierVisitor() {
-						@Override
-						public void visit(PropertyEnvironmentQualifier qualifier) {
-							//stay clusterable as true 
-						}
-
-						@Override
-						public void visit(AnyEnvironmentQualifier qualifier) {
-							//stay clusterable as true 
-						}
-					});
-				}
-			});
-			if (!clusterable[0]) {
-				return null;
-			}
-		}
-		return new SDKBasedExecutionEnvironmentSelector(ImmutableUtils.makeImmutableNavigableMap(sdks));
-	}
-
-	public static NavigableMap<String, SDKDescription> pinSDKSelection(EnvironmentSelectionResult envselectionresult,
-			NavigableMap<String, SDKDescription> sdkdescriptions) {
-		TreeMap<String, SDKDescription> ndescriptions = new TreeMap<>(sdkdescriptions);
-		for (Entry<String, SDKDescription> entry : ndescriptions.entrySet()) {
-			SDKDescription desc = entry.getValue();
-			if (desc instanceof IndeterminateSDKDescription) {
-				IndeterminateSDKDescription indeterminate = (IndeterminateSDKDescription) desc;
-				SDKReference actualreference = getResolvedSDKReference(desc, envselectionresult);
-				SDKDescription pinneddescription = indeterminate.pinSDKDescription(actualreference);
-				entry.setValue(pinneddescription);
-			}
-		}
-		return ndescriptions;
-	}
-
-	private static SDKReference getResolvedSDKReference(SDKDescription description,
-			EnvironmentSelectionResult selectionresult) {
-		SDKReference[] result = { null };
-		description.accept(new SDKDescriptionVisitor() {
-			@Override
-			public void visit(EnvironmentSDKDescription description) {
-				EnvironmentProperty<? extends SDKReference> envproperty = SDKSupportUtils
-						.getEnvironmentSDKDescriptionReferenceEnvironmentProperty(description);
-				result[0] = (SDKReference) selectionresult.getQualifierEnvironmentProperties().get(envproperty);
-			}
-		});
-		return result[0];
 	}
 
 	public static AbstractVCToolsSDKReference searchMSVCLegacyToolchainInProgramFiles(SakerPath programfiles,

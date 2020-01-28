@@ -61,7 +61,6 @@ import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.build.thirdparty.saker.util.io.StreamUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.MSVCUtils;
-import saker.msvc.impl.ccompile.SDKBasedExecutionEnvironmentSelector;
 import saker.msvc.impl.clink.option.FileLibraryPath;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.msvc.impl.clink.option.LibraryPathVisitor;
@@ -151,7 +150,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 		SakerPath outdirpath = outdir.getSakerPath();
 
-		TaskExecutionEnvironmentSelector envselector = MSVCUtils.createEnvironmentSelectorForSDKs(sdkDescriptions);
+		TaskExecutionEnvironmentSelector envselector = SDKSupportUtils
+				.getSDKBasedClusterExecutionEnvironmentSelector(sdkDescriptions.values());
 		NavigableMap<String, SDKDescription> linkerinnertasksdkdescriptions = sdkDescriptions;
 		if (envselector != null) {
 			EnvironmentSelectionResult envselectionresult;
@@ -162,9 +162,9 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 				throw new TaskEnvironmentSelectionFailedException(
 						"Failed to select a suitable build environment for linking.", e);
 			}
-			linkerinnertasksdkdescriptions = MSVCUtils.pinSDKSelection(envselectionresult, sdkDescriptions);
-			envselector = new SDKBasedExecutionEnvironmentSelector(
-					ImmutableUtils.makeImmutableNavigableMap(linkerinnertasksdkdescriptions));
+			linkerinnertasksdkdescriptions = SDKSupportUtils.pinSDKSelection(envselectionresult, sdkDescriptions);
+			envselector = SDKSupportUtils
+					.getSDKBasedClusterExecutionEnvironmentSelector(linkerinnertasksdkdescriptions.values());
 		}
 
 		System.out.println("Linking " + inputs.size() + " files.");

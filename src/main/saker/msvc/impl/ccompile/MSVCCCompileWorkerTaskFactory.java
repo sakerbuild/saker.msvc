@@ -198,7 +198,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		NavigableMap<String, CompiledFileState> stateexecutioncompiledfiles = new TreeMap<>();
 
-		TaskExecutionEnvironmentSelector envselector = MSVCUtils.createEnvironmentSelectorForSDKs(sdkDescriptions);
+		TaskExecutionEnvironmentSelector envselector = SDKSupportUtils
+				.getSDKBasedClusterExecutionEnvironmentSelector(sdkDescriptions.values());
 		NavigableMap<String, SDKDescription> compilerinnertasksdkdescriptions = sdkDescriptions;
 		EnvironmentSelectionResult envselectionresult;
 		if (envselector != null) {
@@ -209,9 +210,9 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				throw new TaskEnvironmentSelectionFailedException(
 						"Failed to select a suitable build environment for compilation.", e);
 			}
-			compilerinnertasksdkdescriptions = MSVCUtils.pinSDKSelection(envselectionresult, sdkDescriptions);
-			envselector = new SDKBasedExecutionEnvironmentSelector(
-					ImmutableUtils.makeImmutableNavigableMap(compilerinnertasksdkdescriptions));
+			compilerinnertasksdkdescriptions = SDKSupportUtils.pinSDKSelection(envselectionresult, sdkDescriptions);
+			envselector = SDKSupportUtils
+					.getSDKBasedClusterExecutionEnvironmentSelector(compilerinnertasksdkdescriptions.values());
 		} else {
 			envselectionresult = null;
 		}
