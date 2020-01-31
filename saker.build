@@ -1,8 +1,9 @@
-global(VERSION_saker.msvc) = "0.8.1"
+global(VERSION_saker.msvc) = "0.8.2"
 global(DEPENDENCIES_saker.msvc) = [
 	saker.standard, 
 	saker.compiler.utils,
 	saker.sdk.support,
+	saker.process-api,
 ]
 
 static(VERSION_saker.build) = nest.dependency.resolve(
@@ -17,22 +18,10 @@ static(VERSION_saker.nest) = nest.dependency.resolve(
 compile(
 	in testapicompile = include(_testapicompile),
 	out javac,
-	out procjavac,
-	out procdllpaths,
 ) {
 	$resolveddependencies = nest.dependency.resolve(
 		global(DEPENDENCIES_saker.msvc),
 		Filters: nest.dependency.filter.compile(CompileTransitive: false)
-	)
-	$procjavac = saker.java.compile(
-		SourceDirectories: proc/src/java/,
-		ClassPath: [
-			saker.java.classpath.bundle([
-				"saker.build-api-v{ static(VERSION_saker.build) }",
-			]),
-		],
-		Identifier: proc,
-		GenerateNativeHeaders: true,
 	)
 	$javac = saker.java.compile(
 		SourceDirectories: [
@@ -44,43 +33,9 @@ compile(
 			]),
 			saker.java.classpath.bundle($resolveddependencies),
 			$testapicompile[javac],
-			$procjavac,
 		],
 		Identifier: "saker.msvc{ $testapicompile[enabled] ? "-testing" : "" }",	
 	)
-	$procdllpaths = foreach $target in [{ arch: x64, id: amd64 }, { arch: x86, id: x86}]
-		with $ccompile, $clink {
-		$ccompile = saker.msvc.ccompile(
-			[
-				{
-					Files: proc/src/cpp/**/*.cpp,
-					IncludeDirectories: [
-						sdk.path(java, Identifier: include),
-						sdk.path(java, Identifier: include.platform),
-						$procjavac[HeaderDirectory],
-					],
-					SimpleParameters: [ 
-						/O2, /GL, /MD 
-					],
-				},
-			],
-			SDKs: {
-				Java: $javac[JavaSDK],
-			},
-			CompilerOptions: [
-				saker.msvc.coptions.preset(dll),
-			],
-			Architecture: $target[arch],
-		)
-		$clink = saker.msvc.clink(
-			$ccompile,
-			LinkerOptions: [
-				saker.msvc.coptions.preset(dll),
-			],
-			SimpleParameters: [ "/OPT:ICF", /LTCG ],
-			Identifier: "NativeProcess.{ $target[id] }",
-		)
-	}: [ $clink[OutputPath]  ]
 	
 }
 export(
@@ -90,14 +45,12 @@ export(
 	out apijar,
 	out impljar,
 	out sourcejar,
-	out procjar,
 	
 	out bundlepaths = [
 		$mainjar[Path],
 		$apijar[Path],
 		$impljar[Path],
 		$sourcejar[Path],
-		$procjar[Path],
 	]
 ) {
 	$mainjar = saker.jar.create(
@@ -168,8 +121,8 @@ export(
 		Output: saker.msvc-sources.jar,
 		Resources: [
 			{
-				Directory: [src/main/, proc/src/java/, proc/src/cpp/],
-				Resources: [**/*.java, **/*.cpp],
+				Directory: [src/main/],
+				Resources: [**/*.java],
 			},
 			{
 				Files: LICENSE,
@@ -180,26 +133,6 @@ export(
 			MainAttributes: {
 				Nest-Bundle-Format-Version: 1,
 				Nest-Bundle-Identifier: "saker.msvc-sources-v{ global(VERSION_saker.msvc) }",
-			},
-		},
-	)
-	$procjar = saker.jar.create(
-		Output: saker.msvc-proc.jar,
-		Resources: [
-			{
-				Directory: $compile[procjavac][ClassDirectory],
-				Resources: **,
-			},
-			{
-				Files: LICENSE,
-				TargetDirectory: META-INF,
-			},
-		] + $compile[procdllpaths],
-		Manifest: {
-			MainAttributes: {
-				Nest-Bundle-Format-Version: 1,
-				Nest-Bundle-Identifier: "saker.msvc-proc-v{ global(VERSION_saker.msvc) }",
-				Nest-Bundle-Source: "saker.msvc-sources-v{ global(VERSION_saker.msvc) }",
 			},
 		},
 	)

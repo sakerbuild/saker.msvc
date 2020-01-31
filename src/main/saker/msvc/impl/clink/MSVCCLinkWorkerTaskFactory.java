@@ -16,7 +16,6 @@
 package saker.msvc.impl.clink;
 
 import java.io.Externalizable;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -32,6 +31,7 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 
 import saker.build.exception.FileMirroringUnavailableException;
 import saker.build.file.DirectoryVisitPredicate;
@@ -42,7 +42,6 @@ import saker.build.file.path.ProviderHolderPathKey;
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.LocalFileProvider;
 import saker.build.file.provider.SakerPathFiles;
-import saker.build.runtime.environment.EnvironmentProperty;
 import saker.build.runtime.environment.SakerEnvironment;
 import saker.build.runtime.execution.ExecutionContext;
 import saker.build.task.EnvironmentSelectionResult;
@@ -56,25 +55,23 @@ import saker.build.task.exception.TaskEnvironmentSelectionFailedException;
 import saker.build.task.identifier.TaskIdentifier;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
-import saker.build.thirdparty.saker.util.io.ByteSink;
+import saker.build.thirdparty.saker.util.function.Functionals;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
-import saker.build.thirdparty.saker.util.io.StreamUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.clink.option.FileLibraryPath;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.msvc.impl.clink.option.LibraryPathVisitor;
+import saker.msvc.impl.util.ByteSinkProcessIOConsumer;
 import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.clink.MSVCCLinkTaskFactory;
-import saker.sdk.support.api.EnvironmentSDKDescription;
-import saker.sdk.support.api.ResolvedSDKDescription;
 import saker.sdk.support.api.SDKDescription;
-import saker.sdk.support.api.SDKDescriptionVisitor;
 import saker.sdk.support.api.SDKPathReference;
 import saker.sdk.support.api.SDKReference;
 import saker.sdk.support.api.SDKSupportUtils;
-import saker.sdk.support.api.UserSDKDescription;
+import saker.sdk.support.api.exc.SDKManagementException;
+import saker.sdk.support.api.exc.SDKNotFoundException;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileLocation;
 import saker.std.api.file.location.FileLocationVisitor;
@@ -338,7 +335,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 				});
 			}
 
-			NavigableMap<String, SDKReference> referencedsdks = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());
+			NavigableMap<String, Supplier<SDKReference>> referencedsdks = new TreeMap<>(
+					SDKSupportUtils.getSDKNameComparator());
 
 			SakerEnvironment environment = taskcontext.getExecutionContext().getEnvironment();
 			if (!ObjectUtils.isNullOrEmpty(this.libraryPath)) {
@@ -383,7 +381,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 							if (ObjectUtils.isNullOrEmpty(sdkname)) {
 								throw new NullPointerException("Library path returned empty sdk name: " + libpath);
 							}
-							SDKReference sdkref = getSDKReferenceForName(taskcontext, referencedsdks, sdkname);
+							SDKReference sdkref = getSDKReferenceForName(environment, referencedsdks, sdkname);
 							if (sdkref == null) {
 								throw new IllegalArgumentException("SDK configuration not found for name: " + sdkname
 										+ " required by library path: " + libpath);
@@ -406,7 +404,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			String hostarchitecture = environment
 					.getEnvironmentPropertyCurrentValue(SystemArchitectureEnvironmentProperty.INSTANCE);
 
-			SDKReference vcsdk = getSDKReferenceForName(taskcontext, referencedsdks, MSVCUtils.SDK_NAME_MSVC);
+			SDKReference vcsdk = getSDKReferenceForName(environment, referencedsdks, MSVCUtils.SDK_NAME_MSVC);
 
 			SakerPath linkexepath = MSVCUtils.getVCSDKExecutablePath(vcsdk, hostarchitecture, architecture,
 					MSVCUtils.VC_EXECUTABLE_NAME_LINK);
@@ -444,15 +442,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			}
 			LocalFileProvider.getInstance().createDirectories(outputmirrorpath.getParent());
 
-			ProcessBuilder pb = new ProcessBuilder(commands);
-			pb.redirectErrorStream(true);
-			pb.directory(new File(workingdir.toString()));
-			MSVCUtils.removeEnvironmentVariablesFromProcess(pb);
-			Process proc = MSVCUtils.startProcess(pb);
-
-			StreamUtils.copyStream(proc.getInputStream(), ByteSink.toOutputStream(taskcontext.getStandardOut()));
-
-			int procresult = proc.waitFor();
+			int procresult = MSVCUtils.runMSVCProcess(commands, workingdir, new ByteSinkProcessIOConsumer(taskcontext.getStandardOut()), null, true);
 			if (procresult != 0) {
 				throw new IOException("Failed to link: " + procresult + " (0x" + Integer.toHexString(procresult) + ")");
 			}
@@ -527,38 +517,24 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		}
 
 		//XXX somewhat duplicated with compiler worker factory
-		private SDKReference getSDKReferenceForName(TaskContext taskcontext,
-				NavigableMap<String, SDKReference> referencedsdkcache, String sdkname) {
-			SDKReference sdkref = referencedsdkcache.computeIfAbsent(sdkname, x -> {
+		private SDKReference getSDKReferenceForName(SakerEnvironment environment,
+				NavigableMap<String, Supplier<SDKReference>> referencedsdkcache, String sdkname) {
+			Supplier<SDKReference> sdkref = referencedsdkcache.computeIfAbsent(sdkname, x -> {
 				SDKDescription desc = sdkDescriptions.get(sdkname);
 				if (desc == null) {
-					return null;
+					return () -> {
+						throw new SDKNotFoundException("SDK not found for name: " + sdkname);
+					};
 				}
-				SDKReference[] refresult = { null };
-				desc.accept(new SDKDescriptionVisitor() {
-					@Override
-					public void visit(EnvironmentSDKDescription description) {
-						EnvironmentProperty<? extends SDKReference> envproperty = SDKSupportUtils
-								.getEnvironmentSDKDescriptionReferenceEnvironmentProperty(description);
-						SDKReference envsdkref = taskcontext.getExecutionContext().getEnvironment()
-								.getEnvironmentPropertyCurrentValue(envproperty);
-						refresult[0] = envsdkref;
-					}
-
-					@Override
-					public void visit(ResolvedSDKDescription description) {
-						refresult[0] = description.getSDKReference();
-					}
-
-					@Override
-					public void visit(UserSDKDescription description) {
-						refresult[0] = UserSDKDescription.createSDKReference(description.getPaths(),
-								description.getProperties());
-					}
-				});
-				return refresult[0];
+				try {
+					return Functionals.valSupplier(SDKSupportUtils.resolveSDKReference(environment, desc));
+				} catch (Exception e) {
+					return () -> {
+						throw new SDKManagementException("Failed to resolve SDK: " + sdkname + " as " + desc, e);
+					};
+				}
 			});
-			return sdkref;
+			return sdkref.get();
 		}
 	}
 

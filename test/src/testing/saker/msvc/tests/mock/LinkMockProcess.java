@@ -18,6 +18,7 @@ package testing.saker.msvc.tests.mock;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -31,37 +32,42 @@ import java.util.TreeSet;
 
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.LocalFileProvider;
-import saker.build.thirdparty.saker.util.io.StreamUtils;
-import saker.build.thirdparty.saker.util.io.UnsyncByteArrayInputStream;
 import saker.build.thirdparty.saker.util.io.UnsyncByteArrayOutputStream;
+import testing.saker.msvc.MSVCTestMetric.MetricProcessIOConsumer;
 
 public class LinkMockProcess {
 	private LinkMockProcess() {
 		throw new UnsupportedOperationException();
 	}
 
-	public static Process run(ProcessBuilder pb) {
-		try (UnsyncByteArrayOutputStream baos = new UnsyncByteArrayOutputStream();
-				PrintStream out = new PrintStream(baos);) {
-			List<String> commands = pb.command();
-			SakerPath exepath = SakerPath.valueOf(commands.get(0));
+	public static int run(List<String> commands, boolean mergestderr, MetricProcessIOConsumer stdoutconsumer,
+			MetricProcessIOConsumer stderrconsumer) throws IOException {
+		try {
+			try (UnsyncByteArrayOutputStream baos = new UnsyncByteArrayOutputStream()) {
+				int resultCode;
+				try (PrintStream out = new PrintStream(baos)) {
+					SakerPath exepath = SakerPath.valueOf(commands.get(0));
 
-			String targetarch = MockingMSVCTestMetric.getMSVCExeTargetArchitecture(exepath);
-			String version = MockingMSVCTestMetric.getMSVCExeVersion(exepath);
-			if (!Objects.equals(targetarch, CLMockProcess.requireCommand(commands, "/MACHINE:"))) {
-				throw new IllegalArgumentException("Architecture mismatch." + targetarch + " - "
-						+ CLMockProcess.requireCommand(commands, "/MACHINE:"));
+					String targetarch = MockingMSVCTestMetric.getMSVCExeTargetArchitecture(exepath);
+					String version = MockingMSVCTestMetric.getMSVCExeVersion(exepath);
+					if (!Objects.equals(targetarch, CLMockProcess.requireCommand(commands, "/MACHINE:"))) {
+						throw new IllegalArgumentException("Architecture mismatch." + targetarch + " - "
+								+ CLMockProcess.requireCommand(commands, "/MACHINE:"));
+					}
+
+					SakerPath outpath = SakerPath.valueOf(CLMockProcess.requireCommand(commands, "/OUT:"));
+
+					resultCode = executeLinking(targetarch, out, commands, outpath, version);
+				}
+				if (stdoutconsumer != null) {
+					stdoutconsumer.handleOutput(ByteBuffer.wrap(baos.getBuffer(), 0, baos.size()));
+				}
+				return resultCode;
 			}
-
-			SakerPath outpath = SakerPath.valueOf(CLMockProcess.requireCommand(commands, "/OUT:"));
-
-			int resultCode = executeLinking(targetarch, out, commands, outpath, version);
-
-			return new MockedProcess(resultCode, new UnsyncByteArrayInputStream(baos.toByteArrayRegion()));
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		}
-		return new MockedProcess(-1, StreamUtils.nullInputStream());
+		return -1;
 	}
 
 	private static int executeLinking(String targetarch, PrintStream stdout, List<String> commands,

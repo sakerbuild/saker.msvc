@@ -50,15 +50,15 @@ public class MockingMSVCTestMetric extends CollectingTestMetric implements MSVCT
 	}
 
 	@Override
-	public Process startProcess(ProcessBuilder pb) throws IOException {
-		List<String> command = pb.command();
+	public int runProcess(List<String> command, boolean mergestderr, MetricProcessIOConsumer stdoutconsumer,
+			MetricProcessIOConsumer stderrconsumer) throws IOException {
 		System.out.println("MockingMSVCTestMetric.startProcess() " + command);
 		SakerPath exepath = SakerPathFiles.requireAbsolutePath(SakerPath.valueOf(command.get(0)));
 		if (exepath.getFileName().equalsIgnoreCase("cl.exe")) {
-			return CLMockProcess.run(pb);
+			return CLMockProcess.run(command, mergestderr, stdoutconsumer, stderrconsumer);
 		}
 		if (exepath.getFileName().equalsIgnoreCase("link.exe")) {
-			return LinkMockProcess.run(pb);
+			return LinkMockProcess.run(command, mergestderr, stdoutconsumer, stderrconsumer);
 		}
 		throw new IOException("Exe not found: " + command);
 	}

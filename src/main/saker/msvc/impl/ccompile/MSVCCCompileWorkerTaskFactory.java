@@ -20,7 +20,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
@@ -54,7 +53,6 @@ import saker.build.file.path.ProviderHolderPathKey;
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.LocalFileProvider;
 import saker.build.file.provider.SakerPathFiles;
-import saker.build.runtime.environment.EnvironmentProperty;
 import saker.build.runtime.environment.SakerEnvironment;
 import saker.build.runtime.execution.ExecutionContext;
 import saker.build.runtime.execution.SakerLog;
@@ -94,19 +92,17 @@ import saker.msvc.impl.ccompile.CompilerState.CompiledFileState;
 import saker.msvc.impl.ccompile.option.FileIncludeDirectory;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryVisitor;
+import saker.msvc.impl.util.CollectingProcessIOConsumer;
 import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
 import saker.msvc.impl.util.InnerTaskMirrorHandler;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
-import saker.msvc.proc.NativeProcess.IOProcessor;
-import saker.sdk.support.api.EnvironmentSDKDescription;
-import saker.sdk.support.api.ResolvedSDKDescription;
 import saker.sdk.support.api.SDKDescription;
-import saker.sdk.support.api.SDKDescriptionVisitor;
 import saker.sdk.support.api.SDKPathReference;
 import saker.sdk.support.api.SDKReference;
 import saker.sdk.support.api.SDKSupportUtils;
-import saker.sdk.support.api.UserSDKDescription;
+import saker.sdk.support.api.exc.SDKManagementException;
+import saker.sdk.support.api.exc.SDKNotFoundException;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileLocationVisitor;
 import saker.std.api.file.location.LocalFileLocation;
@@ -119,7 +115,27 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			.makeImmutableNavigableSet(new String[] { CAPABILITY_INNER_TASKS_COMPUTATIONAL });
 
 	public static final Set<String> ALWAYS_PRESENT_CL_PARAMETERS = ImmutableUtils
-			.makeImmutableNavigableSet(new String[] { "/nologo", "/c", "/showIncludes" });
+			.makeImmutableNavigableSet(new String[] {
+//					Suppress logo
+					"/nologo",
+//					Only compile
+					"/c",
+//					Write includes to standard error or standard output
+//					based on experience, the includes may be written to the standard output
+//					instead of standard error, although the docs says they would be written to std err
+//					
+//					https://docs.microsoft.com/en-us/cpp/build/reference/showincludes-list-include-files?view=vs-2019
+//					    > The /showIncludes option emits to stderr, not stdout.
+//					
+//					However, this is false for some cases. This is verified as well by plainly invoking it from cmd.
+//					Others also have this experience: https://github.com/fastbuild/fastbuild/issues/24
+//					See also: https://developercommunity.visualstudio.com/content/problem/902524/clexe-with-showincludes-writes-to-stdout-instead-o.html
+					"/showIncludes",
+//					Prevents the compiler from searching for include files 
+//					in directories specified in the PATH and INCLUDE environment variables.
+					"/X",
+
+			});
 
 	private static final Pattern CL_OUTPUT_ERROR_PATTERN = Pattern
 			.compile("(.+?)\\(([0-9]+)\\) ?: ?([a-zA-Z ]+)( C[0-9]+)?: (.+)");
@@ -738,7 +754,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		protected SakerDirectory outputDir;
 
 		private transient InnerTaskMirrorHandler mirrorHandler = new InnerTaskMirrorHandler();
-		private transient NavigableMap<String, SDKReference> referencedSDKCache = new ConcurrentSkipListMap<>(
+		private transient NavigableMap<String, Supplier<SDKReference>> referencedSDKCache = new ConcurrentSkipListMap<>(
 				SDKSupportUtils.getSDKNameComparator());
 		private transient NavigableMap<String, Object> sdkCacheLocks = new ConcurrentSkipListMap<>(
 				SDKSupportUtils.getSDKNameComparator());
@@ -899,6 +915,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			}
 
 			List<String> commands = new ArrayList<>();
+			commands.add(clexepath.toString());
 			commands.addAll(ALWAYS_PRESENT_CL_PARAMETERS);
 			commands.addAll(compilationconfiguration.getSimpleParameters());
 			commands.add(getLanguageCommandLineOption(compilationconfiguration.getLanguage()) + compilefilepath[0]);
@@ -914,18 +931,10 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				}
 			}
 
-			ByteArrayRegion procbytecontents;
-			int procresult;
-			try (UnsyncByteArrayOutputStream proccontents = new UnsyncByteArrayOutputStream()) {
-				procresult = MSVCUtils.runClProcess(clexepath, commands, workingdir, new IOProcessor() {
-					@Override
-					public boolean standardInputBytesAvailable(ByteBuffer inbuffer) {
-						proccontents.write(inbuffer);
-						return true;
-					}
-				});
-				procbytecontents = proccontents.toByteArrayRegion();
-			}
+			//merge std error as the /showIncludes option doesn't work properly
+			CollectingProcessIOConsumer stdoutcollector = new CollectingProcessIOConsumer();
+			int procresult = MSVCUtils.runMSVCProcess(commands, workingdir, stdoutcollector, null, true);
+			ByteArrayRegion stdoutbytecontents = stdoutcollector.getOutputBytes();
 
 			NavigableSet<CompilerDiagnostic> diagnostics = new TreeSet<>();
 
@@ -935,7 +944,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			}
 			includebases.add(SakerPath.valueOf(compilefilepath[0]).getParent());
 
-			//TODO separately handle the std out and std err of the process so we don't copy the output
 			UnsyncByteArrayOutputStream processout = new UnsyncByteArrayOutputStream();
 
 			NavigableSet<SakerPath> includes = new TreeSet<>();
@@ -943,7 +951,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			boolean hadline = false;
 			//TODO print the lines in a locked way, so they're not interlaced
 			try (DataInputUnsyncByteArrayInputStream reader = new DataInputUnsyncByteArrayInputStream(
-					procbytecontents)) {
+					stdoutbytecontents)) {
 				for (String line; (line = reader.readLine()) != null;) {
 					if (line.isEmpty()) {
 						continue;
@@ -1095,44 +1103,33 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		//XXX somewhat duplicated with linker worker factory
 		private SDKReference getSDKReferenceForName(SakerEnvironment environment, String sdkname) {
-			SDKReference sdkref = referencedSDKCache.get(sdkname);
+			Supplier<SDKReference> sdkref = referencedSDKCache.get(sdkname);
 			if (sdkref != null) {
-				return sdkref;
+				return sdkref.get();
 			}
 			synchronized (sdkCacheLocks.computeIfAbsent(sdkname, Functionals.objectComputer())) {
 				sdkref = referencedSDKCache.get(sdkname);
 				if (sdkref != null) {
-					return sdkref;
+					return sdkref.get();
 				}
 				SDKDescription desc = sdkDescriptions.get(sdkname);
 				if (desc == null) {
-					return null;
+					sdkref = () -> {
+						throw new SDKNotFoundException("SDK not found for name: " + sdkname);
+					};
+				} else {
+					try {
+						SDKReference refresult = SDKSupportUtils.resolveSDKReference(environment, desc);
+						sdkref = Functionals.valSupplier(refresult);
+					} catch (Exception e) {
+						sdkref = () -> {
+							throw new SDKManagementException("Failed to resolve SDK: " + sdkname + " as " + desc, e);
+						};
+					}
 				}
-				SDKReference[] refresult = { null };
-				desc.accept(new SDKDescriptionVisitor() {
-					@Override
-					public void visit(EnvironmentSDKDescription description) {
-						EnvironmentProperty<? extends SDKReference> envproperty = SDKSupportUtils
-								.getEnvironmentSDKDescriptionReferenceEnvironmentProperty(description);
-						SDKReference envsdkref = environment.getEnvironmentPropertyCurrentValue(envproperty);
-						refresult[0] = envsdkref;
-					}
-
-					@Override
-					public void visit(ResolvedSDKDescription description) {
-						refresult[0] = description.getSDKReference();
-					}
-
-					@Override
-					public void visit(UserSDKDescription description) {
-						refresult[0] = UserSDKDescription.createSDKReference(description.getPaths(),
-								description.getProperties());
-					}
-				});
-				sdkref = refresult[0];
 				referencedSDKCache.put(sdkname, sdkref);
 			}
-			return sdkref;
+			return sdkref.get();
 		}
 	}
 

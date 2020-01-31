@@ -16,13 +16,9 @@
 package saker.msvc.impl;
 
 import java.io.Externalizable;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -47,8 +43,10 @@ import saker.msvc.impl.sdk.RegularLayoutVCToolsSDKReference;
 import saker.msvc.impl.sdk.VersionsMSVCSDKDescription;
 import saker.msvc.impl.sdk.VersionsWindowsKitsSDKDescription;
 import saker.msvc.impl.sdk.WindowsKitsSDKReference;
-import saker.msvc.proc.NativeProcess;
 import saker.nest.bundle.BundleIdentifier;
+import saker.process.api.ProcessIOConsumer;
+import saker.process.api.SakerProcess;
+import saker.process.api.SakerProcessBuilder;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKReference;
 import testing.saker.msvc.TestFlag;
@@ -77,6 +75,10 @@ public class MSVCUtils {
 
 	public static void removeEnvironmentVariablesFromProcess(ProcessBuilder pb) {
 		Map<String, String> env = pb.environment();
+		removeMSVCEnvironmentVariables(env);
+	}
+
+	public static void removeMSVCEnvironmentVariables(Map<String, String> env) {
 		env.remove("CL");
 		env.remove("_CL_");
 		env.remove("INCLUDE");
@@ -167,61 +169,29 @@ public class MSVCUtils {
 						+ executablename + "." + hostarchitecture + "." + targetarchitecture);
 	}
 
-	public static Process startProcess(ProcessBuilder pb) throws IOException {
+	public static int runMSVCProcess(List<String> commands, SakerPath workingdir, ProcessIOConsumer stdoutconsumer,
+			ProcessIOConsumer stderrconsumer, boolean mergestderr)
+			throws IllegalStateException, IOException, InterruptedException {
 		if (TestFlag.ENABLED) {
-			return TestFlag.metric().startProcess(pb);
+			return TestFlag.metric().runProcess(commands, mergestderr,
+					stdoutconsumer == null ? null : stdoutconsumer::handleOutput,
+					stderrconsumer == null ? null : stderrconsumer::handleOutput);
 		}
-		return pb.start();
-	}
-
-	public static int runClProcess(SakerPath clexe, List<String> commands, SakerPath workingdir,
-			NativeProcess.IOProcessor ioprocessor) throws IllegalArgumentException, IOException, InterruptedException {
-		//TODO handle environment variables 
-		if (TestFlag.ENABLED || !NativeProcess.LOADED) {
-			Process proc = createClProcess(clexe, commands, workingdir);
-			InputStream in = proc.getInputStream();
-			byte[] barray = new byte[1024 * 8];
-			ByteBuffer buf = ByteBuffer.wrap(barray);
-			while (true) {
-				int read = in.read(barray);
-				if (read <= 0) {
-					break;
-				}
-				buf.rewind();
-				buf.limit(read);
-				ioprocessor.standardInputBytesAvailable(buf);
-			}
-			return proc.waitFor();
+		SakerProcessBuilder pb = SakerProcessBuilder.create();
+		pb.setCommand(commands);
+		pb.setStandardOutputConsumer(stdoutconsumer);
+		if (mergestderr) {
+			pb.setStandardErrorMerge(true);
 		} else {
-			int result;
-			try (NativeProcess nativeproc = NativeProcess.startProcess(clexe,
-					commands.toArray(ObjectUtils.EMPTY_STRING_ARRAY), workingdir, NativeProcess.FLAG_MERGE_STDERR)) {
-				nativeproc.processIO(ioprocessor);
-				result = nativeproc.waitFor();
-			}
-			return result;
+			pb.setStandardErrorConsumer(stderrconsumer);
 		}
-	}
+		pb.setWorkingDirectory(workingdir);
+		removeMSVCEnvironmentVariables(pb.getEnvironment());
 
-	private static Process createClProcess(SakerPath clexe, List<String> commands, SakerPath workingdir)
-			throws IOException {
-		ProcessBuilder pb = createClProcessBuilder(clexe, commands, workingdir);
-
-		if (TestFlag.ENABLED) {
-			return TestFlag.metric().startProcess(pb);
+		try (SakerProcess proc = pb.start()) {
+			proc.processIO();
+			return proc.waitFor();
 		}
-
-		return pb.start();
-	}
-
-	private static ProcessBuilder createClProcessBuilder(SakerPath clexe, List<String> commands, SakerPath workingdir) {
-		ArrayList<String> cmdlist = new ArrayList<>();
-		cmdlist.add(clexe.toString());
-		ObjectUtils.addAll(cmdlist, commands);
-		ProcessBuilder pb = new ProcessBuilder(cmdlist);
-		pb.redirectErrorStream(true);
-		pb.directory(new File((workingdir == null ? clexe.getParent() : workingdir).toString()));
-		return pb;
 	}
 
 	private MSVCUtils() {

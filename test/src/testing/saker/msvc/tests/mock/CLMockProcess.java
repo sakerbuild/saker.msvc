@@ -18,6 +18,7 @@ package testing.saker.msvc.tests.mock;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,41 +33,53 @@ import saker.build.file.path.SakerPath;
 import saker.build.file.provider.LocalFileProvider;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
-import saker.build.thirdparty.saker.util.io.StreamUtils;
-import saker.build.thirdparty.saker.util.io.UnsyncByteArrayInputStream;
 import saker.build.thirdparty.saker.util.io.UnsyncByteArrayOutputStream;
 import testing.saker.SakerTestCase;
+import testing.saker.msvc.MSVCTestMetric.MetricProcessIOConsumer;
 
 public class CLMockProcess {
 	private CLMockProcess() {
 		throw new UnsupportedOperationException();
 	}
 
-	public static Process run(ProcessBuilder pb) {
-		try (UnsyncByteArrayOutputStream baos = new UnsyncByteArrayOutputStream();
-				PrintStream out = new PrintStream(baos);) {
-			List<String> commands = pb.command();
+	public static int run(List<String> commands, boolean mergestderr, MetricProcessIOConsumer stdoutconsumer,
+			MetricProcessIOConsumer stderrconsumer) throws IOException {
+		try {
+			try (UnsyncByteArrayOutputStream stdoutbaos = new UnsyncByteArrayOutputStream();
+					UnsyncByteArrayOutputStream stderrbaos = new UnsyncByteArrayOutputStream()) {
+				int resultCode;
+				try (PrintStream stdout = new PrintStream(stdoutbaos);
+						PrintStream stderr = mergestderr ? stdout : new PrintStream(stderrbaos)) {
+					//cl should compile only
+					SakerTestCase.assertTrue(commands.contains("/c"));
 
-			//cl should compile only
-			SakerTestCase.assertTrue(commands.contains("/c"));
+					//should ignore environment variables
+					SakerTestCase.assertTrue(commands.contains("/X"));
 
-			SakerPath exepath = SakerPath.valueOf(commands.get(0));
+					SakerPath exepath = SakerPath.valueOf(commands.get(0));
 
-			String targetarch = MockingMSVCTestMetric.getMSVCExeTargetArchitecture(exepath);
-			String version = MockingMSVCTestMetric.getMSVCExeVersion(exepath);
+					String targetarch = MockingMSVCTestMetric.getMSVCExeTargetArchitecture(exepath);
+					String version = MockingMSVCTestMetric.getMSVCExeVersion(exepath);
 
-			SakerPath outputpath = SakerPath.valueOf(requireCommand(commands, "/Fo"));
-			String inputcmd = getInputFileCommand(commands);
-			SakerPath inputpath = SakerPath.valueOf(inputcmd.substring(3));
+					SakerPath outputpath = SakerPath.valueOf(requireCommand(commands, "/Fo"));
+					String inputcmd = getInputFileCommand(commands);
+					SakerPath inputpath = SakerPath.valueOf(inputcmd.substring(3));
 
-			int resultCode = executeCompilation(inputpath, outputpath, out, commands, targetarch,
-					getInputCommandLanguage(inputcmd), version);
-
-			return new MockedProcess(resultCode, new UnsyncByteArrayInputStream(baos.toByteArrayRegion()));
+					resultCode = executeCompilation(inputpath, outputpath, stdout, stderr, commands, targetarch,
+							getInputCommandLanguage(inputcmd), version);
+				}
+				if (stdoutconsumer != null) {
+					stdoutconsumer.handleOutput(ByteBuffer.wrap(stdoutbaos.getBuffer(), 0, stdoutbaos.size()));
+				}
+				if (!mergestderr && stderrconsumer != null) {
+					stderrconsumer.handleOutput(ByteBuffer.wrap(stderrbaos.getBuffer(), 0, stderrbaos.size()));
+				}
+				return resultCode;
+			}
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		}
-		return new MockedProcess(-1, StreamUtils.nullInputStream());
+		return -1;
 	}
 
 	private static String getInputCommandLanguage(String inputcmd) {
@@ -105,7 +118,7 @@ public class CLMockProcess {
 	}
 
 	private static int executeCompilation(SakerPath inputpath, SakerPath outputpath, PrintStream stdout,
-			List<String> commands, String targetarch, String language, String version) {
+			PrintStream stderr, List<String> commands, String targetarch, String language, String version) {
 		if (!commands.contains("/nologo")) {
 			stdout.println("Mock compiler: " + version + " " + language + " for " + targetarch);
 		}
@@ -157,7 +170,7 @@ public class CLMockProcess {
 					}
 					SakerPath includepath = SakerPath.valueOf(includephrase.substring(1, includephrase.length() - 1));
 					if (includephrase.charAt(0) == '<' && includephrase.charAt(includephrase.length() - 1) == '>') {
-						includeBracketIncludePath(includedirs, pendinglines, includedpaths, includepath, stdout,
+						includeBracketIncludePath(includedirs, pendinglines, includedpaths, includepath, stdout, stderr,
 								commands);
 					} else if (includephrase.charAt(0) == '\"'
 							&& includephrase.charAt(includephrase.length() - 1) == '\"') {
@@ -223,7 +236,8 @@ public class CLMockProcess {
 	}
 
 	private static void includeBracketIncludePath(List<SakerPath> includedirs, Deque<String> pendinglines,
-			Set<SakerPath> includedpaths, SakerPath includepath, PrintStream stdout, List<String> commands) {
+			Set<SakerPath> includedpaths, SakerPath includepath, PrintStream stdout, PrintStream stderr,
+			List<String> commands) {
 		List<Exception> causes = new ArrayList<>();
 		for (SakerPath includedir : includedirs) {
 			SakerPath resolvedincludepath = includedir.resolve(includepath);
@@ -236,7 +250,7 @@ public class CLMockProcess {
 				includedpaths.add(resolvedincludepath);
 				//XXX indent the real path based on the include stack
 				if (commands.contains("/showIncludes")) {
-					stdout.println("Note: including file: " + realpath);
+					stderr.println("Note: including file: " + realpath);
 				}
 				pendinglines.addAll(alllines);
 				return;
