@@ -275,15 +275,35 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 						compiledfilestate.setIncludes(compilationresult.getIncludes());
 						compiledfilestate.setFailedIncludes(compilationresult.getFailedIncludes());
 						if (compilationresult.isSuccessful()) {
-							SakerPath outputpath = outdirpath.resolve(compilationresult.getOutputName());
-							SakerFile outfile = taskcontext.getTaskUtilities().resolveFileAtPath(outputpath);
-							if (outfile == null) {
-								throw ObjectUtils.sneakyThrow(
-										new FileNotFoundException("Output object file was not found: " + outdirpath));
-							}
-							ContentDescriptor outcontentdescriptor = outfile.getContentDescriptor();
+							{
+								String outputobjectfilename = compilationresult.getOutputObjectName();
+								if (outputobjectfilename != null) {
+									SakerPath outputpath = outdirpath.resolve(outputobjectfilename);
+									SakerFile outfile = taskcontext.getTaskUtilities().resolveFileAtPath(outputpath);
+									if (outfile == null) {
+										throw ObjectUtils.sneakyThrow(new FileNotFoundException(
+												"Output object file was not found: " + outdirpath));
+									}
+									ContentDescriptor outcontentdescriptor = outfile.getContentDescriptor();
 
-							compiledfilestate.setOutputContents(outputpath, outcontentdescriptor);
+									compiledfilestate.setObjectOutputContents(outputpath, outcontentdescriptor);
+								}
+							}
+							{
+								String outputpchfilename = compilationresult.getOutputPrecompiledHeaderName();
+								if (outputpchfilename != null) {
+									SakerPath outputpath = outdirpath.resolve(outputpchfilename);
+									SakerFile outfile = taskcontext.getTaskUtilities().resolveFileAtPath(outputpath);
+									if (outfile == null) {
+										throw ObjectUtils.sneakyThrow(new FileNotFoundException(
+												"Output precompiled header file was not found: " + outdirpath));
+									}
+									ContentDescriptor outcontentdescriptor = outfile.getContentDescriptor();
+
+									compiledfilestate.setPrecompiledHeaderOutputContents(outputpath,
+											outcontentdescriptor);
+								}
+							}
 						}
 						printDiagnostics(taskcontext, loc.getPath(), compiledfilestate);
 						stateexecutioncompiledfiles.put(compilationentry.getOutFileName(), compiledfilestate);
@@ -394,11 +414,13 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		taskcontext.getTaskUtilities().reportInputFileDependency(CompilationFileTags.SOURCE,
 				inputexecutionfilecontents);
 		taskcontext.getTaskUtilities().reportOutputFileDependency(CompilationFileTags.OBJECT_FILE,
-				nstate.getOutputContentDescriptors());
+				nstate.getOutputObjectFileContentDescriptors());
+		taskcontext.getTaskUtilities().reportOutputFileDependency(CompilationFileTags.PCH_FILE,
+				nstate.getOutputPrecompiledHeaderFileContentDescriptors());
 		taskcontext.setTaskOutput(CompilerState.class, nstate);
 
 		//remove files which are not part of the output object files
-		ObjectUtils.iterateOrderedIterables(outdir.getChildren().entrySet(), nstate.getOutputFileNames(),
+		ObjectUtils.iterateOrderedIterables(outdir.getChildren().entrySet(), nstate.getAllOutputFileNames(),
 				(entry, name) -> entry.getKey().compareTo(name), (entry, outf) -> {
 					if (outf == null) {
 						entry.getValue().remove();
@@ -414,7 +436,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		MSVCCompilerWorkerTaskOutputImpl result = new MSVCCompilerWorkerTaskOutputImpl(passidentifier, architecture,
 				sdkDescriptions);
-		result.setObjectFilePaths(nstate.getObjectFilePaths());
+		result.setObjectFilePaths(nstate.getOutputObjectFilePaths());
 		return result;
 	}
 
@@ -459,6 +481,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		NavigableSet<SakerPath> relevantchanges = new TreeSet<>();
 		collectFileDeltaPaths(inputfilechanges.getFileDeltasWithTag(CompilationFileTags.SOURCE), relevantchanges);
 		collectFileDeltaPaths(outputfilechanges.getFileDeltasWithTag(CompilationFileTags.OBJECT_FILE), relevantchanges);
+		collectFileDeltaPaths(outputfilechanges.getFileDeltasWithTag(CompilationFileTags.PCH_FILE), relevantchanges);
 
 		NavigableSet<SakerPath> includechanges = new TreeSet<>();
 		collectFileDeltaPaths(inputfilechanges.getFileDeltasWithTag(CompilationFileTags.INCLUDE_FILE), includechanges);
@@ -484,9 +507,15 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				//the configuration for the compiled file changed
 				continue;
 			}
-			SakerPath outpath = prevfilestate.getOutputPath();
-			if (outpath != null) {
-				if (relevantchanges.contains(outpath)) {
+			SakerPath outobjpath = prevfilestate.getOutputObjectPath();
+			if (outobjpath != null) {
+				if (relevantchanges.contains(outobjpath)) {
+					continue;
+				}
+			}
+			SakerPath outpchpath = prevfilestate.getOutputPrecompiledHeaderPath();
+			if (outpchpath != null) {
+				if (relevantchanges.contains(outpchpath)) {
 					continue;
 				}
 			}
@@ -613,7 +642,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		protected FileCompilationConfiguration compilationEntry;
 		protected boolean successful;
-		protected String outputName;
+		protected String outputObjectName;
+		protected String outputPrecompiledHeaderName;
 		protected ContentDescriptor inputContents;
 		protected NavigableSet<CompilerDiagnostic> diagnostics;
 		protected NavigableSet<SakerPath> includes;
@@ -650,8 +680,12 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			return compilationEntry;
 		}
 
-		public String getOutputName() {
-			return outputName;
+		public String getOutputObjectName() {
+			return outputObjectName;
+		}
+
+		public String getOutputPrecompiledHeaderName() {
+			return outputPrecompiledHeaderName;
 		}
 
 		public ContentDescriptor getInputContents() {
@@ -678,7 +712,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		public void writeExternal(ObjectOutput out) throws IOException {
 			out.writeObject(compilationEntry);
 			out.writeBoolean(successful);
-			out.writeObject(outputName);
+			out.writeObject(outputObjectName);
 			out.writeObject(inputContents);
 			SerialUtils.writeExternalCollection(out, diagnostics);
 			SerialUtils.writeExternalCollection(out, includes);
@@ -690,11 +724,11 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 			compilationEntry = (FileCompilationConfiguration) in.readObject();
 			successful = in.readBoolean();
-			outputName = (String) in.readObject();
+			outputObjectName = (String) in.readObject();
 			inputContents = (ContentDescriptor) in.readObject();
-			diagnostics = SerialUtils.readExternalImmutableNavigableSet(in);
-			includes = SerialUtils.readExternalImmutableNavigableSet(in);
-			failedIncludes = SerialUtils.readExternalImmutableNavigableSet(in);
+			diagnostics = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+			includes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+			failedIncludes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 			processOutput = (ByteArrayRegion) in.readObject();
 		}
 	}
@@ -893,8 +927,21 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				}
 			}
 			FileCompilationConfiguration compilationconfiguration = compilationentry;
-			String objectfilename = compilationconfiguration.getOutFileName() + ".obj";
-			Path objoutpath = executioncontext.toMirrorPath(outputDirPath.resolve(objectfilename));
+			String outputfilenamebase = compilationconfiguration.getOutFileName();
+			String outputobjectfilename = outputfilenamebase + ".obj";
+			Path objoutpath = executioncontext.toMirrorPath(outputDirPath.resolve(outputobjectfilename));
+
+			boolean createpch = compilationconfiguration.isCreatePrecompiledHeader();
+			String outputpchfilename;
+			Path pchoutpath;
+			if (createpch) {
+				outputpchfilename = outputfilenamebase + ".pch";
+				pchoutpath = executioncontext.toMirrorPath(outputDirPath.resolve(outputpchfilename));
+			} else {
+				outputpchfilename = null;
+				pchoutpath = null;
+			}
+
 			//create the parent directory, else the process will throw
 			LocalFileProvider.getInstance().createDirectories(objoutpath.getParent());
 
@@ -929,6 +976,10 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 					String val = entry.getValue();
 					commands.add("/D" + entry.getKey() + (ObjectUtils.isNullOrEmpty(val) ? "" : "=" + val));
 				}
+			}
+			if (outputpchfilename != null) {
+				commands.add("/Yc");
+				commands.add("/Fp" + pchoutpath);
 			}
 
 			//merge std error as the /showIncludes option doesn't work properly
@@ -1069,6 +1120,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 					}
 				}
 			}
+			TreeSet<String> outputnames = new TreeSet<>();
 			CompilerInnerTaskResult result;
 			if (procresult != 0) {
 				if (!hadline) {
@@ -1078,9 +1130,20 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				}
 				result = CompilerInnerTaskResult.failed(compilationentry);
 			} else {
-				ProviderHolderPathKey objoutpathkey = LocalFileProvider.getInstance().getPathKey(objoutpath);
-				taskutilities.addSynchronizeInvalidatedProviderPathFileToDirectory(outputDir, objoutpathkey,
-						objectfilename);
+				if (objoutpath != null) {
+					ProviderHolderPathKey objoutpathkey = LocalFileProvider.getInstance().getPathKey(objoutpath);
+					taskutilities.addSynchronizeInvalidatedProviderPathFileToDirectory(outputDir, objoutpathkey,
+							outputobjectfilename);
+					outputnames.add(outputobjectfilename);
+				}
+
+				if (pchoutpath != null) {
+					ProviderHolderPathKey pchoutpathkey = LocalFileProvider.getInstance().getPathKey(pchoutpath);
+					taskutilities.addSynchronizeInvalidatedProviderPathFileToDirectory(outputDir, pchoutpathkey,
+							outputpchfilename);
+					outputnames.add(outputpchfilename);
+				}
+
 //				taskcontext.invalidate(objoutpathkey);
 //				SakerFile objsakerfile = taskutilities.createProviderPathFile(objectfilename, objoutpathkey);
 //				outputDir.add(objsakerfile);
@@ -1088,7 +1151,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				result = CompilerInnerTaskResult.successful(compilationentry);
 			}
 
-			result.outputName = objectfilename;
+			result.outputObjectName = outputobjectfilename;
+			result.outputPrecompiledHeaderName = outputpchfilename;
 			result.inputContents = contents[0];
 			if (!diagnostics.isEmpty()) {
 				//dont assign if non empty, keep it null

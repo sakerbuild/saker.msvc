@@ -33,6 +33,7 @@ public class OptionCompilationInputPassOption
 	private Collection<String> simpleParameters;
 	private Collection<MSVCCompilerOptions> compilerOptions;
 	private String language;
+	private Boolean createPrecompiledHeader;
 
 	public OptionCompilationInputPassOption(CompilationInputPassTaskOption copy) {
 		this.files = ObjectUtils.cloneArrayList(copy.getFiles(), MultiFileLocationTaskOption::clone);
@@ -43,6 +44,7 @@ public class OptionCompilationInputPassOption
 		this.simpleParameters = ImmutableUtils.makeImmutableList(copy.getSimpleParameters());
 		this.compilerOptions = ObjectUtils.cloneArrayList(copy.getCompilerOptions(), MSVCCompilerOptions::clone);
 		this.language = copy.getLanguage();
+		this.createPrecompiledHeader = copy.getCreatePrecompiledHeader();
 	}
 
 	@Override
@@ -93,5 +95,10 @@ public class OptionCompilationInputPassOption
 	@Override
 	public CompilationInputPassOption toCompilationInputPassOption(TaskContext taskcontext) {
 		return this;
+	}
+
+	@Override
+	public Boolean getCreatePrecompiledHeader() {
+		return createPrecompiledHeader;
 	}
 }

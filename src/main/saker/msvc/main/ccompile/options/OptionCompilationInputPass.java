@@ -35,4 +35,6 @@ public interface OptionCompilationInputPass {
 	public Collection<String> getSimpleParameters();
 
 	public Collection<MSVCCompilerOptions> getCompilerOptions();
+
+	public Boolean getCreatePrecompiledHeader();
 }

@@ -117,6 +117,11 @@ public interface CompilationInputPassTaskOption {
 		return null;
 	}
 
+	public default Boolean getCreatePrecompiledHeader() {
+		//TODO doc
+		return false;
+	}
+
 	public static CompilationInputPassTaskOption valueOf(FileLocation filelocation) {
 		FileLocationTaskOption.validateFileLocation(filelocation);
 		return new FileCompilationInputFileOption(Collections.singleton(filelocation));

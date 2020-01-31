@@ -48,4 +48,6 @@ public interface PresetCOptions {
 
 	public Set<String> getSimpleLinkerParameters();
 
+	public Boolean getCreatePrecompiledHeader();
+
 }

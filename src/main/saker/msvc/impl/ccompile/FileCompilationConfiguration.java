@@ -40,6 +40,7 @@ public class FileCompilationConfiguration implements Externalizable {
 	private Set<IncludeDirectoryOption> includeDirectories;
 	private Map<String, String> macroDefinitions;
 	private NavigableSet<String> simpleParameters = Collections.emptyNavigableSet();
+	private boolean createPrecompiledHeader;
 
 	/**
 	 * For {@link Externalizable}.
@@ -106,11 +107,20 @@ public class FileCompilationConfiguration implements Externalizable {
 		}
 	}
 
+	public boolean isCreatePrecompiledHeader() {
+		return createPrecompiledHeader;
+	}
+
+	public void setCreatePrecompiledHeader(boolean createPrecompiledHeader) {
+		this.createPrecompiledHeader = createPrecompiledHeader;
+	}
+
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		out.writeObject(fileLocation);
 		out.writeObject(outFileName);
 		out.writeObject(language);
+		out.writeBoolean(createPrecompiledHeader);
 		SerialUtils.writeExternalCollection(out, includeDirectories);
 		SerialUtils.writeExternalMap(out, macroDefinitions);
 		SerialUtils.writeExternalCollection(out, simpleParameters);
@@ -121,6 +131,7 @@ public class FileCompilationConfiguration implements Externalizable {
 		fileLocation = (FileLocation) in.readObject();
 		outFileName = (String) in.readObject();
 		language = (String) in.readObject();
+		createPrecompiledHeader = in.readBoolean();
 		includeDirectories = SerialUtils.readExternalImmutableLinkedHashSet(in);
 		macroDefinitions = SerialUtils.readExternalImmutableLinkedHashMap(in);
 		simpleParameters = SerialUtils.readExternalSortedImmutableNavigableSet(in);
@@ -128,15 +139,8 @@ public class FileCompilationConfiguration implements Externalizable {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((fileLocation == null) ? 0 : fileLocation.hashCode());
-		result = prime * result + ((includeDirectories == null) ? 0 : includeDirectories.hashCode());
-		result = prime * result + ((language == null) ? 0 : language.hashCode());
-		result = prime * result + ((macroDefinitions == null) ? 0 : macroDefinitions.hashCode());
-		result = prime * result + ((outFileName == null) ? 0 : outFileName.hashCode());
-		result = prime * result + ((simpleParameters == null) ? 0 : simpleParameters.hashCode());
-		return result;
+		//keep hashcode simple
+		return ((fileLocation == null) ? 0 : fileLocation.hashCode());
 	}
 
 	@Override
@@ -148,6 +152,8 @@ public class FileCompilationConfiguration implements Externalizable {
 		if (getClass() != obj.getClass())
 			return false;
 		FileCompilationConfiguration other = (FileCompilationConfiguration) obj;
+		if (createPrecompiledHeader != other.createPrecompiledHeader)
+			return false;
 		if (fileLocation == null) {
 			if (other.fileLocation != null)
 				return false;

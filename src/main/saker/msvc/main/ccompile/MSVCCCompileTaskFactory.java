@@ -158,7 +158,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 			public Object run(TaskContext taskcontext) throws Exception {
 				List<CompilationInputPassTaskOption> inputpasses = new ArrayList<>();
 				Collection<MSVCCompilerOptions> compileroptions = new ArrayList<>();
-				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());
+				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(
+						SDKSupportUtils.getSDKNameComparator());
 
 				CompilationIdentifier optionidentifier = this.identifierOption == null ? null
 						: this.identifierOption.clone().getIdentifier();
@@ -214,7 +215,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 				//  as windows has case-insensitive file names, we need to support Main.cpp and main.cpp from different directories
 				NavigableSet<String> outnames = new TreeSet<>(String::compareToIgnoreCase);
 				Set<FileCompilationConfiguration> files = new LinkedHashSet<>();
-				NavigableMap<String, SDKDescription> sdkdescriptions = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());
+				NavigableMap<String, SDKDescription> sdkdescriptions = new TreeMap<>(
+						SDKSupportUtils.getSDKNameComparator());
 
 				for (Entry<String, SDKDescriptionTaskOption> entry : sdkoptions.entrySet()) {
 					SDKDescriptionTaskOption val = entry.getValue();
@@ -262,6 +264,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 							Set<String> simpleparamoption = ImmutableUtils
 									.makeImmutableNavigableSet(input.getSimpleParameters());
 							String passlang = input.getLanguage();
+							Boolean createpch = input.getCreatePrecompiledHeader();
 
 							Collection<IncludeDirectoryTaskOption> indirtaskopts = input.getIncludeDirectories();
 							Set<IncludeDirectoryOption> inputincludedirs = new LinkedHashSet<>();
@@ -289,6 +292,9 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 									nconfig.setSimpleParameters(simpleparamoption);
 									nconfig.setIncludeDirectories(inputincludedirs);
 									nconfig.setMacroDefinitions(macrodefinitions);
+									if (Boolean.TRUE.equals(createpch)) {
+										nconfig.setCreatePrecompiledHeader(true);
+									}
 									configbuf.add(nconfig);
 								}
 							}
@@ -331,12 +337,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 										options.getArchitecture())) {
 									return;
 								}
-								Collection<IncludeDirectoryTaskOption> optincludedirs = options.getIncludeDirectories();
-								mergeIncludeDirectoryTaskOptions(config, taskcontext, calculatedincludediroptions,
-										optincludedirs);
-								mergeSDKDescriptionOptions(taskcontext, sdkdescriptions, options.getSDKs());
-								mergeMacroDefinitions(config, options.getMacroDefinitions());
-								mergeSimpleParameters(config, options.getSimpleCompilerParameters());
+								mergeCompilerOptions(options, config, taskcontext, calculatedincludediroptions,
+										sdkdescriptions);
 							}
 
 							@Override
@@ -354,10 +356,33 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 										continue;
 									}
 
-									mergeIncludeDirectories(config, preset.getIncludeDirectories());
-									mergePresetSDKDescriptions(sdkdescriptions, preset);
-									mergeMacroDefinitions(config, preset.getMacroDefinitions());
-									mergeSimpleParameters(config, preset.getSimpleCompilerParameters());
+									mergePreset(preset, config, sdkdescriptions);
+								}
+							}
+
+							private void mergeCompilerOptions(MSVCCompilerOptions options,
+									FileCompilationConfiguration config, TaskContext taskcontext,
+									Map<IncludeDirectoryTaskOption, Collection<IncludeDirectoryOption>> calculatedincludediroptions,
+									NavigableMap<String, SDKDescription> sdkdescriptions) {
+								Collection<IncludeDirectoryTaskOption> optincludedirs = options.getIncludeDirectories();
+								mergeIncludeDirectoryTaskOptions(config, taskcontext, calculatedincludediroptions,
+										optincludedirs);
+								mergeSDKDescriptionOptions(taskcontext, sdkdescriptions, options.getSDKs());
+								mergeMacroDefinitions(config, options.getMacroDefinitions());
+								mergeSimpleParameters(config, options.getSimpleCompilerParameters());
+								if (Boolean.TRUE.equals(options.getCreatePrecompiledHeader())) {
+									config.setCreatePrecompiledHeader(true);
+								}
+							}
+
+							private void mergePreset(PresetCOptions preset, FileCompilationConfiguration config,
+									NavigableMap<String, SDKDescription> sdkdescriptions) {
+								mergeIncludeDirectories(config, preset.getIncludeDirectories());
+								mergePresetSDKDescriptions(sdkdescriptions, preset);
+								mergeMacroDefinitions(config, preset.getMacroDefinitions());
+								mergeSimpleParameters(config, preset.getSimpleCompilerParameters());
+								if (Boolean.TRUE.equals(preset.getCreatePrecompiledHeader())) {
+									config.setCreatePrecompiledHeader(true);
 								}
 							}
 						};

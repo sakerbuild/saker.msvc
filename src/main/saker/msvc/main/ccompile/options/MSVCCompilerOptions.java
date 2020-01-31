@@ -62,7 +62,8 @@ import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 				+ "When merging, duplicate parameters are removed automatically."))
 @NestFieldInformation(value = "SDKs",
 		type = @NestTypeUsage(value = Map.class,
-				elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class, SDKDescriptionTaskOption.class }),
+				elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class,
+						SDKDescriptionTaskOption.class }),
 		info = @NestInformation(TaskDocs.OPTION_SDKS + "\n"
 				+ "When merging, duplicate SDK definitions are not overwritten."))
 public interface MSVCCompilerOptions {
@@ -98,6 +99,11 @@ public interface MSVCCompilerOptions {
 
 	public default Map<String, SDKDescriptionTaskOption> getSDKs() {
 		return null;
+	}
+
+	public default Boolean getCreatePrecompiledHeader() {
+		//TODO doc
+		return false;
 	}
 
 	public static boolean canMergeArchitectures(String targetarch, String optionsarch) {
