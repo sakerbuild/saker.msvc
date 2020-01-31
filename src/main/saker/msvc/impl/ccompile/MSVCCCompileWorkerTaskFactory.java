@@ -36,9 +36,11 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -94,6 +96,7 @@ import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryVisitor;
 import saker.msvc.impl.util.CollectingProcessIOConsumer;
 import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
+import saker.msvc.impl.util.FileLocationFileNameVisitor;
 import saker.msvc.impl.util.InnerTaskMirrorHandler;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
@@ -103,6 +106,7 @@ import saker.sdk.support.api.SDKReference;
 import saker.sdk.support.api.SDKSupportUtils;
 import saker.sdk.support.api.exc.SDKManagementException;
 import saker.sdk.support.api.exc.SDKNotFoundException;
+import saker.sdk.support.api.exc.SDKPathNotFoundException;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileLocationVisitor;
 import saker.std.api.file.location.LocalFileLocation;
@@ -113,6 +117,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 	private static final NavigableSet<String> WORKER_TASK_CAPABILITIES = ImmutableUtils
 			.makeImmutableNavigableSet(new String[] { CAPABILITY_INNER_TASKS_COMPUTATIONAL });
+
+	private static final String PRECOMPILED_HEADERS_SUBDIRECTORY_NAME = "pch";
 
 	public static final Set<String> ALWAYS_PRESENT_CL_PARAMETERS = ImmutableUtils
 			.makeImmutableNavigableSet(new String[] {
@@ -251,8 +257,31 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			innertaskparams.setClusterDuplicateFactor(compilationentries.size());
 			innertaskparams.setDuplicationPredicate(new FixedTaskDuplicationPredicate(compilationentries.size()));
 
-			SourceCompilerInnerTaskFactory innertask = new SourceCompilerInnerTaskFactory(fileaccumulator::take,
-					outdirpath, architecture, compilerinnertasksdkdescriptions, envselector, outdir);
+			//TODO print the process output and the diagnostics in a locked way
+			WorkerTaskCoordinator coordinator = new WorkerTaskCoordinator() {
+				@Override
+				public void headerPrecompiled(CompilerInnerTaskResult result) {
+					// TODO Auto-generated method stub
+					CompilationDependencyInfo depinfo = result.getDependencyInfo();
+					try {
+						taskcontext.getStandardOut().write(depinfo.getProcessOutput());
+					} catch (NullPointerException | IOException e) {
+						taskcontext.getTaskUtilities().reportIgnoredException(e);
+					}
+					SakerPath[] sourcefilepath = { null };
+					result.compilationEntry.fileLocation.accept(new FileLocationVisitor() {
+						@Override
+						public void visit(ExecutionFileLocation loc) {
+							sourcefilepath[0] = loc.getPath();
+						}
+						//TODO local file location
+					});
+					printDiagnostics(taskcontext, sourcefilepath[0], depinfo.getDiagnostics());
+				}
+			};
+			SourceCompilerInnerTaskFactory innertask = new SourceCompilerInnerTaskFactory(coordinator,
+					fileaccumulator::take, outdirpath, architecture, compilerinnertasksdkdescriptions, envselector,
+					outdir);
 			InnerTaskResults<CompilerInnerTaskResult> innertaskresults = taskcontext.startInnerTask(innertask,
 					innertaskparams);
 			InnerTaskResultHolder<CompilerInnerTaskResult> resultholder;
@@ -265,44 +294,28 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 					continue;
 				}
 				FileCompilationConfiguration compilationentry = compilationresult.getCompilationEntry();
-				taskcontext.getStandardOut().write(compilationresult.getProcessOutput());
+				CompilationDependencyInfo depinfo = compilationresult.getDependencyInfo();
+				taskcontext.getStandardOut().write(depinfo.getProcessOutput());
 				compilationentry.getFileLocation().accept(new FileLocationVisitor() {
 					@Override
 					public void visit(ExecutionFileLocation loc) {
-						CompiledFileState compiledfilestate = new CompiledFileState(
-								compilationresult.getInputContents(), compilationentry);
-						compiledfilestate.setDiagnostics(compilationresult.getDiagnostics());
-						compiledfilestate.setIncludes(compilationresult.getIncludes());
-						compiledfilestate.setFailedIncludes(compilationresult.getFailedIncludes());
+						CompiledFileState compiledfilestate = new CompiledFileState(depinfo.getInputContents(),
+								compilationentry);
+						compiledfilestate.setDiagnostics(depinfo.getDiagnostics());
+						compiledfilestate.setIncludes(depinfo.getIncludes());
+						compiledfilestate.setFailedIncludes(depinfo.getFailedIncludes());
 						if (compilationresult.isSuccessful()) {
-							{
-								String outputobjectfilename = compilationresult.getOutputObjectName();
-								if (outputobjectfilename != null) {
-									SakerPath outputpath = outdirpath.resolve(outputobjectfilename);
-									SakerFile outfile = taskcontext.getTaskUtilities().resolveFileAtPath(outputpath);
-									if (outfile == null) {
-										throw ObjectUtils.sneakyThrow(new FileNotFoundException(
-												"Output object file was not found: " + outdirpath));
-									}
-									ContentDescriptor outcontentdescriptor = outfile.getContentDescriptor();
-
-									compiledfilestate.setObjectOutputContents(outputpath, outcontentdescriptor);
+							String outputobjectfilename = compilationresult.getOutputObjectName();
+							if (outputobjectfilename != null) {
+								SakerPath outputpath = outdirpath.resolve(outputobjectfilename);
+								SakerFile outfile = taskcontext.getTaskUtilities().resolveFileAtPath(outputpath);
+								if (outfile == null) {
+									throw ObjectUtils.sneakyThrow(new FileNotFoundException(
+											"Output object file was not found: " + outdirpath));
 								}
-							}
-							{
-								String outputpchfilename = compilationresult.getOutputPrecompiledHeaderName();
-								if (outputpchfilename != null) {
-									SakerPath outputpath = outdirpath.resolve(outputpchfilename);
-									SakerFile outfile = taskcontext.getTaskUtilities().resolveFileAtPath(outputpath);
-									if (outfile == null) {
-										throw ObjectUtils.sneakyThrow(new FileNotFoundException(
-												"Output precompiled header file was not found: " + outdirpath));
-									}
-									ContentDescriptor outcontentdescriptor = outfile.getContentDescriptor();
+								ContentDescriptor outcontentdescriptor = outfile.getContentDescriptor();
 
-									compiledfilestate.setPrecompiledHeaderOutputContents(outputpath,
-											outcontentdescriptor);
-								}
+								compiledfilestate.setObjectOutputContents(outputpath, outcontentdescriptor);
 							}
 						}
 						printDiagnostics(taskcontext, loc.getPath(), compiledfilestate);
@@ -415,8 +428,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				inputexecutionfilecontents);
 		taskcontext.getTaskUtilities().reportOutputFileDependency(CompilationFileTags.OBJECT_FILE,
 				nstate.getOutputObjectFileContentDescriptors());
-		taskcontext.getTaskUtilities().reportOutputFileDependency(CompilationFileTags.PCH_FILE,
-				nstate.getOutputPrecompiledHeaderFileContentDescriptors());
 		taskcontext.setTaskOutput(CompilerState.class, nstate);
 
 		//remove files which are not part of the output object files
@@ -427,7 +438,28 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 					}
 				});
 		//use the nothing predicate to only delete the files which were removed
-		outdir.synchronize(DirectoryVisitPredicate.nothing());
+		outdir.synchronize(new DirectoryVisitPredicate() {
+			@Override
+			public DirectoryVisitPredicate directoryVisitor(String arg0, SakerDirectory arg1) {
+				return null;
+			}
+
+			@Override
+			public boolean visitFile(String name, SakerFile file) {
+				return false;
+			}
+
+			@Override
+			public boolean visitDirectory(String name, SakerDirectory directory) {
+				return false;
+			}
+
+			@Override
+			public NavigableSet<String> getSynchronizeFilesToKeep() {
+				//don't remove the pch subdir
+				return ImmutableUtils.singletonNavigableSet(PRECOMPILED_HEADERS_SUBDIRECTORY_NAME);
+			}
+		});
 
 		if (!nstate.isAllCompilationSucceeded()) {
 			taskcontext.abortExecution(new IOException("Compilation failed."));
@@ -481,7 +513,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		NavigableSet<SakerPath> relevantchanges = new TreeSet<>();
 		collectFileDeltaPaths(inputfilechanges.getFileDeltasWithTag(CompilationFileTags.SOURCE), relevantchanges);
 		collectFileDeltaPaths(outputfilechanges.getFileDeltasWithTag(CompilationFileTags.OBJECT_FILE), relevantchanges);
-		collectFileDeltaPaths(outputfilechanges.getFileDeltasWithTag(CompilationFileTags.PCH_FILE), relevantchanges);
 
 		NavigableSet<SakerPath> includechanges = new TreeSet<>();
 		collectFileDeltaPaths(inputfilechanges.getFileDeltasWithTag(CompilationFileTags.INCLUDE_FILE), includechanges);
@@ -510,12 +541,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			SakerPath outobjpath = prevfilestate.getOutputObjectPath();
 			if (outobjpath != null) {
 				if (relevantchanges.contains(outobjpath)) {
-					continue;
-				}
-			}
-			SakerPath outpchpath = prevfilestate.getOutputPrecompiledHeaderPath();
-			if (outpchpath != null) {
-				if (relevantchanges.contains(outpchpath)) {
 					continue;
 				}
 			}
@@ -583,6 +608,10 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		return false;
 	}
 
+	protected static SakerPath getPrecompiledHeaderOutputDirectoryPath(SakerPath outputdirpath) {
+		return outputdirpath.resolve(PRECOMPILED_HEADERS_SUBDIRECTORY_NAME);
+	}
+
 	@Override
 	public Set<String> getCapabilities() {
 		return WORKER_TASK_CAPABILITIES;
@@ -637,18 +666,73 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		return true;
 	}
 
+	private static class CompilationDependencyInfo implements Externalizable {
+		private static final long serialVersionUID = 1L;
+
+		protected ContentDescriptor inputContents;
+		protected NavigableSet<CompilerDiagnostic> diagnostics = new TreeSet<>();
+		protected NavigableSet<SakerPath> includes = new TreeSet<>();
+		protected NavigableSet<SakerPath> failedIncludes = new TreeSet<>();
+		//XXX this should not be here but only for compiled source files. no need for pch
+		protected ByteArrayRegion processOutput = ByteArrayRegion.EMPTY;
+
+		/**
+		 * For {@link Externalizable}.
+		 */
+		public CompilationDependencyInfo() {
+		}
+
+		public CompilationDependencyInfo(ContentDescriptor inputContents) {
+			this.inputContents = inputContents;
+		}
+
+		public ContentDescriptor getInputContents() {
+			return inputContents;
+		}
+
+		public NavigableSet<CompilerDiagnostic> getDiagnostics() {
+			return diagnostics;
+		}
+
+		public NavigableSet<SakerPath> getIncludes() {
+			return includes;
+		}
+
+		public NavigableSet<SakerPath> getFailedIncludes() {
+			return failedIncludes;
+		}
+
+		public ByteArrayRegion getProcessOutput() {
+			return processOutput;
+		}
+
+		@Override
+		public void writeExternal(ObjectOutput out) throws IOException {
+			out.writeObject(inputContents);
+			SerialUtils.writeExternalCollection(out, diagnostics);
+			SerialUtils.writeExternalCollection(out, includes);
+			SerialUtils.writeExternalCollection(out, failedIncludes);
+			out.writeObject(processOutput);
+		}
+
+		@Override
+		public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+			inputContents = (ContentDescriptor) in.readObject();
+			diagnostics = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+			includes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+			failedIncludes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+			processOutput = (ByteArrayRegion) in.readObject();
+		}
+	}
+
 	private static class CompilerInnerTaskResult implements Externalizable {
 		private static final long serialVersionUID = 1L;
 
 		protected FileCompilationConfiguration compilationEntry;
 		protected boolean successful;
 		protected String outputObjectName;
-		protected String outputPrecompiledHeaderName;
-		protected ContentDescriptor inputContents;
-		protected NavigableSet<CompilerDiagnostic> diagnostics;
-		protected NavigableSet<SakerPath> includes;
-		protected NavigableSet<SakerPath> failedIncludes;
-		protected ByteArrayRegion processOutput;
+
+		protected CompilationDependencyInfo dependencyInfo;
 
 		/**
 		 * For {@link Externalizable}.
@@ -684,28 +768,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			return outputObjectName;
 		}
 
-		public String getOutputPrecompiledHeaderName() {
-			return outputPrecompiledHeaderName;
-		}
-
-		public ContentDescriptor getInputContents() {
-			return inputContents;
-		}
-
-		public NavigableSet<CompilerDiagnostic> getDiagnostics() {
-			return diagnostics;
-		}
-
-		public NavigableSet<SakerPath> getIncludes() {
-			return includes;
-		}
-
-		public NavigableSet<SakerPath> getFailedIncludes() {
-			return failedIncludes;
-		}
-
-		public ByteArrayRegion getProcessOutput() {
-			return processOutput;
+		public CompilationDependencyInfo getDependencyInfo() {
+			return dependencyInfo;
 		}
 
 		@Override
@@ -713,11 +777,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			out.writeObject(compilationEntry);
 			out.writeBoolean(successful);
 			out.writeObject(outputObjectName);
-			out.writeObject(inputContents);
-			SerialUtils.writeExternalCollection(out, diagnostics);
-			SerialUtils.writeExternalCollection(out, includes);
-			SerialUtils.writeExternalCollection(out, failedIncludes);
-			out.writeObject(processOutput);
+			out.writeObject(dependencyInfo);
 		}
 
 		@Override
@@ -725,11 +785,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			compilationEntry = (FileCompilationConfiguration) in.readObject();
 			successful = in.readBoolean();
 			outputObjectName = (String) in.readObject();
-			inputContents = (ContentDescriptor) in.readObject();
-			diagnostics = SerialUtils.readExternalSortedImmutableNavigableSet(in);
-			includes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
-			failedIncludes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
-			processOutput = (ByteArrayRegion) in.readObject();
+			dependencyInfo = (CompilationDependencyInfo) in.readObject();
 		}
 	}
 
@@ -774,12 +830,16 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		public Object getWrappedObject() {
 			throw new UnsupportedOperationException();
 		}
+	}
 
+	public interface WorkerTaskCoordinator {
+		public void headerPrecompiled(CompilerInnerTaskResult result);
 	}
 
 	@RMIWrap(SourceCompilerRMIWrapper.class)
 	private static class SourceCompilerInnerTaskFactory
 			implements TaskFactory<CompilerInnerTaskResult>, Task<CompilerInnerTaskResult> {
+		protected WorkerTaskCoordinator coordinator;
 		protected Supplier<FileCompilationConfiguration> fileLocationSuppier;
 		protected SakerPath outputDirPath;
 		protected String architecture;
@@ -793,15 +853,20 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		private transient NavigableMap<String, Object> sdkCacheLocks = new ConcurrentSkipListMap<>(
 				SDKSupportUtils.getSDKNameComparator());
 
+		private transient ConcurrentHashMap<FileCompilationConfiguration, Object> precompiledHeaderCreationLocks = new ConcurrentHashMap<>();
+		private transient ConcurrentHashMap<FileCompilationConfiguration, Optional<CompilationDependencyInfo>> precompiledHeaderCreationResults = new ConcurrentHashMap<>();
+
 		/**
 		 * For RMI transfer.
 		 */
 		public SourceCompilerInnerTaskFactory() {
 		}
 
-		public SourceCompilerInnerTaskFactory(Supplier<FileCompilationConfiguration> fileLocationSuppier,
-				SakerPath outputDirPath, String architecture, NavigableMap<String, SDKDescription> sdkDescriptions,
+		public SourceCompilerInnerTaskFactory(WorkerTaskCoordinator coordinator,
+				Supplier<FileCompilationConfiguration> fileLocationSuppier, SakerPath outputDirPath,
+				String architecture, NavigableMap<String, SDKDescription> sdkDescriptions,
 				TaskExecutionEnvironmentSelector envselector, SakerDirectory outputDir) {
+			this.coordinator = coordinator;
 			this.fileLocationSuppier = fileLocationSuppier;
 			this.outputDirPath = outputDirPath;
 			this.architecture = architecture;
@@ -836,17 +901,9 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			return TaskFactory.super.getExecutionEnvironmentSelector();
 		}
 
-		@Override
-		public CompilerInnerTaskResult run(TaskContext taskcontext) throws Exception {
-			FileCompilationConfiguration compilationentry = fileLocationSuppier.get();
-			if (compilationentry == null) {
-				return null;
-			}
+		private Path getCompileFilePath(FileCompilationConfiguration compilationentry, SakerEnvironment environment,
+				TaskExecutionUtilities taskutilities, ContentDescriptor[] contents) {
 			Path[] compilefilepath = { null };
-			ContentDescriptor[] contents = { null };
-			TaskExecutionUtilities taskutilities = taskcontext.getTaskUtilities();
-			ExecutionContext executioncontext = taskcontext.getExecutionContext();
-			SakerEnvironment environment = executioncontext.getEnvironment();
 			compilationentry.getFileLocation().accept(new FileLocationVisitor() {
 				@Override
 				public void visit(ExecutionFileLocation loc) {
@@ -869,6 +926,21 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 					FileLocationVisitor.super.visit(loc);
 				}
 			});
+			return compilefilepath[0];
+		}
+
+		@Override
+		public CompilerInnerTaskResult run(TaskContext taskcontext) throws Exception {
+			FileCompilationConfiguration compilationentry = fileLocationSuppier.get();
+			if (compilationentry == null) {
+				return null;
+			}
+			SakerPath outputdirpath = outputDirPath;
+			ContentDescriptor[] contents = { null };
+			TaskExecutionUtilities taskutilities = taskcontext.getTaskUtilities();
+			ExecutionContext executioncontext = taskcontext.getExecutionContext();
+			SakerEnvironment environment = executioncontext.getEnvironment();
+			Path compilefilepath = getCompileFilePath(compilationentry, environment, taskutilities, contents);
 			List<Path> includedirpaths = new ArrayList<>();
 			Set<IncludeDirectoryOption> includedirectories = compilationentry.getIncludeDirectories();
 
@@ -929,18 +1001,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			FileCompilationConfiguration compilationconfiguration = compilationentry;
 			String outputfilenamebase = compilationconfiguration.getOutFileName();
 			String outputobjectfilename = outputfilenamebase + ".obj";
-			Path objoutpath = executioncontext.toMirrorPath(outputDirPath.resolve(outputobjectfilename));
 
-			boolean createpch = compilationconfiguration.isCreatePrecompiledHeader();
-			String outputpchfilename;
-			Path pchoutpath;
-			if (createpch) {
-				outputpchfilename = outputfilenamebase + ".pch";
-				pchoutpath = executioncontext.toMirrorPath(outputDirPath.resolve(outputpchfilename));
-			} else {
-				outputpchfilename = null;
-				pchoutpath = null;
-			}
+			Path objoutpath = executioncontext.toMirrorPath(outputdirpath.resolve(outputobjectfilename));
 
 			//create the parent directory, else the process will throw
 			LocalFileProvider.getInstance().createDirectories(objoutpath.getParent());
@@ -950,199 +1012,135 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 			SDKReference vcsdk = getSDKReferenceForName(environment, MSVCUtils.SDK_NAME_MSVC);
 
-			SakerPath clexepath = MSVCUtils.getVCSDKExecutablePath(vcsdk, hostarchitecture, architecture,
+			SakerPath clexepath = MSVCUtils.getVCSDKExecutablePath(vcsdk, hostarchitecture, this.architecture,
 					MSVCUtils.VC_EXECUTABLE_NAME_CL);
 			if (clexepath == null) {
-				throw new IllegalArgumentException("SDK doesn't contain appropriate cl.exe: " + vcsdk);
+				throw new SDKPathNotFoundException("SDK doesn't contain appropriate cl.exe: " + vcsdk);
 			}
 			SakerPath workingdir = MSVCUtils.getVCSDKExecutableWorkingDirectoryPath(vcsdk, hostarchitecture,
-					architecture, MSVCUtils.VC_EXECUTABLE_NAME_CL);
+					this.architecture, MSVCUtils.VC_EXECUTABLE_NAME_CL);
 			if (workingdir == null) {
 				workingdir = clexepath.getParent();
+			}
+
+			FileCompilationConfiguration entrypch = compilationentry.getPrecompiledHeader();
+			Path pchoutpath = null;
+			String pchname = null;
+			CompilationDependencyInfo pchdepinfo = null;
+			if (entrypch != null) {
+				SakerPath pchoutdir = getPrecompiledHeaderOutputDirectoryPath(outputdirpath);
+				pchname = FileLocationFileNameVisitor.getFileName(entrypch.getFileLocation());
+				pchoutpath = executioncontext.toMirrorPath(pchoutdir.resolve(entrypch.getOutFileName() + ".pch"));
+
+				LocalFileProvider.getInstance().createDirectories(pchoutpath.getParent());
+
+				Path pchobjpath = executioncontext.toMirrorPath(pchoutdir.resolve(entrypch.getOutFileName() + ".obj"));
+				Optional<CompilationDependencyInfo> headerres = precompiledHeaderCreationResults.get(entrypch);
+				if (headerres == null) {
+					synchronized (precompiledHeaderCreationLocks.computeIfAbsent(entrypch,
+							Functionals.objectComputer())) {
+						headerres = precompiledHeaderCreationResults.get(entrypch);
+						if (headerres == null) {
+							//TODO compile precompiled header
+
+							ContentDescriptor[] pchcontents = { null };
+							Path pchcompilefilepath = getCompileFilePath(entrypch, environment, taskutilities,
+									pchcontents);
+
+							List<String> commands = new ArrayList<>();
+							commands.add(clexepath.toString());
+							commands.addAll(ALWAYS_PRESENT_CL_PARAMETERS);
+							commands.addAll(entrypch.getSimpleParameters());
+							commands.add(getLanguageCommandLineOption(entrypch.getLanguage()) + pchcompilefilepath);
+							commands.add("/Fo" + pchobjpath);
+							addIncludeDirectoryCommands(commands, includedirpaths);
+							Map<String, String> macrodefs = entrypch.getMacroDefinitions();
+							addMacroDefinitionCommands(commands, macrodefs);
+
+							commands.add("/Yc");
+							commands.add("/Fp" + pchoutpath);
+
+							CollectingProcessIOConsumer stdoutcollector = new CollectingProcessIOConsumer();
+							int procresult = MSVCUtils.runMSVCProcess(commands, workingdir, stdoutcollector, null,
+									true);
+							CompilationDependencyInfo depinfo = new CompilationDependencyInfo(contents[0]);
+							entrypch.getFileLocation().accept(new FileLocationVisitor() {
+								//add the compiled header file as an include dependency, so it is added to the source files
+								@Override
+								public void visit(ExecutionFileLocation loc) {
+									depinfo.includes.add(loc.getPath());
+								}
+								//TODO support local
+							});
+							analyzeCLOutput(taskcontext, includedirpaths, stdoutcollector.getOutputBytes(), depinfo,
+									procresult);
+							CompilerInnerTaskResult headerprecompileresult;
+							if (procresult == 0) {
+								headerprecompileresult = CompilerInnerTaskResult.successful(entrypch);
+
+								headerres = Optional.of(depinfo);
+							} else {
+								headerprecompileresult = CompilerInnerTaskResult.failed(entrypch);
+
+								headerres = Optional.empty();
+							}
+							headerprecompileresult.dependencyInfo = depinfo;
+							coordinator.headerPrecompiled(headerprecompileresult);
+							precompiledHeaderCreationResults.put(entrypch, headerres);
+						}
+					}
+				}
+				if (!headerres.isPresent()) {
+					//TODO reify exception
+					throw new IOException("Failed to compile required precompiled header. (" + pchname + ")");
+				}
+				pchdepinfo = headerres.get();
+				//TODO perform pch incremental caching. don't recompile if the previous result hasn't changed
+
+				//RootFileProviderKey localfpkey = LocalFileProvider.getProviderKeyStatic();
 			}
 
 			List<String> commands = new ArrayList<>();
 			commands.add(clexepath.toString());
 			commands.addAll(ALWAYS_PRESENT_CL_PARAMETERS);
 			commands.addAll(compilationconfiguration.getSimpleParameters());
-			commands.add(getLanguageCommandLineOption(compilationconfiguration.getLanguage()) + compilefilepath[0]);
+			commands.add(getLanguageCommandLineOption(compilationconfiguration.getLanguage()) + compilefilepath);
 			commands.add("/Fo" + objoutpath);
-			for (Path incdir : includedirpaths) {
-				commands.add("/I" + incdir);
-			}
+			addIncludeDirectoryCommands(commands, includedirpaths);
 			Map<String, String> macrodefs = compilationentry.getMacroDefinitions();
-			if (!ObjectUtils.isNullOrEmpty(macrodefs)) {
-				for (Entry<String, String> entry : macrodefs.entrySet()) {
-					String val = entry.getValue();
-					commands.add("/D" + entry.getKey() + (ObjectUtils.isNullOrEmpty(val) ? "" : "=" + val));
-				}
-			}
-			if (outputpchfilename != null) {
-				commands.add("/Yc");
+			addMacroDefinitionCommands(commands, macrodefs);
+			if (pchoutpath != null) {
 				commands.add("/Fp" + pchoutpath);
+				commands.add("/Yu" + pchname);
 			}
 
 			//merge std error as the /showIncludes option doesn't work properly
 			CollectingProcessIOConsumer stdoutcollector = new CollectingProcessIOConsumer();
 			int procresult = MSVCUtils.runMSVCProcess(commands, workingdir, stdoutcollector, null, true);
-			ByteArrayRegion stdoutbytecontents = stdoutcollector.getOutputBytes();
+			CompilationDependencyInfo depinfo = new CompilationDependencyInfo(contents[0]);
 
-			NavigableSet<CompilerDiagnostic> diagnostics = new TreeSet<>();
+			analyzeCLOutput(taskcontext, includedirpaths, stdoutcollector.getOutputBytes(), depinfo, procresult);
 
-			NavigableSet<SakerPath> includebases = new TreeSet<>();
-			for (Path incdir : includedirpaths) {
-				includebases.add(SakerPath.valueOf(incdir));
+			if (pchdepinfo != null) {
+				//no need to add failed includes, as if the pch compilation fails, the source file doesn't get compiled
+				depinfo.includes.addAll(pchdepinfo.includes);
 			}
-			includebases.add(SakerPath.valueOf(compilefilepath[0]).getParent());
 
-			UnsyncByteArrayOutputStream processout = new UnsyncByteArrayOutputStream();
-
-			NavigableSet<SakerPath> includes = new TreeSet<>();
-			NavigableSet<SakerPath> failedincludes = null;
-			boolean hadline = false;
-			//TODO print the lines in a locked way, so they're not interlaced
-			try (DataInputUnsyncByteArrayInputStream reader = new DataInputUnsyncByteArrayInputStream(
-					stdoutbytecontents)) {
-				for (String line; (line = reader.readLine()) != null;) {
-					if (line.isEmpty()) {
-						continue;
-					}
-					hadline = true;
-					Matcher errmatcher = CL_OUTPUT_ERROR_PATTERN.matcher(line);
-					if (errmatcher.matches()) {
-						String file = errmatcher.group(CL_OUTPUT_ERROR_GROUP_FILE);
-						String linenum = errmatcher.group(CL_OUTPUT_ERROR_GROUP_LINENUM);
-						String type = errmatcher.group(CL_OUTPUT_ERROR_GROUP_TYPE);
-						String clerror = errmatcher.group(CL_OUTPUT_ERROR_GROUP_CLERROR);
-						String desc = errmatcher.group(CL_OUTPUT_ERROR_GROUP_DESC);
-						int severity;
-						switch (type.toLowerCase(Locale.ENGLISH)) {
-							case "fatal error":
-							case "error": {
-								severity = SakerLog.SEVERITY_ERROR;
-								break;
-							}
-							case "warning": {
-								severity = SakerLog.SEVERITY_WARNING;
-								break;
-							}
-							default: {
-								severity = SakerLog.SEVERITY_INFO;
-								break;
-							}
-						}
-						SakerPath diagnosticpath = null;
-						int lineindex = -1;
-						try {
-							Path diagpath = Paths.get(file);
-							diagnosticpath = executioncontext.toUnmirrorPath(diagpath);
-						} catch (Exception e) {
-							SakerLog.error().verbose().println("Failed to parse CL output path: " + e + " for " + file);
-						}
-						if (diagnosticpath != null) {
-							//only set line index if the path is known
-							try {
-								lineindex = Integer.parseInt(linenum) - 1;
-							} catch (NumberFormatException e) {
-								//ignore
-							}
-						}
-						String trimmedclerror = clerror == null ? null : clerror.trim();
-						if (desc != null && "C1083".equalsIgnoreCase(trimmedclerror)) {
-							//C1083: Cannot open include file: 'the/path/to/the/file': No such file or directory
-							int idx1 = desc.indexOf('\'');
-							if (idx1 >= 0) {
-								int idx2 = desc.lastIndexOf('\'');
-								if (idx2 > idx1) {
-									String notfoundpathstr = desc.substring(idx1 + 1, idx2);
-									Path notfoundpath = Paths.get(notfoundpathstr);
-									if (notfoundpath.isAbsolute()) {
-										SakerPath unmirrored = executioncontext.toUnmirrorPath(notfoundpath);
-										if (unmirrored != null) {
-											if (failedincludes == null) {
-												failedincludes = new TreeSet<>();
-											}
-											failedincludes.add(unmirrored);
-										} else {
-											//TODO handle local missing include
-										}
-									} else {
-										for (Path includedirpath : includedirpaths) {
-											Path notfoundabspath = includedirpath.resolve(notfoundpath);
-											SakerPath unmirrored = executioncontext.toUnmirrorPath(notfoundabspath);
-											if (unmirrored != null) {
-												if (failedincludes == null) {
-													failedincludes = new TreeSet<>();
-												}
-												failedincludes.add(unmirrored);
-											} else {
-												//TODO handle local missing include
-											}
-										}
-									}
-								}
-							}
-						}
-						diagnostics
-								.add(new CompilerDiagnostic(diagnosticpath, severity, lineindex, trimmedclerror, desc));
-					} else if (line.startsWith("Note: including file:")) {
-						//XXX should we choose a lower case locale?
-						String includedfilepathstr = line.substring(21).trim().toLowerCase();// len of Note: ...
-						try {
-							Path reallocalpath = Paths.get(includedfilepathstr).toRealPath(LinkOption.NOFOLLOW_LINKS);
-							SakerPath reallocalsakerpath = SakerPath.valueOf(reallocalpath);
-							SakerPath unmirrored = executioncontext.toUnmirrorPath(reallocalpath);
-							if (!SakerPathFiles.hasPathOrParent(includebases, reallocalsakerpath)) {
-								StringBuilder sb = new StringBuilder();
-								if (unmirrored == null) {
-									sb.append("Included local file: ");
-									sb.append(reallocalsakerpath);
-								} else {
-									sb.append("Included file: ");
-									sb.append(unmirrored);
-								}
-								sb.append(" is not present in any of the include paths.");
-								diagnostics.add(new CompilerDiagnostic(null, SakerLog.SEVERITY_WARNING, -1, null,
-										sb.toString()));
-							}
-							if (unmirrored != null) {
-								includes.add(unmirrored);
-							} else {
-								//TODO handle non mirrored included path
-							}
-						} catch (IOException | InvalidPathException e) {
-							SakerLog.error().verbose().println("Failed to determine included file path for: "
-									+ includedfilepathstr + " (" + e + ")");
-							continue;
-						}
-					} else {
-						processout.write(ByteArrayRegion.wrap((line + "\n").getBytes(StandardCharsets.UTF_8)));
-					}
-				}
-			}
-			TreeSet<String> outputnames = new TreeSet<>();
 			CompilerInnerTaskResult result;
 			if (procresult != 0) {
-				if (!hadline) {
-					//no output from the process, it probably failed to start
-					SakerLog.error().verbose().println("Failed to start cl process: " + procresult + " (0x"
-							+ Integer.toHexString(procresult) + ")");
+				if (depinfo.processOutput.isEmpty()) {
+					//failed to start or something
+					CompilerDiagnostic errordiag = new CompilerDiagnostic(null, SakerLog.SEVERITY_ERROR, -1, null,
+							"cl exited with error code: " + procresult + " (0x" + Integer.toHexString(procresult)
+									+ ")");
+					depinfo.diagnostics.add(errordiag);
+					printDiagnostic(taskcontext, null, errordiag);
 				}
 				result = CompilerInnerTaskResult.failed(compilationentry);
 			} else {
-				if (objoutpath != null) {
-					ProviderHolderPathKey objoutpathkey = LocalFileProvider.getInstance().getPathKey(objoutpath);
-					taskutilities.addSynchronizeInvalidatedProviderPathFileToDirectory(outputDir, objoutpathkey,
-							outputobjectfilename);
-					outputnames.add(outputobjectfilename);
-				}
-
-				if (pchoutpath != null) {
-					ProviderHolderPathKey pchoutpathkey = LocalFileProvider.getInstance().getPathKey(pchoutpath);
-					taskutilities.addSynchronizeInvalidatedProviderPathFileToDirectory(outputDir, pchoutpathkey,
-							outputpchfilename);
-					outputnames.add(outputpchfilename);
-				}
+				ProviderHolderPathKey objoutpathkey = LocalFileProvider.getInstance().getPathKey(objoutpath);
+				taskutilities.addSynchronizeInvalidatedProviderPathFileToDirectory(outputDir, objoutpathkey,
+						outputobjectfilename);
 
 //				taskcontext.invalidate(objoutpathkey);
 //				SakerFile objsakerfile = taskutilities.createProviderPathFile(objectfilename, objoutpathkey);
@@ -1152,17 +1150,152 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			}
 
 			result.outputObjectName = outputobjectfilename;
-			result.outputPrecompiledHeaderName = outputpchfilename;
-			result.inputContents = contents[0];
-			if (!diagnostics.isEmpty()) {
-				//dont assign if non empty, keep it null
-				result.diagnostics = diagnostics;
-			}
-			result.includes = includes;
-			result.failedIncludes = failedincludes;
-			result.processOutput = processout.toByteArrayRegion();
+			result.dependencyInfo = depinfo;
 
 			return result;
+		}
+
+		private static void addIncludeDirectoryCommands(List<String> commands, List<Path> includedirpaths) {
+			for (Path incdir : includedirpaths) {
+				commands.add("/I" + incdir);
+			}
+		}
+
+		private static void analyzeCLOutput(TaskContext taskcontext, List<Path> includedirpaths,
+				ByteArrayRegion stdoutbytecontents, CompilationDependencyInfo depinfo, int procresult) {
+			NavigableSet<SakerPath> includes = depinfo.includes;
+			NavigableSet<SakerPath> failedincludes = depinfo.failedIncludes;
+			NavigableSet<CompilerDiagnostic> diagnostics = depinfo.diagnostics;
+			ExecutionContext executioncontext = taskcontext.getExecutionContext();
+			if (stdoutbytecontents.isEmpty()) {
+				if (procresult != 0) {
+					CompilerDiagnostic errordiag = new CompilerDiagnostic(null, SakerLog.SEVERITY_ERROR, -1, null,
+							"cl exited with error code: " + procresult + " (0x" + Integer.toHexString(procresult)
+									+ ")");
+					depinfo.diagnostics.add(errordiag);
+					printDiagnostic(taskcontext, null, errordiag);
+				}
+			} else {
+				try (UnsyncByteArrayOutputStream processout = new UnsyncByteArrayOutputStream()) {
+					try (DataInputUnsyncByteArrayInputStream reader = new DataInputUnsyncByteArrayInputStream(
+							stdoutbytecontents)) {
+						for (String line; (line = reader.readLine()) != null;) {
+							if (line.isEmpty()) {
+								continue;
+							}
+							Matcher errmatcher = CL_OUTPUT_ERROR_PATTERN.matcher(line);
+							if (errmatcher.matches()) {
+								String file = errmatcher.group(CL_OUTPUT_ERROR_GROUP_FILE);
+								String linenum = errmatcher.group(CL_OUTPUT_ERROR_GROUP_LINENUM);
+								String type = errmatcher.group(CL_OUTPUT_ERROR_GROUP_TYPE);
+								String clerror = errmatcher.group(CL_OUTPUT_ERROR_GROUP_CLERROR);
+								String desc = errmatcher.group(CL_OUTPUT_ERROR_GROUP_DESC);
+								int severity;
+								switch (type.toLowerCase(Locale.ENGLISH)) {
+									case "fatal error":
+									case "error": {
+										severity = SakerLog.SEVERITY_ERROR;
+										break;
+									}
+									case "warning": {
+										severity = SakerLog.SEVERITY_WARNING;
+										break;
+									}
+									default: {
+										severity = SakerLog.SEVERITY_INFO;
+										break;
+									}
+								}
+								SakerPath diagnosticpath = null;
+								int lineindex = -1;
+								try {
+									Path diagpath = Paths.get(file);
+									diagnosticpath = executioncontext.toUnmirrorPath(diagpath);
+								} catch (Exception e) {
+									SakerLog.error().verbose()
+											.println("Failed to parse CL output path: " + e + " for " + file);
+								}
+								if (diagnosticpath != null) {
+									//only set line index if the path is known
+									try {
+										lineindex = Integer.parseInt(linenum) - 1;
+									} catch (NumberFormatException e) {
+										//ignore
+									}
+								}
+								String trimmedclerror = clerror == null ? null : clerror.trim();
+								if (desc != null && "C1083".equalsIgnoreCase(trimmedclerror)) {
+									//C1083: Cannot open include file: 'the/path/to/the/file': No such file or directory
+									int idx1 = desc.indexOf('\'');
+									if (idx1 >= 0) {
+										int idx2 = desc.lastIndexOf('\'');
+										if (idx2 > idx1) {
+											String notfoundpathstr = desc.substring(idx1 + 1, idx2);
+											Path notfoundpath = Paths.get(notfoundpathstr);
+											if (notfoundpath.isAbsolute()) {
+												SakerPath unmirrored = executioncontext.toUnmirrorPath(notfoundpath);
+												if (unmirrored != null) {
+													if (failedincludes == null) {
+														failedincludes = new TreeSet<>();
+													}
+													failedincludes.add(unmirrored);
+												} else {
+													//TODO handle local missing include
+												}
+											} else {
+												for (Path includedirpath : includedirpaths) {
+													Path notfoundabspath = includedirpath.resolve(notfoundpath);
+													SakerPath unmirrored = executioncontext
+															.toUnmirrorPath(notfoundabspath);
+													if (unmirrored != null) {
+														if (failedincludes == null) {
+															failedincludes = new TreeSet<>();
+														}
+														failedincludes.add(unmirrored);
+													} else {
+														//TODO handle local missing include
+													}
+												}
+											}
+										}
+									}
+								}
+								diagnostics.add(new CompilerDiagnostic(diagnosticpath, severity, lineindex,
+										trimmedclerror, desc));
+							} else if (line.startsWith("Note: including file:")) {
+								//XXX should we choose a lower case locale?
+								String includedfilepathstr = line.substring(21).trim().toLowerCase();// len of Note: ...
+								try {
+									Path reallocalpath = Paths.get(includedfilepathstr)
+											.toRealPath(LinkOption.NOFOLLOW_LINKS);
+									SakerPath unmirrored = executioncontext.toUnmirrorPath(reallocalpath);
+									if (unmirrored != null) {
+										includes.add(unmirrored);
+									} else {
+										//TODO handle non mirrored included path
+									}
+								} catch (IOException | InvalidPathException e) {
+									SakerLog.error().verbose().println("Failed to determine included file path for: "
+											+ includedfilepathstr + " (" + e + ")");
+									continue;
+								}
+							} else {
+								processout.write(ByteArrayRegion.wrap((line + "\n").getBytes(StandardCharsets.UTF_8)));
+							}
+						}
+					}
+					depinfo.processOutput = processout.toByteArrayRegion();
+				}
+			}
+		}
+
+		private static void addMacroDefinitionCommands(List<String> commands, Map<String, String> macrodefs) {
+			if (!ObjectUtils.isNullOrEmpty(macrodefs)) {
+				for (Entry<String, String> entry : macrodefs.entrySet()) {
+					String val = entry.getValue();
+					commands.add("/D" + entry.getKey() + (ObjectUtils.isNullOrEmpty(val) ? "" : "=" + val));
+				}
+			}
 		}
 
 		//XXX somewhat duplicated with linker worker factory
@@ -1212,22 +1345,31 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		if (ObjectUtils.isNullOrEmpty(diagnostics)) {
 			return;
 		}
+		printDiagnostics(taskcontext, sourcefilepath, diagnostics);
+	}
+
+	private static void printDiagnostics(TaskContext taskcontext, SakerPath sourcefilepath,
+			NavigableSet<CompilerDiagnostic> diagnostics) {
 		for (CompilerDiagnostic d : diagnostics) {
-			String clerror = d.getErrorCode();
-			String desc = d.getDescription();
-
-			SakerLog log = SakerLog.severity(d.getSeverity());
-			log.out(taskcontext);
-			SakerPath path = d.getPath();
-			if (path != null) {
-				log.path(path);
-				log.line(d.getLineIndex());
-			} else {
-				log.path(sourcefilepath);
-			}
-
-			log.println((clerror == null ? "" : clerror + ": ") + desc);
+			printDiagnostic(taskcontext, sourcefilepath, d);
 		}
+	}
+
+	private static void printDiagnostic(TaskContext taskcontext, SakerPath sourcefilepath, CompilerDiagnostic d) {
+		String clerror = d.getErrorCode();
+		String desc = d.getDescription();
+
+		SakerLog log = SakerLog.severity(d.getSeverity());
+		log.out(taskcontext);
+		SakerPath path = d.getPath();
+		if (path != null) {
+			log.path(path);
+			log.line(d.getLineIndex());
+		} else {
+			log.path(sourcefilepath);
+		}
+
+		log.println((clerror == null ? "" : clerror + ": ") + desc);
 	}
 
 }

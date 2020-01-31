@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
+import saker.std.main.file.option.FileLocationTaskOption;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 
 public interface OptionCompilationInputPass {
@@ -36,5 +37,5 @@ public interface OptionCompilationInputPass {
 
 	public Collection<MSVCCompilerOptions> getCompilerOptions();
 
-	public Boolean getCreatePrecompiledHeader();
+	public FileLocationTaskOption getPrecompiledHeader();
 }

@@ -30,6 +30,7 @@ import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKSupportUtils;
+import saker.std.api.file.location.FileLocation;
 
 public final class SimplePresetCOptions implements PresetCOptions, Externalizable, Cloneable {
 	private static final long serialVersionUID = 1L;
@@ -46,7 +47,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	private Map<String, String> macroDefinitions;
 	private Set<String> linkSimpleParameters;
 	private Set<String> compileSimpleParameters;
-	private Boolean createPrecompiledHeader;
+	private FileLocation precompiledHeader;
 
 	/**
 	 * For {@link Externalizable}.
@@ -114,8 +115,8 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	@Override
-	public Boolean getCreatePrecompiledHeader() {
-		return createPrecompiledHeader;
+	public FileLocation getPrecompiledHeader() {
+		return precompiledHeader;
 	}
 
 	public void setPresetIdentifier(String presetIdentifier) {
@@ -159,8 +160,8 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.compileSimpleParameters = compileSimpleParameters;
 	}
 
-	public void setCreatePrecompiledHeader(Boolean createPrecompiledHeader) {
-		this.createPrecompiledHeader = createPrecompiledHeader;
+	public void setPrecompiledHeader(FileLocation precompiledHeader) {
+		this.precompiledHeader = precompiledHeader;
 	}
 
 	@Override
@@ -169,7 +170,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		out.writeObject(identifier);
 		out.writeObject(language);
 		out.writeObject(architecture);
-		out.writeObject(createPrecompiledHeader);
+		out.writeObject(precompiledHeader);
 		SerialUtils.writeExternalCollection(out, libraryPaths);
 		SerialUtils.writeExternalCollection(out, includeDirectories);
 		SerialUtils.writeExternalMap(out, sdks);
@@ -184,7 +185,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		identifier = (CompilationIdentifier) in.readObject();
 		language = (String) in.readObject();
 		architecture = (String) in.readObject();
-		createPrecompiledHeader = (Boolean) in.readObject();
+		precompiledHeader = (FileLocation) in.readObject();
 		libraryPaths = SerialUtils.readExternalImmutableLinkedHashSet(in);
 		includeDirectories = SerialUtils.readExternalImmutableLinkedHashSet(in);
 		sdks = SerialUtils.readExternalSortedImmutableNavigableMap(in, SDKSupportUtils.getSDKNameComparator());
@@ -199,7 +200,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		int result = 1;
 		result = prime * result + ((architecture == null) ? 0 : architecture.hashCode());
 		result = prime * result + ((compileSimpleParameters == null) ? 0 : compileSimpleParameters.hashCode());
-		result = prime * result + ((createPrecompiledHeader == null) ? 0 : createPrecompiledHeader.hashCode());
+		result = prime * result + ((precompiledHeader == null) ? 0 : precompiledHeader.hashCode());
 		result = prime * result + ((identifier == null) ? 0 : identifier.hashCode());
 		result = prime * result + ((includeDirectories == null) ? 0 : includeDirectories.hashCode());
 		result = prime * result + ((language == null) ? 0 : language.hashCode());
@@ -229,10 +230,10 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 				return false;
 		} else if (!compileSimpleParameters.equals(other.compileSimpleParameters))
 			return false;
-		if (createPrecompiledHeader == null) {
-			if (other.createPrecompiledHeader != null)
+		if (precompiledHeader == null) {
+			if (other.precompiledHeader != null)
 				return false;
-		} else if (!createPrecompiledHeader.equals(other.createPrecompiledHeader))
+		} else if (!precompiledHeader.equals(other.precompiledHeader))
 			return false;
 		if (identifier == null) {
 			if (other.identifier != null)

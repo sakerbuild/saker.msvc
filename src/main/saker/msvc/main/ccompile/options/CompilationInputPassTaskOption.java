@@ -117,9 +117,9 @@ public interface CompilationInputPassTaskOption {
 		return null;
 	}
 
-	public default Boolean getCreatePrecompiledHeader() {
+	public default FileLocationTaskOption getPrecompiledHeader() {
 		//TODO doc
-		return false;
+		return null;
 	}
 
 	public static CompilationInputPassTaskOption valueOf(FileLocation filelocation) {

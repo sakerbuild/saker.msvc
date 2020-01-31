@@ -18,6 +18,7 @@ package saker.msvc.main.ccompile.options;
 import java.util.Collection;
 import java.util.Map;
 
+import saker.build.file.path.SakerPath;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
@@ -33,6 +34,7 @@ import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
+import saker.std.api.file.location.FileLocation;
 
 @NestInformation("Represents an options configuration to be used with " + MSVCCCompileTaskFactory.TASK_NAME + "().\n"
 		+ "The described options will be merged with the compilation input configuration based on the option qualifiers. "
@@ -101,9 +103,9 @@ public interface MSVCCompilerOptions {
 		return null;
 	}
 
-	public default Boolean getCreatePrecompiledHeader() {
+	public default FileLocation getPrecompiledHeader() {
 		//TODO doc
-		return false;
+		return null;
 	}
 
 	public static boolean canMergeArchitectures(String targetarch, String optionsarch) {

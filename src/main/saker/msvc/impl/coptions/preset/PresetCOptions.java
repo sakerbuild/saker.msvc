@@ -22,6 +22,7 @@ import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.sdk.support.api.SDKDescription;
+import saker.std.api.file.location.FileLocation;
 
 public interface PresetCOptions {
 	//transient, no real meaning 
@@ -48,6 +49,6 @@ public interface PresetCOptions {
 
 	public Set<String> getSimpleLinkerParameters();
 
-	public Boolean getCreatePrecompiledHeader();
+	public FileLocation getPrecompiledHeader();
 
 }

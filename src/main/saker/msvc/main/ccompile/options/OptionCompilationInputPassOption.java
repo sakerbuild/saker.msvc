@@ -22,6 +22,7 @@ import saker.build.task.TaskContext;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
+import saker.std.main.file.option.FileLocationTaskOption;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 
 public class OptionCompilationInputPassOption
@@ -33,7 +34,7 @@ public class OptionCompilationInputPassOption
 	private Collection<String> simpleParameters;
 	private Collection<MSVCCompilerOptions> compilerOptions;
 	private String language;
-	private Boolean createPrecompiledHeader;
+	private FileLocationTaskOption precompiledHeader;
 
 	public OptionCompilationInputPassOption(CompilationInputPassTaskOption copy) {
 		this.files = ObjectUtils.cloneArrayList(copy.getFiles(), MultiFileLocationTaskOption::clone);
@@ -44,7 +45,7 @@ public class OptionCompilationInputPassOption
 		this.simpleParameters = ImmutableUtils.makeImmutableList(copy.getSimpleParameters());
 		this.compilerOptions = ObjectUtils.cloneArrayList(copy.getCompilerOptions(), MSVCCompilerOptions::clone);
 		this.language = copy.getLanguage();
-		this.createPrecompiledHeader = copy.getCreatePrecompiledHeader();
+		this.precompiledHeader = ObjectUtils.clone(copy.getPrecompiledHeader(), FileLocationTaskOption::clone);
 	}
 
 	@Override
@@ -98,7 +99,7 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public Boolean getCreatePrecompiledHeader() {
-		return createPrecompiledHeader;
+	public FileLocationTaskOption getPrecompiledHeader() {
+		return precompiledHeader;
 	}
 }

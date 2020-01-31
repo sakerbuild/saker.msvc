@@ -47,11 +47,13 @@ import saker.compiler.utils.api.CompilerUtils;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.ccompile.FileCompilationConfiguration;
+import saker.msvc.impl.ccompile.FileCompilationProperties;
 import saker.msvc.impl.ccompile.MSVCCCompileWorkerTaskFactory;
 import saker.msvc.impl.ccompile.MSVCCCompileWorkerTaskIdentifier;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.impl.coptions.preset.PresetCOptions;
+import saker.msvc.impl.util.FileLocationFileNameVisitor;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.options.CompilationInputPassOptionVisitor;
 import saker.msvc.main.ccompile.options.CompilationInputPassTaskOption;
@@ -65,7 +67,6 @@ import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.DocCCompilerWorkerTaskOutput;
-import saker.msvc.main.util.FileLocationFileNameVisitor;
 import saker.msvc.main.util.TaskTags;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestParameterInformation;
@@ -210,6 +211,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 				}
 
 				Map<IncludeDirectoryTaskOption, Collection<IncludeDirectoryOption>> calculatedincludediroptions = new HashMap<>();
+				Map<FileCompilationProperties, FileCompilationConfiguration> precompiledheaderconfigurations = new HashMap<>();
 
 				//ignore-case comparison of possible output names of the files
 				//  as windows has case-insensitive file names, we need to support Main.cpp and main.cpp from different directories
@@ -234,7 +236,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 
 				FileLocationFileNameVisitor filenamevisitor = new FileLocationFileNameVisitor();
 
-				List<FileCompilationConfiguration> configbuf = new ArrayList<>();
+				List<ConfigSetupHolder> configbuf = new ArrayList<>();
 				for (CompilationInputPassTaskOption inputpass : inputpasses) {
 					CompilationIdentifier[] subid = { null };
 					OptionCompilationInputPass[] suboptioninputpass = { null };
@@ -248,7 +250,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 							for (FileLocation filelocation : filelocations) {
 								FileCompilationConfiguration nconfig = createConfigurationForFileLocation(filelocation,
 										null, null);
-								configbuf.add(nconfig);
+								configbuf.add(new ConfigSetupHolder(nconfig));
 							}
 						}
 
@@ -264,7 +266,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 							Set<String> simpleparamoption = ImmutableUtils
 									.makeImmutableNavigableSet(input.getSimpleParameters());
 							String passlang = input.getLanguage();
-							Boolean createpch = input.getCreatePrecompiledHeader();
+							FileLocation pchfilelocation = TaskOptionUtils.toFileLocation(input.getPrecompiledHeader(),
+									taskcontext);
 
 							Collection<IncludeDirectoryTaskOption> indirtaskopts = input.getIncludeDirectories();
 							Set<IncludeDirectoryOption> inputincludedirs = new LinkedHashSet<>();
@@ -292,10 +295,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 									nconfig.setSimpleParameters(simpleparamoption);
 									nconfig.setIncludeDirectories(inputincludedirs);
 									nconfig.setMacroDefinitions(macrodefinitions);
-									if (Boolean.TRUE.equals(createpch)) {
-										nconfig.setCreatePrecompiledHeader(true);
-									}
-									configbuf.add(nconfig);
+									configbuf.add(new ConfigSetupHolder(nconfig, pchfilelocation));
 								}
 							}
 						}
@@ -321,7 +321,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 					CompilationIdentifier targetmergeidentifier = CompilationIdentifier.concat(optionidentifier,
 							subid[0]);
 
-					for (FileCompilationConfiguration config : configbuf) {
+					for (ConfigSetupHolder configholder : configbuf) {
+						FileCompilationConfiguration config = configholder.config;
 						MSVCCompilerOptionsVisitor optionsvisitor = new MSVCCompilerOptionsVisitor() {
 							@Override
 							public void visit(MSVCCompilerOptions options) {
@@ -370,9 +371,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 								mergeSDKDescriptionOptions(taskcontext, sdkdescriptions, options.getSDKs());
 								mergeMacroDefinitions(config, options.getMacroDefinitions());
 								mergeSimpleParameters(config, options.getSimpleCompilerParameters());
-								if (Boolean.TRUE.equals(options.getCreatePrecompiledHeader())) {
-									config.setCreatePrecompiledHeader(true);
-								}
+								FileLocation pch = options.getPrecompiledHeader();
+								mergePrecompiledHeader(configholder, pch);
 							}
 
 							private void mergePreset(PresetCOptions preset, FileCompilationConfiguration config,
@@ -381,8 +381,21 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 								mergePresetSDKDescriptions(sdkdescriptions, preset);
 								mergeMacroDefinitions(config, preset.getMacroDefinitions());
 								mergeSimpleParameters(config, preset.getSimpleCompilerParameters());
-								if (Boolean.TRUE.equals(preset.getCreatePrecompiledHeader())) {
-									config.setCreatePrecompiledHeader(true);
+
+								FileLocation pch = preset.getPrecompiledHeader();
+								mergePrecompiledHeader(configholder, pch);
+
+							}
+
+							private void mergePrecompiledHeader(ConfigSetupHolder configholder, FileLocation pch) {
+								if (pch != null) {
+									FileLocation presentpch = configholder.precompiledHeader;
+									if (presentpch != null && !presentpch.equals(pch)) {
+										throw new IllegalArgumentException(
+												"Option merge conflict for precompiled header: " + pch + " and "
+														+ presentpch);
+									}
+									configholder.precompiledHeader = pch;
 								}
 							}
 						};
@@ -400,7 +413,30 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 						}
 					}
 
-					files.addAll(configbuf);
+					//resolve precompiled headers
+					for (ConfigSetupHolder configholder : configbuf) {
+						if (configholder.precompiledHeader != null) {
+							FileCompilationProperties pchprops = new FileCompilationProperties(
+									configholder.precompiledHeader);
+							pchprops.copyFrom(configholder.config);
+
+							FileCompilationConfiguration presentpchconfig = precompiledheaderconfigurations
+									.get(pchprops);
+							if (presentpchconfig == null) {
+								configholder.precompiledHeader.accept(filenamevisitor);
+								String pchfilename = filenamevisitor.getFileName();
+
+								String pchoutfilename = getOutFileName(pchfilename, outnames, null);
+								presentpchconfig = new FileCompilationConfiguration(configholder.precompiledHeader,
+										pchoutfilename);
+								presentpchconfig.copyFrom(pchprops);
+								precompiledheaderconfigurations.put(pchprops, presentpchconfig);
+							}
+							configholder.config.setPrecompiledHeader(presentpchconfig);
+
+						}
+						files.add(configholder.config);
+					}
 					configbuf.clear();
 				}
 
@@ -571,6 +607,21 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 			}
 			++i;
 		}
+	}
+
+	private static class ConfigSetupHolder {
+		public FileCompilationConfiguration config;
+		public FileLocation precompiledHeader;
+
+		public ConfigSetupHolder(FileCompilationConfiguration config) {
+			this.config = config;
+		}
+
+		public ConfigSetupHolder(FileCompilationConfiguration config, FileLocation precompiledHeader) {
+			this.config = config;
+			this.precompiledHeader = precompiledHeader;
+		}
+
 	}
 
 }
