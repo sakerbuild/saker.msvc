@@ -387,7 +387,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 		for (CompiledFileState filestate : stateexecutioncompiledfiles.values()) {
 			FileCompilationConfiguration compilationconfig = filestate.getCompilationConfiguration();
-			Set<IncludeDirectoryOption> includedirs = compilationconfig.getIncludeDirectories();
+			Collection<IncludeDirectoryOption> includedirs = compilationconfig.getIncludeDirectories();
 			if (!ObjectUtils.isNullOrEmpty(includedirs)) {
 				for (IncludeDirectoryOption includediroption : includedirs) {
 					includediroption.accept(new IncludeDirectoryVisitor() {
@@ -725,7 +725,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 	}
 
-	private static class CompilerInnerTaskResult implements Externalizable {
+	public static class CompilerInnerTaskResult implements Externalizable {
 		private static final long serialVersionUID = 1L;
 
 		protected FileCompilationConfiguration compilationEntry;
@@ -801,6 +801,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		@Override
 		public void writeWrapped(RMIObjectOutput out) throws IOException {
+			out.writeRemoteObject(task.coordinator);
 			out.writeRemoteObject(task.fileLocationSuppier);
 			out.writeObject(task.outputDirPath);
 			out.writeObject(task.architecture);
@@ -813,6 +814,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		@Override
 		public void readWrapped(RMIObjectInput in) throws IOException, ClassNotFoundException {
 			task = new SourceCompilerInnerTaskFactory();
+			task.coordinator = (WorkerTaskCoordinator) in.readObject();
 			task.fileLocationSuppier = (Supplier<FileCompilationConfiguration>) in.readObject();
 			task.outputDirPath = (SakerPath) in.readObject();
 			task.architecture = (String) in.readObject();
@@ -942,7 +944,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			SakerEnvironment environment = executioncontext.getEnvironment();
 			Path compilefilepath = getCompileFilePath(compilationentry, environment, taskutilities, contents);
 			List<Path> includedirpaths = new ArrayList<>();
-			Set<IncludeDirectoryOption> includedirectories = compilationentry.getIncludeDirectories();
+			Collection<IncludeDirectoryOption> includedirectories = compilationentry.getIncludeDirectories();
 
 			if (!ObjectUtils.isNullOrEmpty(includedirectories)) {
 				for (IncludeDirectoryOption includediroption : includedirectories) {
@@ -1063,7 +1065,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 							CollectingProcessIOConsumer stdoutcollector = new CollectingProcessIOConsumer();
 							int procresult = MSVCUtils.runMSVCProcess(commands, workingdir, stdoutcollector, null,
 									true);
-							CompilationDependencyInfo depinfo = new CompilationDependencyInfo(contents[0]);
+							CompilationDependencyInfo depinfo = new CompilationDependencyInfo(pchcontents[0]);
 							entrypch.getFileLocation().accept(new FileLocationVisitor() {
 								//add the compiled header file as an include dependency, so it is added to the source files
 								@Override
@@ -1264,7 +1266,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 										trimmedclerror, desc));
 							} else if (line.startsWith("Note: including file:")) {
 								//XXX should we choose a lower case locale?
-								String includedfilepathstr = line.substring(21).trim().toLowerCase();// len of Note: ...
+								// 21: len of Note: ...
+								String includedfilepathstr = line.substring(21).trim().toLowerCase();
 								try {
 									Path reallocalpath = Paths.get(includedfilepathstr)
 											.toRealPath(LinkOption.NOFOLLOW_LINKS);

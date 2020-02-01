@@ -6,11 +6,13 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
+import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
@@ -21,7 +23,8 @@ public class FileCompilationProperties implements Externalizable {
 
 	protected FileLocation fileLocation;
 	protected String language;
-	protected Set<IncludeDirectoryOption> includeDirectories;
+	//store include directories as a list, as their order matters
+	protected List<IncludeDirectoryOption> includeDirectories;
 	protected Map<String, String> macroDefinitions;
 	protected NavigableSet<String> simpleParameters = Collections.emptyNavigableSet();
 
@@ -42,11 +45,12 @@ public class FileCompilationProperties implements Externalizable {
 		this.simpleParameters = config.simpleParameters;
 	}
 
-	public void setIncludeDirectories(Set<IncludeDirectoryOption> includeDirectories) {
+	public void setIncludeDirectories(Collection<? extends IncludeDirectoryOption> includeDirectories) {
 		if (ObjectUtils.isNullOrEmpty(includeDirectories)) {
 			this.includeDirectories = null;
 		} else {
-			this.includeDirectories = includeDirectories;
+			this.includeDirectories = ImmutableUtils
+					.makeImmutableList(ImmutableUtils.makeImmutableLinkedHashSet(includeDirectories));
 		}
 	}
 
@@ -72,7 +76,7 @@ public class FileCompilationProperties implements Externalizable {
 		return language;
 	}
 
-	public Set<IncludeDirectoryOption> getIncludeDirectories() {
+	public Collection<IncludeDirectoryOption> getIncludeDirectories() {
 		return includeDirectories;
 	}
 
@@ -105,7 +109,7 @@ public class FileCompilationProperties implements Externalizable {
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 		fileLocation = (FileLocation) in.readObject();
 		language = (String) in.readObject();
-		includeDirectories = SerialUtils.readExternalImmutableLinkedHashSet(in);
+		includeDirectories = SerialUtils.readExternalImmutableList(in);
 		macroDefinitions = SerialUtils.readExternalImmutableLinkedHashMap(in);
 		simpleParameters = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 	}
