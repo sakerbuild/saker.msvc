@@ -28,6 +28,7 @@ public class PrecompiledHeaderDependencyCompileTest extends MSVCTestCase {
 		files.putFile(maincpppath, files.getAllBytes(maincpppath).toString().replace("123", "456"));
 		runScriptTask("build");
 		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 888, 222, 456));
+		assertHeaderPrecompilationWasntRun();
 
 		files.putFile(pchpath, files.getAllBytes(pchpath).toString().replace("222", "333"));
 		runScriptTask("build");

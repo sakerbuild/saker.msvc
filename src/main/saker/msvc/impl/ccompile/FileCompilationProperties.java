@@ -9,7 +9,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.TreeSet;
 
 import saker.build.thirdparty.saker.util.ImmutableUtils;
@@ -18,7 +17,7 @@ import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.std.api.file.location.FileLocation;
 
-public class FileCompilationProperties implements Externalizable {
+public final class FileCompilationProperties implements Externalizable {
 	private static final long serialVersionUID = 1L;
 
 	protected FileLocation fileLocation;
@@ -36,6 +35,17 @@ public class FileCompilationProperties implements Externalizable {
 
 	public FileCompilationProperties(FileLocation fileLocation) {
 		this.fileLocation = fileLocation;
+	}
+
+	public FileCompilationProperties(FileCompilationProperties copy) {
+		this.fileLocation = copy.fileLocation;
+		copyFrom(copy);
+	}
+
+	public FileCompilationProperties withFileLocation(FileLocation fl) {
+		FileCompilationProperties result = new FileCompilationProperties(fl);
+		result.copyFrom(this);
+		return result;
 	}
 
 	public void copyFrom(FileCompilationProperties config) {
@@ -155,6 +165,15 @@ public class FileCompilationProperties implements Externalizable {
 		} else if (!simpleParameters.equals(other.simpleParameters))
 			return false;
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "FileCompilationProperties[" + (fileLocation != null ? "fileLocation=" + fileLocation + ", " : "")
+				+ (language != null ? "language=" + language + ", " : "")
+				+ (includeDirectories != null ? "includeDirectories=" + includeDirectories + ", " : "")
+				+ (macroDefinitions != null ? "macroDefinitions=" + macroDefinitions + ", " : "")
+				+ (simpleParameters != null ? "simpleParameters=" + simpleParameters : "") + "]";
 	}
 
 }

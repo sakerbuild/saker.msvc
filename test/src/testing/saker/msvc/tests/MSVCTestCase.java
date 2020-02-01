@@ -18,6 +18,7 @@ package testing.saker.msvc.tests;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import saker.build.thirdparty.saker.util.StringUtils;
 import testing.saker.msvc.tests.mock.CLMockProcess;
@@ -169,5 +170,13 @@ public abstract class MSVCTestCase extends RepositoryLoadingVariablesMetricEnvir
 	@FunctionalInterface
 	public interface BinaryLine {
 		public void process(List<String> output, String architecture, String version);
+	}
+
+	protected void assertHeaderPrecompilationWasntRun() {
+		for (Entry<List<String>, Long> entry : getMetric().getProcessInvocationFrequencies().entrySet()) {
+			if (entry.getKey().contains("/Yc")) {
+				throw new AssertionError("Header was precompiled: " + entry.getKey());
+			}
+		}
 	}
 }

@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.TreeMap;
@@ -27,6 +29,7 @@ import java.util.TreeSet;
 
 import saker.build.file.content.ContentDescriptor;
 import saker.build.file.path.SakerPath;
+import saker.build.file.provider.RootFileProviderKey;
 import saker.build.task.EnvironmentSelectionResult;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
@@ -35,6 +38,72 @@ import saker.sdk.support.api.SDKSupportUtils;
 
 public class CompilerState implements Externalizable {
 	private static final long serialVersionUID = 1L;
+
+	public static class PrecompiledHeaderState implements Externalizable {
+		private static final long serialVersionUID = 1L;
+
+		private ContentDescriptor inputContents;
+		private ContentDescriptor outputContents;
+		private FileCompilationProperties compilationProperties;
+
+		private NavigableSet<SakerPath> includes;
+		private NavigableSet<CompilerDiagnostic> diagnostics;
+
+		/**
+		 * For {@link Externalizable}.
+		 */
+		public PrecompiledHeaderState() {
+		}
+
+		public PrecompiledHeaderState(ContentDescriptor inputContents, ContentDescriptor outputContents,
+				FileCompilationProperties compilationProperties, NavigableSet<SakerPath> includes,
+				NavigableSet<CompilerDiagnostic> diagnostics) {
+			this.inputContents = inputContents;
+			this.outputContents = outputContents;
+			this.compilationProperties = compilationProperties;
+			this.includes = includes;
+			this.diagnostics = diagnostics;
+		}
+
+		public ContentDescriptor getInputContents() {
+			return inputContents;
+		}
+
+		public ContentDescriptor getOutputContents() {
+			return outputContents;
+		}
+
+		public NavigableSet<CompilerDiagnostic> getDiagnostics() {
+			return diagnostics;
+		}
+
+		public FileCompilationProperties getCompilationProperties() {
+			return compilationProperties;
+		}
+
+		public NavigableSet<SakerPath> getIncludes() {
+			return includes;
+		}
+
+		@Override
+		public void writeExternal(ObjectOutput out) throws IOException {
+			out.writeObject(inputContents);
+			out.writeObject(outputContents);
+			out.writeObject(compilationProperties);
+			SerialUtils.writeExternalCollection(out, diagnostics);
+			SerialUtils.writeExternalCollection(out, includes);
+		}
+
+		@Override
+		public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+			inputContents = (ContentDescriptor) in.readObject();
+			outputContents = (ContentDescriptor) in.readObject();
+			compilationProperties = (FileCompilationProperties) in.readObject();
+			diagnostics = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+			includes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+		}
+
+	}
 
 	public static class CompiledFileState implements Externalizable {
 		private static final long serialVersionUID = 1L;
@@ -140,6 +209,8 @@ public class CompilerState implements Externalizable {
 
 	//maps out file names to states
 	private NavigableMap<String, CompiledFileState> executionCompiledFiles = Collections.emptyNavigableMap();
+	private Map<RootFileProviderKey, NavigableMap<SakerPath, PrecompiledHeaderState>> precompiledHeaders = Collections
+			.emptyMap();
 	private NavigableMap<String, SDKDescription> sdkDescriptions;
 	private EnvironmentSelectionResult environmentSelection;
 
@@ -147,6 +218,15 @@ public class CompilerState implements Externalizable {
 	 * For {@link Externalizable}.
 	 */
 	public CompilerState() {
+	}
+
+	public Map<RootFileProviderKey, NavigableMap<SakerPath, PrecompiledHeaderState>> getPrecompiledHeaders() {
+		return precompiledHeaders;
+	}
+
+	public void setPrecompiledHeaders(
+			Map<RootFileProviderKey, NavigableMap<SakerPath, PrecompiledHeaderState>> precompiledHeaders) {
+		this.precompiledHeaders = precompiledHeaders;
 	}
 
 	public void setExecutionCompiledFiles(NavigableMap<String, CompiledFileState> executionCompiledFiles) {
@@ -237,6 +317,8 @@ public class CompilerState implements Externalizable {
 	public void writeExternal(ObjectOutput out) throws IOException {
 		SerialUtils.writeExternalMap(out, executionCompiledFiles);
 		SerialUtils.writeExternalMap(out, sdkDescriptions);
+		SerialUtils.writeExternalMap(out, precompiledHeaders, SerialUtils::writeExternalObject,
+				SerialUtils::writeExternalMap);
 		out.writeObject(environmentSelection);
 	}
 
@@ -245,6 +327,8 @@ public class CompilerState implements Externalizable {
 		executionCompiledFiles = SerialUtils.readExternalSortedImmutableNavigableMap(in);
 		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
 				SDKSupportUtils.getSDKNameComparator());
+		precompiledHeaders = SerialUtils.readExternalMap(new HashMap<>(), in, SerialUtils::readExternalObject,
+				SerialUtils::readExternalSortedImmutableNavigableMap);
 		environmentSelection = (EnvironmentSelectionResult) in.readObject();
 	}
 

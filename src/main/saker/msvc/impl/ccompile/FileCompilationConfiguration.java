@@ -22,12 +22,13 @@ import java.io.ObjectOutput;
 
 import saker.std.api.file.location.FileLocation;
 
-public class FileCompilationConfiguration extends FileCompilationProperties {
+public class FileCompilationConfiguration implements Externalizable {
 	private static final long serialVersionUID = 1L;
 
 	private String outFileName;
-	//TODO the precompiled headers don't need full configuration as their options are the same as this
-	private FileCompilationConfiguration precompiledHeader;
+	private FileCompilationProperties properties;
+	private FileLocation precompiledHeaderFileLocation;
+	private String precompiledHeaderOutFileName;
 
 	/**
 	 * For {@link Externalizable}.
@@ -35,9 +36,9 @@ public class FileCompilationConfiguration extends FileCompilationProperties {
 	public FileCompilationConfiguration() {
 	}
 
-	public FileCompilationConfiguration(FileLocation fileLocation, String outFileName) {
-		super(fileLocation);
+	public FileCompilationConfiguration(String outFileName, FileCompilationProperties properties) {
 		this.outFileName = outFileName;
+		this.properties = properties;
 	}
 
 	/**
@@ -47,33 +48,45 @@ public class FileCompilationConfiguration extends FileCompilationProperties {
 		return outFileName;
 	}
 
-	public FileCompilationConfiguration getPrecompiledHeader() {
-		return precompiledHeader;
+	public FileCompilationProperties getProperties() {
+		return properties;
 	}
 
-	public void setPrecompiledHeader(FileCompilationConfiguration precompiledHeader) {
-		this.precompiledHeader = precompiledHeader;
+	public String getPrecompiledHeaderOutFileName() {
+		return precompiledHeaderOutFileName;
+	}
+
+	public FileLocation getPrecompiledHeaderFileLocation() {
+		return precompiledHeaderFileLocation;
+	}
+
+	public void setPrecompiledHeader(FileLocation filelocation, String precompiledHeaderOutFileName) {
+		this.precompiledHeaderFileLocation = filelocation;
+		this.precompiledHeaderOutFileName = precompiledHeaderOutFileName;
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
-		super.writeExternal(out);
 		out.writeObject(outFileName);
-		out.writeObject(precompiledHeader);
+		out.writeObject(properties);
+		out.writeObject(precompiledHeaderFileLocation);
+		out.writeObject(precompiledHeaderOutFileName);
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		super.readExternal(in);
 		outFileName = (String) in.readObject();
-		precompiledHeader = (FileCompilationConfiguration) in.readObject();
+		properties = (FileCompilationProperties) in.readObject();
+		precompiledHeaderFileLocation = (FileLocation) in.readObject();
+		precompiledHeaderOutFileName = (String) in.readObject();
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
-		int result = super.hashCode();
+		int result = 1;
 		result = prime * result + ((outFileName == null) ? 0 : outFileName.hashCode());
+		result = prime * result + ((properties == null) ? 0 : properties.hashCode());
 		return result;
 	}
 
@@ -81,7 +94,7 @@ public class FileCompilationConfiguration extends FileCompilationProperties {
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		if (!super.equals(obj))
+		if (obj == null)
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
@@ -91,18 +104,27 @@ public class FileCompilationConfiguration extends FileCompilationProperties {
 				return false;
 		} else if (!outFileName.equals(other.outFileName))
 			return false;
-		if (precompiledHeader == null) {
-			if (other.precompiledHeader != null)
+		if (precompiledHeaderFileLocation == null) {
+			if (other.precompiledHeaderFileLocation != null)
 				return false;
-		} else if (!precompiledHeader.equals(other.precompiledHeader))
+		} else if (!precompiledHeaderFileLocation.equals(other.precompiledHeaderFileLocation))
+			return false;
+		if (precompiledHeaderOutFileName == null) {
+			if (other.precompiledHeaderOutFileName != null)
+				return false;
+		} else if (!precompiledHeaderOutFileName.equals(other.precompiledHeaderOutFileName))
+			return false;
+		if (properties == null) {
+			if (other.properties != null)
+				return false;
+		} else if (!properties.equals(other.properties))
 			return false;
 		return true;
 	}
 
 	@Override
 	public String toString() {
-		return "FileCompilationConfiguration[" + (outFileName != null ? "outFileName=" + outFileName + ", " : "")
-				+ (language != null ? "language=" + language : "") + "]";
+		return "FileCompilationConfiguration[" + (outFileName != null ? "outFileName=" + outFileName : "") + "]";
 	}
 
 }
