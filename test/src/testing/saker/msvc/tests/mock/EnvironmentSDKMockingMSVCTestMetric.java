@@ -24,7 +24,7 @@ import java.util.Set;
 import saker.build.file.path.SakerPath;
 import saker.build.runtime.environment.SakerEnvironment;
 import saker.build.thirdparty.saker.util.function.Functionals;
-import testing.saker.msvc.tests.cluster.compile.SimpleClusterCompileTest;
+import testing.saker.msvc.tests.MSVCTestCase;
 
 public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 	private Map<String, Set<TestMSVCSDKConfig>> defaultClusterMSVCSDKs = new HashMap<>();
@@ -32,8 +32,8 @@ public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 
 	public EnvironmentSDKMockingMSVCTestMetric(Path testsdkdirectory) {
 		super(testsdkdirectory);
-		addMSVCDefaultSDK(SimpleClusterCompileTest.DEFAULT_CLUSTER_NAME, MockingMSVCTestMetric.DEFAULT_VERSION, false);
-		addWindowsKitsDefaultSDK(SimpleClusterCompileTest.DEFAULT_CLUSTER_NAME, MockingMSVCTestMetric.DEFAULT_VERSION);
+		addMSVCDefaultSDK(MSVCTestCase.DEFAULT_CLUSTER_NAME, MockingMSVCTestMetric.DEFAULT_VERSION, false);
+		addWindowsKitsDefaultSDK(MSVCTestCase.DEFAULT_CLUSTER_NAME, MockingMSVCTestMetric.DEFAULT_VERSION);
 	}
 
 	public void clearSDKs() {
@@ -69,7 +69,7 @@ public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 
 	@Override
 	public Set<String> getPresentMSVCSDKVersions(SakerEnvironment environment) {
-		String clustername = environment.getUserParameters().get(SimpleClusterCompileTest.TEST_CLUSTER_NAME_ENV_PARAM);
+		String clustername = environment.getUserParameters().get(MSVCTestCase.TEST_CLUSTER_NAME_ENV_PARAM);
 		Set<TestMSVCSDKConfig> sdk = defaultClusterMSVCSDKs.get(clustername);
 		if (sdk == null) {
 			throw new RuntimeException("SDK not found: " + clustername);
@@ -83,7 +83,7 @@ public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 
 	@Override
 	public Set<String> getPresentWindowsKitsSDKVersions(SakerEnvironment environment) {
-		String clustername = environment.getUserParameters().get(SimpleClusterCompileTest.TEST_CLUSTER_NAME_ENV_PARAM);
+		String clustername = environment.getUserParameters().get(MSVCTestCase.TEST_CLUSTER_NAME_ENV_PARAM);
 		Set<TestWindowsKitsSDKConfig> sdk = defaultClusterWindowsKits.get(clustername);
 		if (sdk == null) {
 			throw new RuntimeException("SDK not found: " + clustername);
@@ -97,7 +97,7 @@ public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 
 	@Override
 	public SakerPath getWindowsKitsSDKBasePath(SakerEnvironment environment, String version) {
-		String clustername = environment.getUserParameters().get(SimpleClusterCompileTest.TEST_CLUSTER_NAME_ENV_PARAM);
+		String clustername = environment.getUserParameters().get(MSVCTestCase.TEST_CLUSTER_NAME_ENV_PARAM);
 		Set<TestWindowsKitsSDKConfig> sdk = defaultClusterWindowsKits.get(clustername);
 		if (sdk == null) {
 			throw new RuntimeException("SDK not found: " + clustername);
@@ -112,7 +112,7 @@ public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 
 	@Override
 	public SakerPath getMSVCSDKBasePath(SakerEnvironment environment, String version) {
-		String clustername = environment.getUserParameters().get(SimpleClusterCompileTest.TEST_CLUSTER_NAME_ENV_PARAM);
+		String clustername = environment.getUserParameters().get(MSVCTestCase.TEST_CLUSTER_NAME_ENV_PARAM);
 		Set<TestMSVCSDKConfig> sdk = defaultClusterMSVCSDKs.get(clustername);
 		if (sdk == null) {
 			throw new RuntimeException("SDK not found: " + clustername);
@@ -127,7 +127,7 @@ public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 
 	@Override
 	public boolean isMSVCSDKLegacy(SakerEnvironment environment, String version) {
-		String clustername = environment.getUserParameters().get(SimpleClusterCompileTest.TEST_CLUSTER_NAME_ENV_PARAM);
+		String clustername = environment.getUserParameters().get(MSVCTestCase.TEST_CLUSTER_NAME_ENV_PARAM);
 		Set<TestMSVCSDKConfig> sdk = defaultClusterMSVCSDKs.get(clustername);
 		if (sdk == null) {
 			throw new RuntimeException("SDK not found: " + clustername);

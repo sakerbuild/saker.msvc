@@ -39,6 +39,8 @@ public abstract class MSVCTestCase extends RepositoryLoadingVariablesMetricEnvir
 
 	protected static final String VER_1_0 = "1.0";
 
+	public static final String DEFAULT_CLUSTER_NAME = "cluster";
+
 	@Override
 	protected MockingMSVCTestMetric createMetricImpl() {
 		return new MockingMSVCTestMetric(getTestSDKDirectory());

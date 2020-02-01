@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2020 Bence Sipka
- *
- * This program is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License as published by 
- * the Free Software Foundation, version 3.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-package testing.saker.msvc.tests.cluster.compile;
+package testing.saker.msvc.tests.cluster.compile.pch;
 
 import java.util.Set;
 
@@ -22,13 +7,14 @@ import saker.build.thirdparty.saker.util.ImmutableUtils;
 import testing.saker.SakerTest;
 import testing.saker.build.tests.EnvironmentTestCaseConfiguration;
 import testing.saker.msvc.tests.MSVCTestCase;
+import testing.saker.msvc.tests.cluster.compile.SimpleClusterCompileTest;
 import testing.saker.msvc.tests.mock.EnvironmentSDKMockingMSVCTestMetric;
 import testing.saker.msvc.tests.mock.MockingMSVCTestMetric;
 
 @SakerTest
-public class SimpleClusterCompileTest extends MSVCTestCase {
-	private static final SakerPath PATH_MAINC_OBJ = PATH_BUILD_DIRECTORY
-			.resolve("saker.msvc.ccompile/default/x64/main.c.obj");
+public class SimpleClusterPrecompiledHeaderCompileTest extends MSVCTestCase {
+	private static final SakerPath PATH_MAINCPP_OBJ = PATH_BUILD_DIRECTORY
+			.resolve("saker.msvc.ccompile/default/x64/main.cpp.obj");
 
 	private MockingMSVCTestMetric baseMetric;
 
@@ -52,10 +38,23 @@ public class SimpleClusterCompileTest extends MSVCTestCase {
 
 	@Override
 	protected void runTestImpl() throws Throwable {
+		SakerPath maincpppath = PATH_WORKING_DIRECTORY.resolve("main.cpp");
+
 		runScriptTask("build");
-		assertMap(baseMetric.getCompiledFileClusterNames()).contains(PATH_WORKING_DIRECTORY.resolve("main.c"),
+		assertMap(baseMetric.getCompiledFileClusterNames()).contains(maincpppath,
 				SimpleClusterCompileTest.DEFAULT_CLUSTER_NAME);
-		assertEquals(files.getAllBytes(PATH_MAINC_OBJ).toString(), compile(LANG_C, ARCH_X64, 123));
+		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 222, 123));
+
+		runScriptTask("build");
+		assertEmpty(getMetric().getRunTaskIdFactories());
+
+		files.putFile(PATH_WORKING_DIRECTORY.resolve("pch.h"), "333".getBytes());
+		runScriptTask("build");
+		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 333, 123));
+
+		files.putFile(maincpppath, files.getAllBytes(maincpppath).toString().replace("123", "456"));
+		runScriptTask("build");
+		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 333, 456));
 	}
 
 }

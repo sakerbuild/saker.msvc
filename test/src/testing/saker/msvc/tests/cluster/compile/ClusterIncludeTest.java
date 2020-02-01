@@ -27,8 +27,6 @@ import testing.saker.msvc.tests.mock.MockingMSVCTestMetric;
 
 @SakerTest
 public class ClusterIncludeTest extends MSVCTestCase {
-	public static final String DEFAULT_CLUSTER_NAME = "cluster";
-
 	private static final SakerPath PATH_MAINC_OBJ = PATH_BUILD_DIRECTORY
 			.resolve("saker.msvc.ccompile/default/x64/main.c.obj");
 

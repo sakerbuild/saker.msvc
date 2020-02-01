@@ -52,7 +52,7 @@ public class DifferentClusterDefaultSDKTest extends MSVCTestCase {
 	@Override
 	protected Set<EnvironmentTestCaseConfiguration> getTestConfigurations() {
 		return EnvironmentTestCaseConfiguration.builder(super.getTestConfigurations())
-				.setClusterNames(ImmutableUtils.singletonSet(SimpleClusterCompileTest.DEFAULT_CLUSTER_NAME)).build();
+				.setClusterNames(ImmutableUtils.singletonSet(DEFAULT_CLUSTER_NAME)).build();
 	}
 
 	@Override

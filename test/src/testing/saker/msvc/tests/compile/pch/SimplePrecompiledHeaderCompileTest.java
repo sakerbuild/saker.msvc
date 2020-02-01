@@ -11,6 +11,8 @@ public class SimplePrecompiledHeaderCompileTest extends MSVCTestCase {
 
 	@Override
 	protected void runTestImpl() throws Throwable {
+		SakerPath maincpppath = PATH_WORKING_DIRECTORY.resolve("main.cpp");
+
 		runScriptTask("build");
 		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 222, 123));
 
@@ -21,7 +23,6 @@ public class SimplePrecompiledHeaderCompileTest extends MSVCTestCase {
 		runScriptTask("build");
 		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 333, 123));
 
-		SakerPath maincpppath = PATH_WORKING_DIRECTORY.resolve("main.cpp");
 		files.putFile(maincpppath, files.getAllBytes(maincpppath).toString().replace("123", "456"));
 		runScriptTask("build");
 		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 333, 456));

@@ -274,7 +274,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				@Override
 				public void headerPrecompiled(CompilerInnerTaskResult result, PathKey outputpathkey,
 						ContentDescriptor outputcontents) {
-					// TODO Auto-generated method stub
 					CompilationDependencyInfo depinfo = result.getDependencyInfo();
 					try {
 						taskcontext.getStandardOut().write(depinfo.getProcessOutput());
@@ -889,11 +888,12 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 	}
 
 	public interface WorkerTaskCoordinator {
-		public void headerPrecompiled(CompilerInnerTaskResult result, PathKey outputpathkey,
-				ContentDescriptor outputcontents);
+		public void headerPrecompiled(@RMISerialize CompilerInnerTaskResult result, PathKey outputpathkey,
+				@RMISerialize ContentDescriptor outputcontents);
 
 		@RMISerialize
-		public NavigableMap<SakerPath, PrecompiledHeaderState> getPrecompiledHeaderStates(RootFileProviderKey fpk);
+		public NavigableMap<SakerPath, PrecompiledHeaderState> getPrecompiledHeaderStates(
+				@RMISerialize RootFileProviderKey fpk);
 	}
 
 	@RMIWrap(SourceCompilerRMIWrapper.class)
@@ -1059,23 +1059,23 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 							//XXX duplicated code with linker worker
 							String sdkname = includedir.getSDKName();
 							if (ObjectUtils.isNullOrEmpty(sdkname)) {
-								throw new NullPointerException(
+								throw new SDKPathNotFoundException(
 										"Include directory returned empty sdk name: " + includedir);
 							}
 							SDKReference sdkref = getSDKReferenceForName(environment, sdkname);
 							if (sdkref == null) {
-								throw new IllegalArgumentException("SDK configuration not found for name: " + sdkname
+								throw new SDKPathNotFoundException("SDK configuration not found for name: " + sdkname
 										+ " required by include directory: " + includedir);
 							}
 							try {
 								SakerPath sdkdirpath = includedir.getPath(sdkref);
 								if (sdkdirpath == null) {
-									throw new IllegalArgumentException("No SDK include directory found for: "
+									throw new SDKPathNotFoundException("No SDK include directory found for: "
 											+ includedir + " in SDK: " + sdkname + " as " + sdkref);
 								}
 								includedirpaths.add(LocalFileProvider.toRealPath(sdkdirpath));
 							} catch (Exception e) {
-								throw new IllegalArgumentException("Failed to retrieve SDK include directory for: "
+								throw new SDKPathNotFoundException("Failed to retrieve SDK include directory for: "
 										+ includedir + " in SDK: " + sdkname + " as " + sdkref, e);
 							}
 						}
