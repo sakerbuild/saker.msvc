@@ -18,7 +18,6 @@ package saker.msvc.main.ccompile.options;
 import java.util.Collection;
 import java.util.Map;
 
-import saker.build.file.path.SakerPath;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
@@ -35,6 +34,7 @@ import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 import saker.std.api.file.location.FileLocation;
+import saker.std.main.file.option.FileLocationTaskOption;
 
 @NestInformation("Represents an options configuration to be used with " + MSVCCCompileTaskFactory.TASK_NAME + "().\n"
 		+ "The described options will be merged with the compilation input configuration based on the option qualifiers. "
@@ -68,6 +68,12 @@ import saker.std.api.file.location.FileLocation;
 						SDKDescriptionTaskOption.class }),
 		info = @NestInformation(TaskDocs.OPTION_SDKS + "\n"
 				+ "When merging, duplicate SDK definitions are not overwritten."))
+
+@NestFieldInformation(value = "PrecompiledHeader",
+		type = @NestTypeUsage(FileLocationTaskOption.class),
+		info = @NestInformation(TaskDocs.COMPILE_PRECOMPILED_HEADER + "\n"
+				+ "When merging, only a single precompiled header may be used. An exception "
+				+ "is thrown in case of conflict."))
 public interface MSVCCompilerOptions {
 	public void accept(MSVCCompilerOptionsVisitor visitor);
 
@@ -104,7 +110,6 @@ public interface MSVCCompilerOptions {
 	}
 
 	public default FileLocation getPrecompiledHeader() {
-		//TODO doc
 		return null;
 	}
 

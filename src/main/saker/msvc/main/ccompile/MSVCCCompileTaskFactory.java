@@ -393,17 +393,6 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 
 							}
 
-							private void mergePrecompiledHeader(ConfigSetupHolder configholder, FileLocation pch) {
-								if (pch != null) {
-									FileLocation presentpch = configholder.precompiledHeader;
-									if (presentpch != null && !presentpch.equals(pch)) {
-										throw new IllegalArgumentException(
-												"Option merge conflict for precompiled header: " + pch + " and "
-														+ presentpch);
-									}
-									configholder.precompiledHeader = pch;
-								}
-							}
 						};
 						if (suboptioninputpass[0] != null) {
 							Collection<MSVCCompilerOptions> subcompileroptions = suboptioninputpass[0]
@@ -544,6 +533,17 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 				});
 			}
 			sdkdescriptions.putIfAbsent(entry.getKey(), desc[0]);
+		}
+	}
+
+	private static void mergePrecompiledHeader(ConfigSetupHolder configholder, FileLocation pch) {
+		if (pch != null) {
+			FileLocation presentpch = configholder.precompiledHeader;
+			if (presentpch != null && !presentpch.equals(pch)) {
+				throw new IllegalArgumentException(
+						"Option merge conflict for precompiled header: " + pch + " and " + presentpch);
+			}
+			configholder.precompiledHeader = pch;
 		}
 	}
 
