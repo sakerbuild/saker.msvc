@@ -55,6 +55,7 @@ public class SimpleClusterPrecompiledHeaderCompileTest extends MSVCTestCase {
 		files.putFile(maincpppath, files.getAllBytes(maincpppath).toString().replace("123", "456"));
 		runScriptTask("build");
 		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 333, 456));
+		assertHeaderPrecompilationWasntRun();
 	}
 
 }
