@@ -27,8 +27,6 @@ import testing.saker.msvc.tests.mock.MockingMSVCTestMetric;
 
 @SakerTest
 public class SimpleClusterLinkTest extends MSVCTestCase {
-	public static final String DEFAULT_CLUSTER_NAME = "cluster";
-
 	private static final SakerPath PATH_MAINC_OBJ = PATH_BUILD_DIRECTORY
 			.resolve("saker.msvc.ccompile/default/x64/main.c.obj");
 	private static final SakerPath PATH_EXE = PATH_BUILD_DIRECTORY.resolve("saker.msvc.clink/default/x64/default.exe");

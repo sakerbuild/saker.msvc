@@ -18,6 +18,7 @@ package testing.saker.msvc.tests;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import saker.build.thirdparty.saker.util.StringUtils;
 import testing.saker.msvc.tests.mock.CLMockProcess;
@@ -37,6 +38,8 @@ public abstract class MSVCTestCase extends RepositoryLoadingVariablesMetricEnvir
 	protected static final String ARCH_X86 = "x86";
 
 	protected static final String VER_1_0 = "1.0";
+
+	public static final String DEFAULT_CLUSTER_NAME = "cluster";
 
 	@Override
 	protected MockingMSVCTestMetric createMetricImpl() {
@@ -170,4 +173,23 @@ public abstract class MSVCTestCase extends RepositoryLoadingVariablesMetricEnvir
 	public interface BinaryLine {
 		public void process(List<String> output, String architecture, String version);
 	}
+
+	protected void assertHeaderPrecompilationWasntRun() {
+		for (Entry<List<String>, Long> entry : getMetric().getProcessInvocationFrequencies().entrySet()) {
+			if (entry.getKey().contains("/Yc")) {
+				throw new AssertionError("Header was precompiled: " + entry.getKey());
+			}
+		}
+	}
+
+	protected void assertPrecompilationRunOnlyOnce() {
+		for (Entry<List<String>, Long> entry : getMetric().getProcessInvocationFrequencies().entrySet()) {
+			if (entry.getKey().contains("/Yc")) {
+				if (entry.getValue() > 1) {
+					fail("Precompiled more than once: " + entry.getKey());
+				}
+			}
+		}
+	}
+
 }

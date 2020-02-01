@@ -47,11 +47,13 @@ import saker.compiler.utils.api.CompilerUtils;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.ccompile.FileCompilationConfiguration;
+import saker.msvc.impl.ccompile.FileCompilationProperties;
 import saker.msvc.impl.ccompile.MSVCCCompileWorkerTaskFactory;
 import saker.msvc.impl.ccompile.MSVCCCompileWorkerTaskIdentifier;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.impl.coptions.preset.PresetCOptions;
+import saker.msvc.impl.util.FileLocationFileNameVisitor;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.options.CompilationInputPassOptionVisitor;
 import saker.msvc.main.ccompile.options.CompilationInputPassTaskOption;
@@ -65,7 +67,6 @@ import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.DocCCompilerWorkerTaskOutput;
-import saker.msvc.main.util.FileLocationFileNameVisitor;
 import saker.msvc.main.util.TaskTags;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestParameterInformation;
@@ -158,7 +159,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 			public Object run(TaskContext taskcontext) throws Exception {
 				List<CompilationInputPassTaskOption> inputpasses = new ArrayList<>();
 				Collection<MSVCCompilerOptions> compileroptions = new ArrayList<>();
-				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());
+				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(
+						SDKSupportUtils.getSDKNameComparator());
 
 				CompilationIdentifier optionidentifier = this.identifierOption == null ? null
 						: this.identifierOption.clone().getIdentifier();
@@ -209,12 +211,14 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 				}
 
 				Map<IncludeDirectoryTaskOption, Collection<IncludeDirectoryOption>> calculatedincludediroptions = new HashMap<>();
+				Map<FileCompilationProperties, String> precompiledheaderoutnamesconfigurations = new HashMap<>();
 
 				//ignore-case comparison of possible output names of the files
 				//  as windows has case-insensitive file names, we need to support Main.cpp and main.cpp from different directories
 				NavigableSet<String> outnames = new TreeSet<>(String::compareToIgnoreCase);
 				Set<FileCompilationConfiguration> files = new LinkedHashSet<>();
-				NavigableMap<String, SDKDescription> sdkdescriptions = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());
+				NavigableMap<String, SDKDescription> sdkdescriptions = new TreeMap<>(
+						SDKSupportUtils.getSDKNameComparator());
 
 				for (Entry<String, SDKDescriptionTaskOption> entry : sdkoptions.entrySet()) {
 					SDKDescriptionTaskOption val = entry.getValue();
@@ -232,7 +236,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 
 				FileLocationFileNameVisitor filenamevisitor = new FileLocationFileNameVisitor();
 
-				List<FileCompilationConfiguration> configbuf = new ArrayList<>();
+				List<ConfigSetupHolder> configbuf = new ArrayList<>();
 				for (CompilationInputPassTaskOption inputpass : inputpasses) {
 					CompilationIdentifier[] subid = { null };
 					OptionCompilationInputPass[] suboptioninputpass = { null };
@@ -244,9 +248,9 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 								return;
 							}
 							for (FileLocation filelocation : filelocations) {
-								FileCompilationConfiguration nconfig = createConfigurationForFileLocation(filelocation,
-										null, null);
-								configbuf.add(nconfig);
+								FileCompilationConfiguration nconfig = createConfigurationForProperties(
+										new FileCompilationProperties(filelocation), null, null);
+								configbuf.add(new ConfigSetupHolder(nconfig));
 							}
 						}
 
@@ -262,6 +266,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 							Set<String> simpleparamoption = ImmutableUtils
 									.makeImmutableNavigableSet(input.getSimpleParameters());
 							String passlang = input.getLanguage();
+							FileLocation pchfilelocation = TaskOptionUtils.toFileLocation(input.getPrecompiledHeader(),
+									taskcontext);
 
 							Collection<IncludeDirectoryTaskOption> indirtaskopts = input.getIncludeDirectories();
 							Set<IncludeDirectoryOption> inputincludedirs = new LinkedHashSet<>();
@@ -284,18 +290,22 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 										.getIdentifier(passsubidopt);
 								subid[0] = passsubid;
 								for (FileLocation filelocation : filelocations) {
-									FileCompilationConfiguration nconfig = createConfigurationForFileLocation(
-											filelocation, passsubid, passlang);
-									nconfig.setSimpleParameters(simpleparamoption);
-									nconfig.setIncludeDirectories(inputincludedirs);
-									nconfig.setMacroDefinitions(macrodefinitions);
-									configbuf.add(nconfig);
+									FileCompilationProperties nproperties = new FileCompilationProperties(filelocation);
+									nproperties.setSimpleParameters(simpleparamoption);
+									nproperties.setIncludeDirectories(inputincludedirs);
+									nproperties.setMacroDefinitions(macrodefinitions);
+
+									FileCompilationConfiguration nconfig = createConfigurationForProperties(nproperties,
+											passsubid, passlang);
+									configbuf.add(new ConfigSetupHolder(nconfig, pchfilelocation));
 								}
 							}
 						}
 
-						private FileCompilationConfiguration createConfigurationForFileLocation(
-								FileLocation filelocation, CompilationIdentifier passsubid, String optionlanguage) {
+						private FileCompilationConfiguration createConfigurationForProperties(
+								FileCompilationProperties properties, CompilationIdentifier passsubid,
+								String optionlanguage) {
+							FileLocation filelocation = properties.getFileLocation();
 							filelocation.accept(filenamevisitor);
 							String pathfilename = filenamevisitor.getFileName();
 							if (pathfilename == null) {
@@ -305,9 +315,9 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 							String outfname = getOutFileName(pathfilename, outnames, passsubid);
 							String language = getLanguageBasedOnFileName(optionlanguage, pathfilename);
 
-							FileCompilationConfiguration nconfig = new FileCompilationConfiguration(filelocation,
-									outfname);
-							nconfig.setLanguage(language);
+							FileCompilationConfiguration nconfig = new FileCompilationConfiguration(outfname,
+									properties);
+							properties.setLanguage(language);
 							return nconfig;
 						}
 					});
@@ -315,7 +325,10 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 					CompilationIdentifier targetmergeidentifier = CompilationIdentifier.concat(optionidentifier,
 							subid[0]);
 
-					for (FileCompilationConfiguration config : configbuf) {
+					for (ConfigSetupHolder configholder : configbuf) {
+						FileCompilationConfiguration config = configholder.config;
+						FileCompilationProperties configproperties = config.getProperties();
+						String configlanguage = configproperties.getLanguage();
 						MSVCCompilerOptionsVisitor optionsvisitor = new MSVCCompilerOptionsVisitor() {
 							@Override
 							public void visit(MSVCCompilerOptions options) {
@@ -324,19 +337,15 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 												: options.getIdentifier().getIdentifier())) {
 									return;
 								}
-								if (!CompilerUtils.canMergeLanguages(config.getLanguage(), options.getLanguage())) {
+								if (!CompilerUtils.canMergeLanguages(configlanguage, options.getLanguage())) {
 									return;
 								}
 								if (!MSVCCompilerOptions.canMergeArchitectures(architecture,
 										options.getArchitecture())) {
 									return;
 								}
-								Collection<IncludeDirectoryTaskOption> optincludedirs = options.getIncludeDirectories();
-								mergeIncludeDirectoryTaskOptions(config, taskcontext, calculatedincludediroptions,
-										optincludedirs);
-								mergeSDKDescriptionOptions(taskcontext, sdkdescriptions, options.getSDKs());
-								mergeMacroDefinitions(config, options.getMacroDefinitions());
-								mergeSimpleParameters(config, options.getSimpleCompilerParameters());
+								mergeCompilerOptions(options, configproperties, taskcontext,
+										calculatedincludediroptions, sdkdescriptions);
 							}
 
 							@Override
@@ -346,7 +355,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 											preset.getIdentifier())) {
 										continue;
 									}
-									if (!CompilerUtils.canMergeLanguages(config.getLanguage(), preset.getLanguage())) {
+									if (!CompilerUtils.canMergeLanguages(configlanguage, preset.getLanguage())) {
 										continue;
 									}
 									if (!MSVCCompilerOptions.canMergeArchitectures(architecture,
@@ -354,12 +363,36 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 										continue;
 									}
 
-									mergeIncludeDirectories(config, preset.getIncludeDirectories());
-									mergePresetSDKDescriptions(sdkdescriptions, preset);
-									mergeMacroDefinitions(config, preset.getMacroDefinitions());
-									mergeSimpleParameters(config, preset.getSimpleCompilerParameters());
+									mergePreset(preset, configproperties, sdkdescriptions);
 								}
 							}
+
+							private void mergeCompilerOptions(MSVCCompilerOptions options,
+									FileCompilationProperties config, TaskContext taskcontext,
+									Map<IncludeDirectoryTaskOption, Collection<IncludeDirectoryOption>> calculatedincludediroptions,
+									NavigableMap<String, SDKDescription> sdkdescriptions) {
+								Collection<IncludeDirectoryTaskOption> optincludedirs = options.getIncludeDirectories();
+								mergeIncludeDirectoryTaskOptions(config, taskcontext, calculatedincludediroptions,
+										optincludedirs);
+								mergeSDKDescriptionOptions(taskcontext, sdkdescriptions, options.getSDKs());
+								mergeMacroDefinitions(config, options.getMacroDefinitions());
+								mergeSimpleParameters(config, options.getSimpleCompilerParameters());
+								FileLocation pch = options.getPrecompiledHeader();
+								mergePrecompiledHeader(configholder, pch);
+							}
+
+							private void mergePreset(PresetCOptions preset, FileCompilationProperties config,
+									NavigableMap<String, SDKDescription> sdkdescriptions) {
+								mergeIncludeDirectories(config, preset.getIncludeDirectories());
+								mergePresetSDKDescriptions(sdkdescriptions, preset);
+								mergeMacroDefinitions(config, preset.getMacroDefinitions());
+								mergeSimpleParameters(config, preset.getSimpleCompilerParameters());
+
+								FileLocation pch = preset.getPrecompiledHeader();
+								mergePrecompiledHeader(configholder, pch);
+
+							}
+
 						};
 						if (suboptioninputpass[0] != null) {
 							Collection<MSVCCompilerOptions> subcompileroptions = suboptioninputpass[0]
@@ -375,7 +408,26 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 						}
 					}
 
-					files.addAll(configbuf);
+					//resolve precompiled headers
+					for (ConfigSetupHolder configholder : configbuf) {
+						if (configholder.precompiledHeader != null) {
+							FileCompilationProperties pchprops = new FileCompilationProperties(
+									configholder.precompiledHeader);
+							pchprops.copyFrom(configholder.config.getProperties());
+
+							String pchoutfilename = precompiledheaderoutnamesconfigurations.get(pchprops);
+							if (pchoutfilename == null) {
+								configholder.precompiledHeader.accept(filenamevisitor);
+								String pchfilename = filenamevisitor.getFileName();
+
+								pchoutfilename = getOutFileName(pchfilename, outnames, null);
+								precompiledheaderoutnamesconfigurations.put(pchprops, pchoutfilename);
+							}
+							configholder.config.setPrecompiledHeader(configholder.precompiledHeader, pchoutfilename);
+
+						}
+						files.add(configholder.config);
+					}
 					configbuf.clear();
 				}
 
@@ -410,7 +462,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 		};
 	}
 
-	private static void mergeIncludeDirectoryTaskOptions(FileCompilationConfiguration config, TaskContext taskcontext,
+	private static void mergeIncludeDirectoryTaskOptions(FileCompilationProperties config, TaskContext taskcontext,
 			Map<IncludeDirectoryTaskOption, Collection<IncludeDirectoryOption>> calculatedincludediroptions,
 			Collection<IncludeDirectoryTaskOption> includediroptions) {
 		if (ObjectUtils.isNullOrEmpty(includediroptions)) {
@@ -426,7 +478,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 		config.setIncludeDirectories(nincludedirs);
 	}
 
-	private static void mergeSimpleParameters(FileCompilationConfiguration config, Collection<String> simpleparams) {
+	private static void mergeSimpleParameters(FileCompilationProperties config, Collection<String> simpleparams) {
 		if (ObjectUtils.isNullOrEmpty(simpleparams)) {
 			return;
 		}
@@ -438,7 +490,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 		config.setSimpleParameters(result);
 	}
 
-	private static void mergeMacroDefinitions(FileCompilationConfiguration config, Map<String, String> macrodefs) {
+	private static void mergeMacroDefinitions(FileCompilationProperties config, Map<String, String> macrodefs) {
 		if (ObjectUtils.isNullOrEmpty(macrodefs)) {
 			return;
 		}
@@ -455,7 +507,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 		config.setMacroDefinitions(nmacros);
 	}
 
-	private static void mergeIncludeDirectories(FileCompilationConfiguration config,
+	private static void mergeIncludeDirectories(FileCompilationProperties config,
 			Collection<IncludeDirectoryOption> includediroptions) {
 		if (ObjectUtils.isNullOrEmpty(includediroptions)) {
 			return;
@@ -481,6 +533,17 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 				});
 			}
 			sdkdescriptions.putIfAbsent(entry.getKey(), desc[0]);
+		}
+	}
+
+	private static void mergePrecompiledHeader(ConfigSetupHolder configholder, FileLocation pch) {
+		if (pch != null) {
+			FileLocation presentpch = configholder.precompiledHeader;
+			if (presentpch != null && !presentpch.equals(pch)) {
+				throw new IllegalArgumentException(
+						"Option merge conflict for precompiled header: " + pch + " and " + presentpch);
+			}
+			configholder.precompiledHeader = pch;
 		}
 	}
 
@@ -546,6 +609,21 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 			}
 			++i;
 		}
+	}
+
+	private static class ConfigSetupHolder {
+		public FileCompilationConfiguration config;
+		public FileLocation precompiledHeader;
+
+		public ConfigSetupHolder(FileCompilationConfiguration config) {
+			this.config = config;
+		}
+
+		public ConfigSetupHolder(FileCompilationConfiguration config, FileLocation precompiledHeader) {
+			this.config = config;
+			this.precompiledHeader = precompiledHeader;
+		}
+
 	}
 
 }

@@ -57,6 +57,14 @@ public class TaskDocs {
 			+ "The \"MSVC\" SDK is used to determine the location of the backend executables (cl.exe, link.exe). If it is "
 			+ "not specified, then the task will attempt to determine it automatically.";
 
+	public static final String COMPILE_PRECOMPILED_HEADER = "Specifies the path or file location of a header file that should be precompiled.\n"
+			+ "Precompiled headers files can be preprocessed by the compiler and included in multiple source files. "
+			+ "Using them can result in faster builds as the compiler can reuse the result of the precompilation.\n"
+			+ "It is recommended that the precompiled headers contains infrequently changing source files.\n"
+			+ "The precompiled header should be included in the compiled source files in the first line. They "
+			+ "can be included with the #include \"header_file_name.h\" directive. (Substitute the header_file_name.h with "
+			+ "the actual simple file name of the header.)";
+
 	public static final String LINK_INPUT = "Specifies one or more inputs for the link operation.\n"
 			+ "The inputs may be either simple paths, wildcards, file locations, file collections or task output from "
 			+ MSVCCCompileTaskFactory.TASK_NAME + "().";
@@ -161,8 +169,7 @@ public class TaskDocs {
 					+ "with when compiling the inputs."))
 	@NestFieldInformation(value = "SDKs",
 			type = @NestTypeUsage(value = Map.class,
-					elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class,
-							DocSDKDescription.class }),
+					elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class, DocSDKDescription.class }),
 			info = @NestInformation("Contains the SDKs that were used for compiling the inputs.\n"
 					+ "The map contains all SDKs (explicit or implicit) that was used during the configuration of the compilation."))
 	@NestTypeInformation(qualifiedName = "saker.msvc.CCompilerWorkerTaskOutput")

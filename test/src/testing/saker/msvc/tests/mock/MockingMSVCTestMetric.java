@@ -18,9 +18,14 @@ package testing.saker.msvc.tests.mock;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.LongAdder;
 
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.SakerPathFiles;
@@ -44,6 +49,7 @@ public class MockingMSVCTestMetric extends CollectingTestMetric implements MSVCT
 	protected Path testSDKDirectory;
 
 	protected ConcurrentSkipListMap<SakerPath, String> compiledFileClusterNames = new ConcurrentSkipListMap<>();
+	protected ConcurrentHashMap<List<String>, LongAdder> runCommands = new ConcurrentHashMap<>();
 
 	public MockingMSVCTestMetric(Path testSDKDirectory) {
 		this.testSDKDirectory = testSDKDirectory;
@@ -52,6 +58,7 @@ public class MockingMSVCTestMetric extends CollectingTestMetric implements MSVCT
 	@Override
 	public int runProcess(List<String> command, boolean mergestderr, MetricProcessIOConsumer stdoutconsumer,
 			MetricProcessIOConsumer stderrconsumer) throws IOException {
+		runCommands.computeIfAbsent(command, x -> new LongAdder()).increment();
 		System.out.println("MockingMSVCTestMetric.startProcess() " + command);
 		SakerPath exepath = SakerPathFiles.requireAbsolutePath(SakerPath.valueOf(command.get(0)));
 		if (exepath.getFileName().equalsIgnoreCase("cl.exe")) {
@@ -61,6 +68,14 @@ public class MockingMSVCTestMetric extends CollectingTestMetric implements MSVCT
 			return LinkMockProcess.run(command, mergestderr, stdoutconsumer, stderrconsumer);
 		}
 		throw new IOException("Exe not found: " + command);
+	}
+
+	public Map<List<String>, Long> getProcessInvocationFrequencies() {
+		HashMap<List<String>, Long> result = new HashMap<>();
+		for (Entry<List<String>, LongAdder> entry : runCommands.entrySet()) {
+			result.put(entry.getKey(), entry.getValue().longValue());
+		}
+		return result;
 	}
 
 	@Override

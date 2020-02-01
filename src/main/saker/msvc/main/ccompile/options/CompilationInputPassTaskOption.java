@@ -82,6 +82,10 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 				+ "The language is also used to determine if fiven CompilerOptions configuration should be merged. "
 				+ "The languages are treated in an case-insensitive way.\n"
 				+ "Corresponds to the /Tc or /Tp command line options accordingly for cl.exe."))
+
+@NestFieldInformation(value = "PrecompiledHeader",
+		type = @NestTypeUsage(FileLocationTaskOption.class),
+		info = @NestInformation(TaskDocs.COMPILE_PRECOMPILED_HEADER))
 public interface CompilationInputPassTaskOption {
 	public default CompilationInputPassTaskOption clone() {
 		return new OptionCompilationInputPassOption(this);
@@ -114,6 +118,10 @@ public interface CompilationInputPassTaskOption {
 	}
 
 	public default String getLanguage() {
+		return null;
+	}
+
+	public default FileLocationTaskOption getPrecompiledHeader() {
 		return null;
 	}
 

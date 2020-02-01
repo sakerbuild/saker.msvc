@@ -72,6 +72,7 @@ import saker.sdk.support.api.SDKReference;
 import saker.sdk.support.api.SDKSupportUtils;
 import saker.sdk.support.api.exc.SDKManagementException;
 import saker.sdk.support.api.exc.SDKNotFoundException;
+import saker.sdk.support.api.exc.SDKPathNotFoundException;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileLocation;
 import saker.std.api.file.location.FileLocationVisitor;
@@ -409,7 +410,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			SakerPath linkexepath = MSVCUtils.getVCSDKExecutablePath(vcsdk, hostarchitecture, architecture,
 					MSVCUtils.VC_EXECUTABLE_NAME_LINK);
 			if (linkexepath == null) {
-				throw new IllegalArgumentException("SDK doesn't contain appropriate link.exe: " + vcsdk);
+				throw new SDKPathNotFoundException("SDK doesn't contain appropriate link.exe: " + vcsdk);
 			}
 			SakerPath workingdir = MSVCUtils.getVCSDKExecutableWorkingDirectoryPath(vcsdk, hostarchitecture,
 					architecture, MSVCUtils.VC_EXECUTABLE_NAME_LINK);
@@ -442,7 +443,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			}
 			LocalFileProvider.getInstance().createDirectories(outputmirrorpath.getParent());
 
-			int procresult = MSVCUtils.runMSVCProcess(commands, workingdir, new ByteSinkProcessIOConsumer(taskcontext.getStandardOut()), null, true);
+			int procresult = MSVCUtils.runMSVCProcess(commands, workingdir,
+					new ByteSinkProcessIOConsumer(taskcontext.getStandardOut()), null, true);
 			if (procresult != 0) {
 				throw new IOException("Failed to link: " + procresult + " (0x" + Integer.toHexString(procresult) + ")");
 			}

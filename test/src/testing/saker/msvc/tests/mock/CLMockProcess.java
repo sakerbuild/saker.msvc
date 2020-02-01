@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -92,9 +93,14 @@ public class CLMockProcess {
 		throw new IllegalArgumentException(inputcmd);
 	}
 
-	private static String nextLine(BufferedReader reader, Deque<String> pendinglines) throws IOException {
+	private static SourceLine nextLine(BufferedReader reader, Deque<SourceLine> pendinglines, SakerPath inputpath)
+			throws IOException {
 		if (pendinglines.isEmpty()) {
-			return reader.readLine();
+			String nl = reader.readLine();
+			if (nl == null) {
+				return null;
+			}
+			return new SourceLine(inputpath, nl);
 		}
 		return pendinglines.pollFirst();
 	}
@@ -117,13 +123,39 @@ public class CLMockProcess {
 		return null;
 	}
 
+	private static class SourceLine {
+		public SakerPath sourcePath;
+		public String line;
+
+		public SourceLine(SakerPath sourcePath, String line) {
+			this.sourcePath = sourcePath;
+			this.line = line;
+		}
+	}
+
 	private static int executeCompilation(SakerPath inputpath, SakerPath outputpath, PrintStream stdout,
 			PrintStream stderr, List<String> commands, String targetarch, String language, String version) {
 		if (!commands.contains("/nologo")) {
 			stdout.println("Mock compiler: " + version + " " + language + " for " + targetarch);
 		}
+		StringBuilder pch = null;
+		String pchname = null;
+		String usepchname = null;
+		if (commands.contains("/Yc")) {
+			pch = new StringBuilder();
+		}
+		String pchnamecmd = getPchNameCommand(commands);
+		if (pchnamecmd != null) {
+			pchname = pchnamecmd.substring(3);
+		}
+		String usepchcmd = getUsePchNameCommand(commands);
+		if (usepchcmd != null) {
+			usepchname = usepchcmd.substring(3);
+		}
+		boolean includedpch = usepchcmd == null;
+
 		List<SakerPath> includedirs = getIncludeDirectoriesFromCommands(commands);
-		Deque<String> pendinglines = new ArrayDeque<>();
+		Deque<SourceLine> pendinglines = new ArrayDeque<>();
 		Set<SakerPath> includedpaths = new TreeSet<>();
 		Set<SakerPath> referencedlibs = new TreeSet<>();
 
@@ -159,7 +191,9 @@ public class CLMockProcess {
 			} else if (ObjectUtils.containsAny(commands, ImmutableUtils.asUnmodifiableArrayList("/LD", "/LDd"))) {
 				throw new IllegalArgumentException("Unsupported runtime library options: " + commands);
 			}
-			for (String line; (line = nextLine(reader, pendinglines)) != null;) {
+			//TODO handle pch force include
+			for (SourceLine srcline; (srcline = nextLine(reader, pendinglines, inputpath)) != null;) {
+				String line = srcline.line;
 				if (line.isEmpty()) {
 					continue;
 				}
@@ -168,16 +202,39 @@ public class CLMockProcess {
 					if (includephrase.isEmpty()) {
 						return -2;
 					}
+					if (!includedpch && (includephrase.equals('\"' + usepchname + '\"')
+							|| includephrase.equals('<' + usepchname + '>'))) {
+						Path pchpath = Paths.get(pchname);
+						SakerPath pchsakerpath = SakerPath.valueOf(pchpath);
+						List<String> pchlines = Files.readAllLines(pchpath);
+						for (String l : pchlines) {
+							pendinglines.add(new SourceLine(pchsakerpath, l));
+						}
+						includedpch = true;
+						continue;
+					}
 					SakerPath includepath = SakerPath.valueOf(includephrase.substring(1, includephrase.length() - 1));
 					if (includephrase.charAt(0) == '<' && includephrase.charAt(includephrase.length() - 1) == '>') {
 						includeBracketIncludePath(includedirs, pendinglines, includedpaths, includepath, stdout, stderr,
 								commands);
 					} else if (includephrase.charAt(0) == '\"'
 							&& includephrase.charAt(includephrase.length() - 1) == '\"') {
-						throw new UnsupportedOperationException();
+						throw new UnsupportedOperationException(
+								"Quoted inclusion shouldn't be used as it is prone to mirroring errors.");
+//						SakerPath resolvedincludepath = srcline.sourcePath.getParent().resolve(includepath);
+//						includeResolvedIncludePath(pendinglines, resolvedincludepath, stdout, stderr, includedpaths,
+//								commands);
 					} else {
 						return -3;
 					}
+					continue;
+				}
+				if (pch != null) {
+					pch.append(line);
+					pch.append('\n');
+				}
+				if (!includedpch) {
+					// haven't found the pch inclusion yet, ignore the lines
 					continue;
 				}
 				if (line.startsWith("#lib ")) {
@@ -212,11 +269,29 @@ public class CLMockProcess {
 			e.printStackTrace();
 			return -99;
 		}
+		if (!includedpch) {
+			printErrorMessage(stdout, "c:\\some\\path\\to\\source", null, "fatal error", "C1010",
+					"Haven't found PCH: " + usepchname);
+			return -5;
+		}
 		try {
 			Files.write(LocalFileProvider.toRealPath(outputpath), fileoutbuf.toByteArray());
 		} catch (IOException e) {
 			e.printStackTrace();
 			return -99;
+		}
+		if (pch != null) {
+			if (pchname == null) {
+				printErrorMessage(stdout, "c:\\some\\path\\to\\source", null, "fatal error", null,
+						"No PCH name specified for creation.");
+				return -99;
+			}
+			try {
+				Files.write(Paths.get(pchname), pch.toString().getBytes(StandardCharsets.UTF_8));
+			} catch (IOException e) {
+				e.printStackTrace();
+				return -99;
+			}
 		}
 		return 0;
 	}
@@ -235,7 +310,22 @@ public class CLMockProcess {
 		throw new IllegalArgumentException("Unknown language: " + language);
 	}
 
-	private static void includeBracketIncludePath(List<SakerPath> includedirs, Deque<String> pendinglines,
+	private static void includeResolvedIncludePath(Deque<SourceLine> pendinglines, SakerPath includepath,
+			PrintStream stdout, PrintStream stderr, Set<SakerPath> includedpaths, List<String> commands)
+			throws IOException {
+		Path realpath = LocalFileProvider.toRealPath(includepath);
+		List<String> alllines = Files.readAllLines(realpath);
+		includedpaths.add(includepath);
+		//XXX indent the real path based on the include stack
+		if (commands.contains("/showIncludes")) {
+			stderr.println("Note: including file: " + realpath);
+		}
+		for (String l : alllines) {
+			pendinglines.add(new SourceLine(includepath, l));
+		}
+	}
+
+	private static void includeBracketIncludePath(List<SakerPath> includedirs, Deque<SourceLine> pendinglines,
 			Set<SakerPath> includedpaths, SakerPath includepath, PrintStream stdout, PrintStream stderr,
 			List<String> commands) {
 		List<Exception> causes = new ArrayList<>();
@@ -245,14 +335,7 @@ public class CLMockProcess {
 				return;
 			}
 			try {
-				Path realpath = LocalFileProvider.toRealPath(resolvedincludepath);
-				List<String> alllines = Files.readAllLines(realpath);
-				includedpaths.add(resolvedincludepath);
-				//XXX indent the real path based on the include stack
-				if (commands.contains("/showIncludes")) {
-					stderr.println("Note: including file: " + realpath);
-				}
-				pendinglines.addAll(alllines);
+				includeResolvedIncludePath(pendinglines, resolvedincludepath, stdout, stderr, includedpaths, commands);
 				return;
 			} catch (IOException e) {
 				causes.add(e);
@@ -272,7 +355,22 @@ public class CLMockProcess {
 
 	private static void printErrorMessage(PrintStream stdout, String logpath, String linenum, String severity,
 			String errornum, String description) {
-		stdout.println(logpath + "(" + linenum + "): " + severity + " " + errornum + ": " + description);
+		StringBuilder sb = new StringBuilder();
+		sb.append(logpath);
+		if (linenum != null) {
+			sb.append("(");
+			sb.append(linenum);
+			sb.append(")");
+		}
+		sb.append(": ");
+		sb.append(severity);
+		if (errornum != null) {
+			sb.append(" ");
+			sb.append(errornum);
+		}
+		sb.append(": ");
+		sb.append(description);
+		stdout.println(sb.toString());
 	}
 
 	private static List<SakerPath> getIncludeDirectoriesFromCommands(List<String> commands) {
@@ -283,6 +381,24 @@ public class CLMockProcess {
 			}
 		}
 		return result;
+	}
+
+	private static String getPchNameCommand(List<String> commands) {
+		for (String cmd : commands) {
+			if (cmd.startsWith("/Fp")) {
+				return cmd;
+			}
+		}
+		return null;
+	}
+
+	private static String getUsePchNameCommand(List<String> commands) {
+		for (String cmd : commands) {
+			if (cmd.startsWith("/Yu")) {
+				return cmd;
+			}
+		}
+		return null;
 	}
 
 	private static String getInputFileCommand(List<String> commands) {

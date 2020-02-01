@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.TreeMap;
@@ -27,10 +29,9 @@ import java.util.TreeSet;
 
 import saker.build.file.content.ContentDescriptor;
 import saker.build.file.path.SakerPath;
+import saker.build.file.provider.RootFileProviderKey;
 import saker.build.task.EnvironmentSelectionResult;
-import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
-import saker.build.thirdparty.saker.util.TransformingSortedMap;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKSupportUtils;
@@ -38,13 +39,79 @@ import saker.sdk.support.api.SDKSupportUtils;
 public class CompilerState implements Externalizable {
 	private static final long serialVersionUID = 1L;
 
+	public static class PrecompiledHeaderState implements Externalizable {
+		private static final long serialVersionUID = 1L;
+
+		private ContentDescriptor inputContents;
+		private ContentDescriptor outputContents;
+		private FileCompilationProperties compilationProperties;
+
+		private NavigableSet<SakerPath> includes;
+		private NavigableSet<CompilerDiagnostic> diagnostics;
+
+		/**
+		 * For {@link Externalizable}.
+		 */
+		public PrecompiledHeaderState() {
+		}
+
+		public PrecompiledHeaderState(ContentDescriptor inputContents, ContentDescriptor outputContents,
+				FileCompilationProperties compilationProperties, NavigableSet<SakerPath> includes,
+				NavigableSet<CompilerDiagnostic> diagnostics) {
+			this.inputContents = inputContents;
+			this.outputContents = outputContents;
+			this.compilationProperties = compilationProperties;
+			this.includes = includes;
+			this.diagnostics = diagnostics;
+		}
+
+		public ContentDescriptor getInputContents() {
+			return inputContents;
+		}
+
+		public ContentDescriptor getOutputContents() {
+			return outputContents;
+		}
+
+		public NavigableSet<CompilerDiagnostic> getDiagnostics() {
+			return diagnostics;
+		}
+
+		public FileCompilationProperties getCompilationProperties() {
+			return compilationProperties;
+		}
+
+		public NavigableSet<SakerPath> getIncludes() {
+			return includes;
+		}
+
+		@Override
+		public void writeExternal(ObjectOutput out) throws IOException {
+			out.writeObject(inputContents);
+			out.writeObject(outputContents);
+			out.writeObject(compilationProperties);
+			SerialUtils.writeExternalCollection(out, diagnostics);
+			SerialUtils.writeExternalCollection(out, includes);
+		}
+
+		@Override
+		public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+			inputContents = (ContentDescriptor) in.readObject();
+			outputContents = (ContentDescriptor) in.readObject();
+			compilationProperties = (FileCompilationProperties) in.readObject();
+			diagnostics = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+			includes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
+		}
+
+	}
+
 	public static class CompiledFileState implements Externalizable {
 		private static final long serialVersionUID = 1L;
 
 		private ContentDescriptor inputContents;
 		private FileCompilationConfiguration compilationConfiguration;
-		private SakerPath outputPath;
-		private ContentDescriptor outputContents;
+		private SakerPath outputObjectPath;
+		private ContentDescriptor outputObjectContents;
 		private NavigableSet<CompilerDiagnostic> diagnostics;
 		/**
 		 * Absolute execution paths of referenced include files.
@@ -67,11 +134,12 @@ public class CompilerState implements Externalizable {
 			this.compilationConfiguration = compilationConfiguration;
 		}
 
-		/**
-		 * <code>null</code> if compilation failed.
-		 */
-		public SakerPath getOutputPath() {
-			return outputPath;
+		public SakerPath getOutputObjectPath() {
+			return outputObjectPath;
+		}
+
+		public ContentDescriptor getOutputObjectContents() {
+			return outputObjectContents;
 		}
 
 		public FileCompilationConfiguration getCompilationConfiguration() {
@@ -80,10 +148,6 @@ public class CompilerState implements Externalizable {
 
 		public ContentDescriptor getInputContents() {
 			return inputContents;
-		}
-
-		public ContentDescriptor getOutputContents() {
-			return outputContents;
 		}
 
 		public NavigableSet<CompilerDiagnostic> getDiagnostics() {
@@ -106,9 +170,9 @@ public class CompilerState implements Externalizable {
 			this.inputContents = inputContents;
 		}
 
-		public void setOutputContents(SakerPath outputpath, ContentDescriptor outputContents) {
-			this.outputPath = outputpath;
-			this.outputContents = outputContents;
+		public void setObjectOutputContents(SakerPath outputpath, ContentDescriptor outputContents) {
+			this.outputObjectPath = outputpath;
+			this.outputObjectContents = outputContents;
 		}
 
 		public void setIncludes(NavigableSet<SakerPath> includes) {
@@ -123,8 +187,8 @@ public class CompilerState implements Externalizable {
 		public void writeExternal(ObjectOutput out) throws IOException {
 			out.writeObject(inputContents);
 			out.writeObject(compilationConfiguration);
-			out.writeObject(outputPath);
-			out.writeObject(outputContents);
+			out.writeObject(outputObjectPath);
+			out.writeObject(outputObjectContents);
 			SerialUtils.writeExternalCollection(out, diagnostics);
 			SerialUtils.writeExternalCollection(out, includes);
 			SerialUtils.writeExternalCollection(out, failedIncludes);
@@ -134,8 +198,8 @@ public class CompilerState implements Externalizable {
 		public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 			inputContents = (ContentDescriptor) in.readObject();
 			compilationConfiguration = (FileCompilationConfiguration) in.readObject();
-			outputPath = (SakerPath) in.readObject();
-			outputContents = (ContentDescriptor) in.readObject();
+			outputObjectPath = (SakerPath) in.readObject();
+			outputObjectContents = (ContentDescriptor) in.readObject();
 			diagnostics = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 			includes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 			failedIncludes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
@@ -145,6 +209,8 @@ public class CompilerState implements Externalizable {
 
 	//maps out file names to states
 	private NavigableMap<String, CompiledFileState> executionCompiledFiles = Collections.emptyNavigableMap();
+	private Map<RootFileProviderKey, NavigableMap<SakerPath, PrecompiledHeaderState>> precompiledHeaders = Collections
+			.emptyMap();
 	private NavigableMap<String, SDKDescription> sdkDescriptions;
 	private EnvironmentSelectionResult environmentSelection;
 
@@ -152,6 +218,15 @@ public class CompilerState implements Externalizable {
 	 * For {@link Externalizable}.
 	 */
 	public CompilerState() {
+	}
+
+	public Map<RootFileProviderKey, NavigableMap<SakerPath, PrecompiledHeaderState>> getPrecompiledHeaders() {
+		return precompiledHeaders;
+	}
+
+	public void setPrecompiledHeaders(
+			Map<RootFileProviderKey, NavigableMap<SakerPath, PrecompiledHeaderState>> precompiledHeaders) {
+		this.precompiledHeaders = precompiledHeaders;
 	}
 
 	public void setExecutionCompiledFiles(NavigableMap<String, CompiledFileState> executionCompiledFiles) {
@@ -178,53 +253,33 @@ public class CompilerState implements Externalizable {
 		this.environmentSelection = envselectionresult;
 	}
 
-	public NavigableMap<String, ContentDescriptor> getInputContentDescriptors() {
-		return ImmutableUtils.makeImmutableNavigableMap(
-				new TransformingSortedMap<String, CompiledFileState, String, ContentDescriptor>(
-						executionCompiledFiles) {
-					@Override
-					protected Entry<String, ContentDescriptor> transformEntry(String key, CompiledFileState value) {
-						return ImmutableUtils.makeImmutableMapEntry(key, value.getInputContents());
-					}
-				});
-	}
-
-	public NavigableMap<SakerPath, ContentDescriptor> getOutputContentDescriptors() {
+	public NavigableMap<SakerPath, ContentDescriptor> getOutputObjectFileContentDescriptors() {
 		TreeMap<SakerPath, ContentDescriptor> result = new TreeMap<>();
 		for (CompiledFileState state : executionCompiledFiles.values()) {
-			SakerPath outpath = state.getOutputPath();
+			SakerPath outpath = state.getOutputObjectPath();
 			if (outpath == null) {
 				continue;
 			}
-			result.put(outpath, state.getOutputContents());
+			result.put(outpath, state.getOutputObjectContents());
 		}
 		return result;
 	}
 
-	public NavigableSet<String> getOutputFileNames() {
+	public NavigableSet<String> getAllOutputFileNames() {
 		TreeSet<String> result = new TreeSet<>();
 		for (CompiledFileState state : executionCompiledFiles.values()) {
-			SakerPath outpath = state.getOutputPath();
-			if (outpath == null) {
-				continue;
+			SakerPath objpath = state.getOutputObjectPath();
+			if (objpath != null) {
+				result.add(objpath.getFileName());
 			}
-			result.add(outpath.getFileName());
 		}
 		return result;
 	}
 
-//	public NavigableSet<SakerPath> getCompiledFileParentDirectoryPaths() {
-//		TreeSet<SakerPath> result = new TreeSet<>();
-//		for (SakerPath compiledfilepath : executionCompiledFiles.keySet()) {
-//			result.add(compiledfilepath.getParent());
-//		}
-//		return result;
-//	}
-
-	public NavigableSet<SakerPath> getObjectFilePaths() {
+	public NavigableSet<SakerPath> getOutputObjectFilePaths() {
 		TreeSet<SakerPath> result = new TreeSet<>();
 		for (CompiledFileState state : executionCompiledFiles.values()) {
-			SakerPath outpath = state.getOutputPath();
+			SakerPath outpath = state.getOutputObjectPath();
 			if (outpath == null) {
 				continue;
 			}
@@ -251,7 +306,7 @@ public class CompilerState implements Externalizable {
 
 	public boolean isAllCompilationSucceeded() {
 		for (CompiledFileState state : executionCompiledFiles.values()) {
-			if (state.getOutputPath() == null) {
+			if (state.getOutputObjectPath() == null) {
 				return false;
 			}
 		}
@@ -262,13 +317,18 @@ public class CompilerState implements Externalizable {
 	public void writeExternal(ObjectOutput out) throws IOException {
 		SerialUtils.writeExternalMap(out, executionCompiledFiles);
 		SerialUtils.writeExternalMap(out, sdkDescriptions);
+		SerialUtils.writeExternalMap(out, precompiledHeaders, SerialUtils::writeExternalObject,
+				SerialUtils::writeExternalMap);
 		out.writeObject(environmentSelection);
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 		executionCompiledFiles = SerialUtils.readExternalSortedImmutableNavigableMap(in);
-		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, SDKSupportUtils.getSDKNameComparator());
+		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
+				SDKSupportUtils.getSDKNameComparator());
+		precompiledHeaders = SerialUtils.readExternalMap(new HashMap<>(), in, SerialUtils::readExternalObject,
+				SerialUtils::readExternalSortedImmutableNavigableMap);
 		environmentSelection = (EnvironmentSelectionResult) in.readObject();
 	}
 
