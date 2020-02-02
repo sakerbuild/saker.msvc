@@ -1,0 +1,8 @@
+build {
+	$compile = saker.msvc.ccompile({
+		Files: *.cpp,
+		PrecompiledHeader: pch.h,
+		ForceInclude: [first.h, second.h],
+		ForceIncludePrecompiledHeader: true,
+	})
+}

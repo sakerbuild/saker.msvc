@@ -262,7 +262,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 
 		if (!compilationentries.isEmpty()) {
-			System.out.println("Compiling " + compilationentries.size() + " source files.");
+			int sccount = compilationentries.size();
+			System.out.println("Compiling " + sccount + " source file" + (sccount == 1 ? "" : "s") + ".");
 			ConcurrentPrependAccumulator<FileCompilationConfiguration> fileaccumulator = new ConcurrentPrependAccumulator<>(
 					compilationentries);
 			InnerTaskExecutionParameters innertaskparams = new InnerTaskExecutionParameters();
@@ -1027,63 +1028,13 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			ExecutionContext executioncontext = taskcontext.getExecutionContext();
 			SakerEnvironment environment = executioncontext.getEnvironment();
 			Path compilefilepath = getCompileFilePath(compilationentryproperties, environment, taskutilities, contents);
-			List<Path> includedirpaths = new ArrayList<>();
-			Collection<IncludeDirectoryOption> includedirectories = compilationentryproperties.getIncludeDirectories();
 
-			if (!ObjectUtils.isNullOrEmpty(includedirectories)) {
-				for (IncludeDirectoryOption includediroption : includedirectories) {
-					includediroption.accept(new IncludeDirectoryVisitor() {
-						@Override
-						public void visit(FileIncludeDirectory includedir) {
-							includedir.getFileLocation().accept(new FileLocationVisitor() {
-								@Override
-								public void visit(ExecutionFileLocation loc) {
-									SakerPath path = loc.getPath();
-									try {
-										includedirpaths.add(mirrorHandler.mirrorDirectory(taskutilities, path));
-									} catch (FileMirroringUnavailableException | IOException e) {
-										throw ObjectUtils.sneakyThrow(e);
-									}
-								}
+			List<Path> includedirpaths = getIncludePaths(taskutilities, environment,
+					compilationentryproperties.getIncludeDirectories(), true);
+			List<Path> forceincludepaths = getIncludePaths(taskutilities, environment,
+					compilationentryproperties.getForceInclude(), false);
+			boolean forceincludepch = compilationentry.isPrecompiledHeaderForceInclude();
 
-								@Override
-								public void visit(LocalFileLocation loc) {
-									// TODO handle local include directory
-									FileLocationVisitor.super.visit(loc);
-								}
-							});
-						}
-
-						@Override
-						public void visit(SDKPathReference includedir) {
-							//XXX duplicated code with linker worker
-							String sdkname = includedir.getSDKName();
-							if (ObjectUtils.isNullOrEmpty(sdkname)) {
-								throw new SDKPathNotFoundException(
-										"Include directory returned empty sdk name: " + includedir);
-							}
-							SDKReference sdkref = getSDKReferenceForName(environment, sdkname);
-							if (sdkref == null) {
-								throw new SDKPathNotFoundException("SDK configuration not found for name: " + sdkname
-										+ " required by include directory: " + includedir);
-							}
-							try {
-								SakerPath sdkdirpath = includedir.getPath(sdkref);
-								if (sdkdirpath == null) {
-									throw new SDKPathNotFoundException("No SDK include directory found for: "
-											+ includedir + " in SDK: " + sdkname + " as " + sdkref);
-								}
-								includedirpaths.add(LocalFileProvider.toRealPath(sdkdirpath));
-							} catch (Exception e) {
-								throw new SDKPathNotFoundException("Failed to retrieve SDK include directory for: "
-										+ includedir + " in SDK: " + sdkname + " as " + sdkref, e);
-							}
-						}
-
-					});
-
-				}
-			}
 			FileCompilationConfiguration compilationconfiguration = compilationentry;
 			String outputfilenamebase = compilationconfiguration.getOutFileName();
 			String outputobjectfilename = outputfilenamebase + ".obj";
@@ -1153,8 +1104,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 										getLanguageCommandLineOption(pchproperties.getLanguage()) + pchcompilefilepath);
 								commands.add("/Fo" + pchobjpath);
 								addIncludeDirectoryCommands(commands, includedirpaths);
-								Map<String, String> macrodefs = pchproperties.getMacroDefinitions();
-								addMacroDefinitionCommands(commands, macrodefs);
+								addForceIncludeCommands(commands, forceincludepaths);
+								addMacroDefinitionCommands(commands, pchproperties.getMacroDefinitions());
 
 								commands.add("/Yc");
 								commands.add("/Fp" + pchoutpath);
@@ -1190,6 +1141,9 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 												.getContentDescriptor(localfp.getPathKey(pchcompilesakerfilepath)));
 							}
 							precompiledHeaderCreationResults.put(entrypch, headerres);
+							//clear the force include paths as they are part of the precompiled header
+							//and they shouldn't be included in the source files
+							forceincludepaths = Collections.emptyList();
 						}
 					}
 				}
@@ -1207,11 +1161,14 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			commands.add(getLanguageCommandLineOption(compilationentryproperties.getLanguage()) + compilefilepath);
 			commands.add("/Fo" + objoutpath);
 			addIncludeDirectoryCommands(commands, includedirpaths);
-			Map<String, String> macrodefs = compilationentryproperties.getMacroDefinitions();
-			addMacroDefinitionCommands(commands, macrodefs);
+			addForceIncludeCommands(commands, forceincludepaths);
+			addMacroDefinitionCommands(commands, compilationentryproperties.getMacroDefinitions());
 			if (pchoutpath != null) {
 				commands.add("/Fp" + pchoutpath);
 				commands.add("/Yu" + pchname);
+				if (forceincludepch) {
+					commands.add("/FI" + pchname);
+				}
 			}
 
 			//merge std error as the /showIncludes option doesn't work properly
@@ -1255,9 +1212,94 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			return result;
 		}
 
+		private List<Path> getIncludePaths(TaskExecutionUtilities taskutilities, SakerEnvironment environment,
+				Collection<IncludeDirectoryOption> includeoptions, boolean directories) {
+			if (ObjectUtils.isNullOrEmpty(includeoptions)) {
+				return Collections.emptyList();
+			}
+			List<Path> includepaths = new ArrayList<>();
+			if (!ObjectUtils.isNullOrEmpty(includeoptions)) {
+				for (IncludeDirectoryOption incopt : includeoptions) {
+					Path incpath = getIncludePath(taskutilities, environment, incopt, directories);
+					includepaths.add(incpath);
+				}
+			}
+			return includepaths;
+		}
+
+		private Path getIncludePath(TaskExecutionUtilities taskutilities, SakerEnvironment environment,
+				IncludeDirectoryOption includediroption, boolean directories) {
+			Path[] includepath = { null };
+			includediroption.accept(new IncludeDirectoryVisitor() {
+				@Override
+				public void visit(FileIncludeDirectory includedir) {
+					includedir.getFileLocation().accept(new FileLocationVisitor() {
+						@Override
+						public void visit(ExecutionFileLocation loc) {
+							SakerPath path = loc.getPath();
+							try {
+								if (directories) {
+									includepath[0] = mirrorHandler.mirrorDirectory(taskutilities, path);
+								} else {
+									//XXX handle mirrored force include contents?
+									includepath[0] = mirrorHandler.mirrorFile(taskutilities, path).getPath();
+								}
+							} catch (FileMirroringUnavailableException | IOException e) {
+								throw ObjectUtils.sneakyThrow(e);
+							}
+						}
+
+						@Override
+						public void visit(LocalFileLocation loc) {
+							// TODO handle local include directory
+							FileLocationVisitor.super.visit(loc);
+						}
+					});
+				}
+
+				@Override
+				public void visit(SDKPathReference includedir) {
+					//XXX duplicated code with linker worker
+					String sdkname = includedir.getSDKName();
+					if (ObjectUtils.isNullOrEmpty(sdkname)) {
+						throw new SDKPathNotFoundException("Include directory returned empty sdk name: " + includedir);
+					}
+					SDKReference sdkref = getSDKReferenceForName(environment, sdkname);
+					if (sdkref == null) {
+						throw new SDKPathNotFoundException("SDK configuration not found for name: " + sdkname
+								+ " required by include directory: " + includedir);
+					}
+					try {
+						SakerPath sdkdirpath = includedir.getPath(sdkref);
+						if (sdkdirpath == null) {
+							throw new SDKPathNotFoundException("No SDK include directory found for: " + includedir
+									+ " in SDK: " + sdkname + " as " + sdkref);
+						}
+						includepath[0] = LocalFileProvider.toRealPath(sdkdirpath);
+					} catch (Exception e) {
+						throw new SDKPathNotFoundException("Failed to retrieve SDK include directory for: " + includedir
+								+ " in SDK: " + sdkname + " as " + sdkref, e);
+					}
+				}
+			});
+			return includepath[0];
+		}
+
 		private static void addIncludeDirectoryCommands(List<String> commands, List<Path> includedirpaths) {
+			if (ObjectUtils.isNullOrEmpty(includedirpaths)) {
+				return;
+			}
 			for (Path incdir : includedirpaths) {
 				commands.add("/I" + incdir);
+			}
+		}
+
+		private static void addForceIncludeCommands(List<String> commands, List<Path> forceincludepaths) {
+			if (ObjectUtils.isNullOrEmpty(forceincludepaths)) {
+				return;
+			}
+			for (Path fipath : forceincludepaths) {
+				commands.add("/FI" + fipath);
 			}
 		}
 

@@ -28,24 +28,28 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 public class OptionCompilationInputPassOption
 		implements OptionCompilationInputPass, CompilationInputPassOption, CompilationInputPassTaskOption {
 	private Collection<MultiFileLocationTaskOption> files;
-	private Collection<IncludeDirectoryTaskOption> includeDirectories;
+	private Collection<IncludePathTaskOption> includeDirectories;
 	private CompilationIdentifierTaskOption subIdentifier;
 	private Map<String, String> macroDefinitions;
 	private Collection<String> simpleParameters;
 	private Collection<MSVCCompilerOptions> compilerOptions;
 	private String language;
 	private FileLocationTaskOption precompiledHeader;
+	private Collection<IncludePathTaskOption> forceInclude;
+	private Boolean forceIncludePrecompiledHeader;
 
 	public OptionCompilationInputPassOption(CompilationInputPassTaskOption copy) {
 		this.files = ObjectUtils.cloneArrayList(copy.getFiles(), MultiFileLocationTaskOption::clone);
 		this.includeDirectories = ObjectUtils.cloneArrayList(copy.getIncludeDirectories(),
-				IncludeDirectoryTaskOption::clone);
+				IncludePathTaskOption::clone);
 		this.subIdentifier = ObjectUtils.clone(copy.getSubIdentifier(), CompilationIdentifierTaskOption::clone);
 		this.macroDefinitions = ImmutableUtils.makeImmutableNavigableMap(copy.getMacroDefinitions());
 		this.simpleParameters = ImmutableUtils.makeImmutableList(copy.getSimpleParameters());
 		this.compilerOptions = ObjectUtils.cloneArrayList(copy.getCompilerOptions(), MSVCCompilerOptions::clone);
 		this.language = copy.getLanguage();
 		this.precompiledHeader = ObjectUtils.clone(copy.getPrecompiledHeader(), FileLocationTaskOption::clone);
+		this.forceInclude = ObjectUtils.cloneArrayList(copy.getForceInclude(), IncludePathTaskOption::clone);
+		this.forceIncludePrecompiledHeader = copy.getForceIncludePrecompiledHeader();
 	}
 
 	@Override
@@ -69,7 +73,7 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public Collection<IncludeDirectoryTaskOption> getIncludeDirectories() {
+	public Collection<IncludePathTaskOption> getIncludeDirectories() {
 		return includeDirectories;
 	}
 
@@ -94,12 +98,22 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public CompilationInputPassOption toCompilationInputPassOption(TaskContext taskcontext) {
-		return this;
+	public FileLocationTaskOption getPrecompiledHeader() {
+		return precompiledHeader;
 	}
 
 	@Override
-	public FileLocationTaskOption getPrecompiledHeader() {
-		return precompiledHeader;
+	public Collection<IncludePathTaskOption> getForceInclude() {
+		return forceInclude;
+	}
+
+	@Override
+	public Boolean getForceIncludePrecompiledHeader() {
+		return forceIncludePrecompiledHeader;
+	}
+
+	@Override
+	public CompilationInputPassOption toCompilationInputPassOption(TaskContext taskcontext) {
+		return this;
 	}
 }

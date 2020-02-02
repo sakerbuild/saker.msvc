@@ -16,29 +16,25 @@
 package saker.msvc.main.ccompile.options;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.Set;
 
-import saker.build.file.path.SakerPath;
 import saker.build.task.TaskContext;
-import saker.msvc.impl.ccompile.option.FileIncludeDirectoryOption;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
-import saker.std.api.file.location.ExecutionFileLocation;
 
-final class RelativePathIncludeDirectoryTaskOption implements IncludeDirectoryTaskOption {
-	private final SakerPath path;
+public final class SimpleIncludePathTaskOption implements IncludePathTaskOption {
+	private final Set<IncludeDirectoryOption> directoryoptions;
 
-	public RelativePathIncludeDirectoryTaskOption(SakerPath path) {
-		this.path = path;
+	public SimpleIncludePathTaskOption(Set<IncludeDirectoryOption> directoryoptions) {
+		this.directoryoptions = directoryoptions;
 	}
 
 	@Override
 	public Collection<IncludeDirectoryOption> toIncludeDirectories(TaskContext tc) {
-		return Collections.singleton(new FileIncludeDirectoryOption(
-				ExecutionFileLocation.create(tc.getTaskWorkingDirectoryPath().resolve(path))));
+		return directoryoptions;
 	}
 
 	@Override
-	public IncludeDirectoryTaskOption clone() {
+	public IncludePathTaskOption clone() {
 		return this;
 	}
 
@@ -46,7 +42,7 @@ final class RelativePathIncludeDirectoryTaskOption implements IncludeDirectoryTa
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((path == null) ? 0 : path.hashCode());
+		result = prime * result + ((directoryoptions == null) ? 0 : directoryoptions.hashCode());
 		return result;
 	}
 
@@ -58,13 +54,12 @@ final class RelativePathIncludeDirectoryTaskOption implements IncludeDirectoryTa
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		RelativePathIncludeDirectoryTaskOption other = (RelativePathIncludeDirectoryTaskOption) obj;
-		if (path == null) {
-			if (other.path != null)
+		SimpleIncludePathTaskOption other = (SimpleIncludePathTaskOption) obj;
+		if (directoryoptions == null) {
+			if (other.directoryoptions != null)
 				return false;
-		} else if (!path.equals(other.path))
+		} else if (!directoryoptions.equals(other.directoryoptions))
 			return false;
 		return true;
 	}
-
 }

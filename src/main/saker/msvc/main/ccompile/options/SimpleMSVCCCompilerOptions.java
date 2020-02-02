@@ -27,7 +27,7 @@ import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 public class SimpleMSVCCCompilerOptions implements MSVCCompilerOptions {
 	private CompilationIdentifierTaskOption identifier;
 	private String language;
-	private Collection<IncludeDirectoryTaskOption> includeDirectories;
+	private Collection<IncludePathTaskOption> includeDirectories;
 	private String architecture;
 	private Map<String, SDKDescriptionTaskOption> sdks;
 	private Map<String, String> macroDefinitions;
@@ -41,7 +41,7 @@ public class SimpleMSVCCCompilerOptions implements MSVCCompilerOptions {
 		this.identifier = ObjectUtils.clone(copy.getIdentifier(), CompilationIdentifierTaskOption::clone);
 		this.language = copy.getLanguage();
 		this.includeDirectories = ObjectUtils.cloneArrayList(copy.getIncludeDirectories(),
-				IncludeDirectoryTaskOption::clone);
+				IncludePathTaskOption::clone);
 		this.architecture = copy.getArchitecture();
 		this.sdks = ObjectUtils.cloneTreeMap(copy.getSDKs(), Functionals.identityFunction(),
 				SDKDescriptionTaskOption::clone);
@@ -66,7 +66,7 @@ public class SimpleMSVCCCompilerOptions implements MSVCCompilerOptions {
 	}
 
 	@Override
-	public Collection<IncludeDirectoryTaskOption> getIncludeDirectories() {
+	public Collection<IncludePathTaskOption> getIncludeDirectories() {
 		return includeDirectories;
 	}
 

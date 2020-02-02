@@ -51,4 +51,8 @@ public interface PresetCOptions {
 
 	public FileLocation getPrecompiledHeader();
 
+	public Set<IncludeDirectoryOption> getForceInclude();
+
+	public Boolean getForceIncludePrecompiledHeader();
+
 }

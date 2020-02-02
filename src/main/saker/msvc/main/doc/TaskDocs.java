@@ -22,7 +22,7 @@ import saker.build.file.path.SakerPath;
 import saker.build.scripting.model.info.TypeInformationKind;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
-import saker.msvc.main.ccompile.options.IncludeDirectoryTaskOption;
+import saker.msvc.main.ccompile.options.IncludePathTaskOption;
 import saker.msvc.main.clink.MSVCCLinkTaskFactory;
 import saker.msvc.main.clink.options.LibraryPathTaskOption;
 import saker.msvc.main.coptions.COptionsPresetTaskFactory;
@@ -64,6 +64,16 @@ public class TaskDocs {
 			+ "The precompiled header should be included in the compiled source files in the first line. They "
 			+ "can be included with the #include \"header_file_name.h\" directive. (Substitute the header_file_name.h with "
 			+ "the actual simple file name of the header.)";
+
+	public static final String COMPILE_FORCE_INCLUDE = "Specifies paths or file locations that should be force included in the compiled source files.\n"
+			+ "The option corresponds to the /FI argument of cl.exe. The option acts as if the specified file was included with the #include directive "
+			+ "at the start of the compiled source file.\n"
+			+ "Multiple force included files can be specified. To force include the precompiled header file, use the ForceIncludePrecompiledHeader option set "
+			+ "to true.";
+	public static final String COMPILE_FORCE_INCLUDE_PRECOMPILED_HEADER = "Boolean that specifies if the precompiled header should be force included in the source files.\n"
+			+ "If you're using precompiled headers, you will need to include them at the first line of your source files. Setting this option to true "
+			+ "will cause the compiler to include it for you, so you don't need to start your source files with the #include precompiled header directive.\n"
+			+ "(In general we don't recommend using this option as that could cause portability issues of your source code.)";
 
 	public static final String LINK_INPUT = "Specifies one or more inputs for the link operation.\n"
 			+ "The inputs may be either simple paths, wildcards, file locations, file collections or task output from "
@@ -234,7 +244,7 @@ public class TaskDocs {
 			info = @NestInformation(TaskDocs.OPTIONS_ARCHITECTURE))
 
 	@NestFieldInformation(value = "IncludeDirectories",
-			type = @NestTypeUsage(value = Collection.class, elementTypes = IncludeDirectoryTaskOption.class),
+			type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
 			info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
 	@NestFieldInformation(value = "SDKs",
 			type = @NestTypeUsage(value = Map.class,

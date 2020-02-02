@@ -38,50 +38,50 @@ import saker.std.main.file.option.FileLocationTaskOption;
 @NestInformation("Represents an include directory for C/C++ compilation.\n"
 		+ "Include directories are used to resolve #include directives in source code by the preprocessor.\n"
 		+ "The option accepts simple paths, wildcards, file locations, file collections, and SDK paths.")
-public interface IncludeDirectoryTaskOption {
-	public IncludeDirectoryTaskOption clone();
+public interface IncludePathTaskOption {
+	public IncludePathTaskOption clone();
 
 	public Collection<IncludeDirectoryOption> toIncludeDirectories(TaskContext taskcontext);
 
-	public static IncludeDirectoryTaskOption valueOf(FileLocation filelocation) {
+	public static IncludePathTaskOption valueOf(FileLocation filelocation) {
 		FileLocationTaskOption.validateFileLocation(filelocation);
-		return new SimpleIncludeDirectoryTaskOption(
+		return new SimpleIncludePathTaskOption(
 				Collections.singleton(new FileIncludeDirectoryOption(filelocation)));
 	}
 
-	public static IncludeDirectoryTaskOption valueOf(FileCollection files) {
+	public static IncludePathTaskOption valueOf(FileCollection files) {
 		Set<IncludeDirectoryOption> filelist = new LinkedHashSet<>();
 		for (FileLocation fl : files) {
 			filelist.add(new FileIncludeDirectoryOption(fl));
 		}
-		return new SimpleIncludeDirectoryTaskOption(ImmutableUtils.unmodifiableSet(filelist));
+		return new SimpleIncludePathTaskOption(ImmutableUtils.unmodifiableSet(filelist));
 	}
 
-	public static IncludeDirectoryTaskOption valueOf(SakerPath path) {
+	public static IncludePathTaskOption valueOf(SakerPath path) {
 		if (!path.isAbsolute()) {
-			return new RelativePathIncludeDirectoryTaskOption(path);
+			return new RelativePathIncludePathTaskOption(path);
 		}
-		return new SimpleIncludeDirectoryTaskOption(
+		return new SimpleIncludePathTaskOption(
 				Collections.singleton(new FileIncludeDirectoryOption(ExecutionFileLocation.create(path))));
 	}
 
-	public static IncludeDirectoryTaskOption valueOf(WildcardPath path) {
+	public static IncludePathTaskOption valueOf(WildcardPath path) {
 		ReducedWildcardPath reduced = path.reduce();
 		if (reduced.getWildcard() == null) {
 			return valueOf(reduced.getFile());
 		}
-		return new WildcardIncludeDirectoryTaskOption(path);
+		return new WildcardIncludePathTaskOption(path);
 	}
 
-	public static IncludeDirectoryTaskOption valueOf(String path) {
+	public static IncludePathTaskOption valueOf(String path) {
 		return valueOf(WildcardPath.valueOf(path));
 	}
 
-	public static IncludeDirectoryTaskOption valueOf(IncludeDirectoryOption option) {
-		return new SimpleIncludeDirectoryTaskOption(Collections.singleton(option));
+	public static IncludePathTaskOption valueOf(IncludeDirectoryOption option) {
+		return new SimpleIncludePathTaskOption(Collections.singleton(option));
 	}
 
-	public static IncludeDirectoryTaskOption valueOf(SDKPathReference pathreference) {
+	public static IncludePathTaskOption valueOf(SDKPathReference pathreference) {
 		return valueOf(new CommonSDKPathReferenceOption(pathreference));
 	}
 }

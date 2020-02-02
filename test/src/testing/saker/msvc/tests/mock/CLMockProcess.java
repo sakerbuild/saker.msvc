@@ -21,6 +21,7 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import saker.build.exception.InvalidPathFormatException;
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.LocalFileProvider;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
@@ -158,6 +160,40 @@ public class CLMockProcess {
 		Deque<SourceLine> pendinglines = new ArrayDeque<>();
 		Set<SakerPath> includedpaths = new TreeSet<>();
 		Set<SakerPath> referencedlibs = new TreeSet<>();
+		for (String cmd : commands) {
+			if (cmd.startsWith("/FI")) {
+				String fipath = cmd.substring(3);
+				if (usepchname != null) {
+					if (!fipath.equals(usepchname)) {
+						throw new IllegalArgumentException(
+								"Force includes shouldn't contain other headers than the precompiled header: " + cmd);
+					}
+					Path pchpath = Paths.get(pchname);
+					SakerPath pchsakerpath = SakerPath.valueOf(pchpath);
+					try {
+						List<String> pchlines = Files.readAllLines(pchpath);
+						for (String l : pchlines) {
+							pendinglines.add(new SourceLine(pchsakerpath, l));
+						}
+						//showincludes are not printed
+						includedpch = true;
+						continue;
+					} catch (IOException e) {
+						e.printStackTrace();
+						return -99;
+					}
+				}
+				try {
+					SakerPath incpath = SakerPath.valueOf(fipath);
+
+					includeResolvedIncludePath(pendinglines, incpath, stdout, stderr, includedpaths, commands);
+				} catch (InvalidPathException | InvalidPathFormatException | IOException e) {
+					printErrorMessage(stdout, "c:\\some\\path\\to\\source", "123", "fatal error", "C1083",
+							"Cannot open include file: '" + fipath + "': No such file or directory");
+					return -2;
+				}
+			}
+		}
 
 		UnsyncByteArrayOutputStream fileoutbuf = new UnsyncByteArrayOutputStream();
 		try (BufferedReader reader = Files.newBufferedReader(LocalFileProvider.toRealPath(inputpath));
@@ -191,7 +227,6 @@ public class CLMockProcess {
 			} else if (ObjectUtils.containsAny(commands, ImmutableUtils.asUnmodifiableArrayList("/LD", "/LDd"))) {
 				throw new IllegalArgumentException("Unsupported runtime library options: " + commands);
 			}
-			//TODO handle pch force include
 			for (SourceLine srcline; (srcline = nextLine(reader, pendinglines, inputpath)) != null;) {
 				String line = srcline.line;
 				if (line.isEmpty()) {
@@ -210,6 +245,7 @@ public class CLMockProcess {
 						for (String l : pchlines) {
 							pendinglines.add(new SourceLine(pchsakerpath, l));
 						}
+						//showincludes are not printed
 						includedpch = true;
 						continue;
 					}

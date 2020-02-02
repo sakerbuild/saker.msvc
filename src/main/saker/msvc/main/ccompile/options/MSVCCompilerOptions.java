@@ -51,7 +51,7 @@ import saker.std.main.file.option.FileLocationTaskOption;
 		type = @NestTypeUsage(ArchitectureType.class),
 		info = @NestInformation(TaskDocs.OPTIONS_ARCHITECTURE))
 @NestFieldInformation(value = "IncludeDirectories",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludeDirectoryTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
 @NestFieldInformation(value = "MacroDefinitions",
 		type = @NestTypeUsage(value = Map.class,
@@ -74,6 +74,13 @@ import saker.std.main.file.option.FileLocationTaskOption;
 		info = @NestInformation(TaskDocs.COMPILE_PRECOMPILED_HEADER + "\n"
 				+ "When merging, only a single precompiled header may be used. An exception "
 				+ "is thrown in case of conflict."))
+@NestFieldInformation(value = "ForceInclude",
+		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
+		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE))
+@NestFieldInformation(value = "ForceIncludePrecompiledHeader",
+		type = @NestTypeUsage(boolean.class),
+		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE_PRECOMPILED_HEADER + "\n"
+				+ "When merging, true will take precedence for this option."))
 public interface MSVCCompilerOptions {
 	public void accept(MSVCCompilerOptionsVisitor visitor);
 
@@ -93,7 +100,7 @@ public interface MSVCCompilerOptions {
 		return null;
 	}
 
-	public default Collection<IncludeDirectoryTaskOption> getIncludeDirectories() {
+	public default Collection<IncludePathTaskOption> getIncludeDirectories() {
 		return null;
 	}
 
@@ -109,7 +116,15 @@ public interface MSVCCompilerOptions {
 		return null;
 	}
 
-	public default FileLocation getPrecompiledHeader() {
+	public default FileLocationTaskOption getPrecompiledHeader() {
+		return null;
+	}
+
+	public default Collection<IncludePathTaskOption> getForceInclude() {
+		return null;
+	}
+
+	public default Boolean getForceIncludePrecompiledHeader() {
 		return null;
 	}
 

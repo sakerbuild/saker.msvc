@@ -52,7 +52,7 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 				+ "The specified files are directly passed to the backend compiler (cl.exe)."))
 
 @NestFieldInformation(value = "IncludeDirectories",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludeDirectoryTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
 @NestFieldInformation(value = "CompilerOptions",
 		type = @NestTypeUsage(value = Collection.class, elementTypes = MSVCCompilerOptions.class),
@@ -86,6 +86,12 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 @NestFieldInformation(value = "PrecompiledHeader",
 		type = @NestTypeUsage(FileLocationTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_PRECOMPILED_HEADER))
+@NestFieldInformation(value = "ForceInclude",
+		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
+		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE))
+@NestFieldInformation(value = "ForceIncludePrecompiledHeader",
+		type = @NestTypeUsage(boolean.class),
+		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE_PRECOMPILED_HEADER))
 public interface CompilationInputPassTaskOption {
 	public default CompilationInputPassTaskOption clone() {
 		return new OptionCompilationInputPassOption(this);
@@ -97,7 +103,7 @@ public interface CompilationInputPassTaskOption {
 		return null;
 	}
 
-	public default Collection<IncludeDirectoryTaskOption> getIncludeDirectories() {
+	public default Collection<IncludePathTaskOption> getIncludeDirectories() {
 		return null;
 	}
 
@@ -122,6 +128,14 @@ public interface CompilationInputPassTaskOption {
 	}
 
 	public default FileLocationTaskOption getPrecompiledHeader() {
+		return null;
+	}
+
+	public default Collection<IncludePathTaskOption> getForceInclude() {
+		return null;
+	}
+
+	public default Boolean getForceIncludePrecompiledHeader() {
 		return null;
 	}
 

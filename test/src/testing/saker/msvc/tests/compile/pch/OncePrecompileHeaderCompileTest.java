@@ -24,7 +24,7 @@ public class OncePrecompileHeaderCompileTest extends MSVCTestCase {
 		assertEquals(files.getAllBytes(PATH_MAINCPP2_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 222, 123));
 		assertEquals(files.getAllBytes(PATH_MAINCPP3_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 222, 123));
 		assertEquals(files.getAllBytes(PATH_MAINCPP4_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 222, 123));
-		assertPrecompilationRunOnlyOnce();
+		assertHeaderPrecompilationRunOnlyOnce();
 
 		runScriptTask("build");
 		assertEmpty(getMetric().getRunTaskIdFactories());
@@ -35,7 +35,7 @@ public class OncePrecompileHeaderCompileTest extends MSVCTestCase {
 		assertEquals(files.getAllBytes(PATH_MAINCPP2_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 333, 123));
 		assertEquals(files.getAllBytes(PATH_MAINCPP3_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 333, 123));
 		assertEquals(files.getAllBytes(PATH_MAINCPP4_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 333, 123));
-		assertPrecompilationRunOnlyOnce();
+		assertHeaderPrecompilationRunOnlyOnce();
 		
 		files.putFile(maincpppath, files.getAllBytes(maincpppath).toString().replace("123", "456"));
 		runScriptTask("build");

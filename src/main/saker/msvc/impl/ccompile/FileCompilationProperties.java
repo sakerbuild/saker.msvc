@@ -24,6 +24,7 @@ public final class FileCompilationProperties implements Externalizable {
 	protected String language;
 	//store include directories as a list, as their order matters
 	protected List<IncludeDirectoryOption> includeDirectories;
+	protected List<IncludeDirectoryOption> forceInclude;
 	protected Map<String, String> macroDefinitions;
 	protected NavigableSet<String> simpleParameters = Collections.emptyNavigableSet();
 
@@ -64,6 +65,15 @@ public final class FileCompilationProperties implements Externalizable {
 		}
 	}
 
+	public void setForceInclude(Collection<? extends IncludeDirectoryOption> includeDirectories) {
+		if (ObjectUtils.isNullOrEmpty(includeDirectories)) {
+			this.forceInclude = null;
+		} else {
+			this.forceInclude = ImmutableUtils
+					.makeImmutableList(ImmutableUtils.makeImmutableLinkedHashSet(includeDirectories));
+		}
+	}
+
 	public void setSimpleParameters(Collection<String> simpleParameters) {
 		if (simpleParameters == null) {
 			this.simpleParameters = Collections.emptyNavigableSet();
@@ -98,6 +108,10 @@ public final class FileCompilationProperties implements Externalizable {
 		return simpleParameters;
 	}
 
+	public List<IncludeDirectoryOption> getForceInclude() {
+		return forceInclude;
+	}
+
 	public void setMacroDefinitions(Map<String, String> macroDefinitions) {
 		if (ObjectUtils.isNullOrEmpty(macroDefinitions)) {
 			this.macroDefinitions = null;
@@ -111,6 +125,7 @@ public final class FileCompilationProperties implements Externalizable {
 		out.writeObject(fileLocation);
 		out.writeObject(language);
 		SerialUtils.writeExternalCollection(out, includeDirectories);
+		SerialUtils.writeExternalCollection(out, forceInclude);
 		SerialUtils.writeExternalMap(out, macroDefinitions);
 		SerialUtils.writeExternalCollection(out, simpleParameters);
 	}
@@ -120,6 +135,7 @@ public final class FileCompilationProperties implements Externalizable {
 		fileLocation = (FileLocation) in.readObject();
 		language = (String) in.readObject();
 		includeDirectories = SerialUtils.readExternalImmutableList(in);
+		forceInclude = SerialUtils.readExternalImmutableList(in);
 		macroDefinitions = SerialUtils.readExternalImmutableLinkedHashMap(in);
 		simpleParameters = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 	}
@@ -143,6 +159,11 @@ public final class FileCompilationProperties implements Externalizable {
 			if (other.fileLocation != null)
 				return false;
 		} else if (!fileLocation.equals(other.fileLocation))
+			return false;
+		if (forceInclude == null) {
+			if (other.forceInclude != null)
+				return false;
+		} else if (!forceInclude.equals(other.forceInclude))
 			return false;
 		if (includeDirectories == null) {
 			if (other.includeDirectories != null)

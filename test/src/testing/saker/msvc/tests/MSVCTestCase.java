@@ -182,7 +182,7 @@ public abstract class MSVCTestCase extends RepositoryLoadingVariablesMetricEnvir
 		}
 	}
 
-	protected void assertPrecompilationRunOnlyOnce() {
+	protected void assertHeaderPrecompilationRunOnlyOnce() {
 		for (Entry<List<String>, Long> entry : getMetric().getProcessInvocationFrequencies().entrySet()) {
 			if (entry.getKey().contains("/Yc")) {
 				if (entry.getValue() > 1) {

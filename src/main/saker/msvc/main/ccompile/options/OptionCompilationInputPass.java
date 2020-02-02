@@ -27,7 +27,7 @@ public interface OptionCompilationInputPass {
 
 	public String getLanguage();
 
-	public Collection<IncludeDirectoryTaskOption> getIncludeDirectories();
+	public Collection<IncludePathTaskOption> getIncludeDirectories();
 
 	public CompilationIdentifierTaskOption getSubIdentifier();
 
@@ -38,4 +38,8 @@ public interface OptionCompilationInputPass {
 	public Collection<MSVCCompilerOptions> getCompilerOptions();
 
 	public FileLocationTaskOption getPrecompiledHeader();
+
+	public Collection<IncludePathTaskOption> getForceInclude();
+
+	public Boolean getForceIncludePrecompiledHeader();
 }

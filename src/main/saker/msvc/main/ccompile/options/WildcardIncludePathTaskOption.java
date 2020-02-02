@@ -31,10 +31,10 @@ import saker.msvc.impl.ccompile.option.FileIncludeDirectoryOption;
 import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
 import saker.std.api.file.location.ExecutionFileLocation;
 
-final class WildcardIncludeDirectoryTaskOption implements IncludeDirectoryTaskOption {
+final class WildcardIncludePathTaskOption implements IncludePathTaskOption {
 	private final WildcardPath path;
 
-	public WildcardIncludeDirectoryTaskOption(WildcardPath path) {
+	public WildcardIncludePathTaskOption(WildcardPath path) {
 		this.path = path;
 	}
 
@@ -53,7 +53,7 @@ final class WildcardIncludeDirectoryTaskOption implements IncludeDirectoryTaskOp
 	}
 
 	@Override
-	public IncludeDirectoryTaskOption clone() {
+	public IncludePathTaskOption clone() {
 		return this;
 	}
 
@@ -73,7 +73,7 @@ final class WildcardIncludeDirectoryTaskOption implements IncludeDirectoryTaskOp
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		WildcardIncludeDirectoryTaskOption other = (WildcardIncludeDirectoryTaskOption) obj;
+		WildcardIncludePathTaskOption other = (WildcardIncludePathTaskOption) obj;
 		if (path == null) {
 			if (other.path != null)
 				return false;

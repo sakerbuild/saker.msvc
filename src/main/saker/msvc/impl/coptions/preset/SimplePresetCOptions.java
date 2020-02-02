@@ -48,6 +48,8 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	private Set<String> linkSimpleParameters;
 	private Set<String> compileSimpleParameters;
 	private FileLocation precompiledHeader;
+	private Set<IncludeDirectoryOption> forceInclude;
+	private Boolean forceIncludePrecompiledHeader;
 
 	/**
 	 * For {@link Externalizable}.
@@ -119,6 +121,16 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		return precompiledHeader;
 	}
 
+	@Override
+	public Set<IncludeDirectoryOption> getForceInclude() {
+		return forceInclude;
+	}
+
+	@Override
+	public Boolean getForceIncludePrecompiledHeader() {
+		return forceIncludePrecompiledHeader;
+	}
+
 	public void setPresetIdentifier(String presetIdentifier) {
 		this.presetIdentifier = presetIdentifier;
 	}
@@ -164,6 +176,14 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.precompiledHeader = precompiledHeader;
 	}
 
+	public void setForceInclude(Set<IncludeDirectoryOption> forceInclude) {
+		this.forceInclude = forceInclude;
+	}
+
+	public void setForceIncludePrecompiledHeader(Boolean forceIncludePrecompiledHeader) {
+		this.forceIncludePrecompiledHeader = forceIncludePrecompiledHeader;
+	}
+
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		out.writeObject(presetIdentifier);
@@ -171,12 +191,14 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		out.writeObject(language);
 		out.writeObject(architecture);
 		out.writeObject(precompiledHeader);
+		out.writeObject(forceIncludePrecompiledHeader);
 		SerialUtils.writeExternalCollection(out, libraryPaths);
 		SerialUtils.writeExternalCollection(out, includeDirectories);
 		SerialUtils.writeExternalMap(out, sdks);
 		SerialUtils.writeExternalMap(out, macroDefinitions);
 		SerialUtils.writeExternalCollection(out, linkSimpleParameters);
 		SerialUtils.writeExternalCollection(out, compileSimpleParameters);
+		SerialUtils.writeExternalCollection(out, forceInclude);
 	}
 
 	@Override
@@ -186,12 +208,14 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		language = (String) in.readObject();
 		architecture = (String) in.readObject();
 		precompiledHeader = (FileLocation) in.readObject();
+		forceIncludePrecompiledHeader = (Boolean) in.readObject();
 		libraryPaths = SerialUtils.readExternalImmutableLinkedHashSet(in);
 		includeDirectories = SerialUtils.readExternalImmutableLinkedHashSet(in);
 		sdks = SerialUtils.readExternalSortedImmutableNavigableMap(in, SDKSupportUtils.getSDKNameComparator());
 		macroDefinitions = SerialUtils.readExternalImmutableLinkedHashMap(in);
 		linkSimpleParameters = SerialUtils.readExternalImmutableNavigableSet(in);
 		compileSimpleParameters = SerialUtils.readExternalImmutableNavigableSet(in);
+		forceInclude = SerialUtils.readExternalImmutableLinkedHashSet(in);
 	}
 
 	@Override
@@ -200,13 +224,16 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		int result = 1;
 		result = prime * result + ((architecture == null) ? 0 : architecture.hashCode());
 		result = prime * result + ((compileSimpleParameters == null) ? 0 : compileSimpleParameters.hashCode());
-		result = prime * result + ((precompiledHeader == null) ? 0 : precompiledHeader.hashCode());
+		result = prime * result + ((forceInclude == null) ? 0 : forceInclude.hashCode());
+		result = prime * result
+				+ ((forceIncludePrecompiledHeader == null) ? 0 : forceIncludePrecompiledHeader.hashCode());
 		result = prime * result + ((identifier == null) ? 0 : identifier.hashCode());
 		result = prime * result + ((includeDirectories == null) ? 0 : includeDirectories.hashCode());
 		result = prime * result + ((language == null) ? 0 : language.hashCode());
 		result = prime * result + ((libraryPaths == null) ? 0 : libraryPaths.hashCode());
 		result = prime * result + ((linkSimpleParameters == null) ? 0 : linkSimpleParameters.hashCode());
 		result = prime * result + ((macroDefinitions == null) ? 0 : macroDefinitions.hashCode());
+		result = prime * result + ((precompiledHeader == null) ? 0 : precompiledHeader.hashCode());
 		result = prime * result + ((sdks == null) ? 0 : sdks.hashCode());
 		return result;
 	}
@@ -230,10 +257,15 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 				return false;
 		} else if (!compileSimpleParameters.equals(other.compileSimpleParameters))
 			return false;
-		if (precompiledHeader == null) {
-			if (other.precompiledHeader != null)
+		if (forceInclude == null) {
+			if (other.forceInclude != null)
 				return false;
-		} else if (!precompiledHeader.equals(other.precompiledHeader))
+		} else if (!forceInclude.equals(other.forceInclude))
+			return false;
+		if (forceIncludePrecompiledHeader == null) {
+			if (other.forceIncludePrecompiledHeader != null)
+				return false;
+		} else if (!forceIncludePrecompiledHeader.equals(other.forceIncludePrecompiledHeader))
 			return false;
 		if (identifier == null) {
 			if (other.identifier != null)
@@ -264,6 +296,11 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 			if (other.macroDefinitions != null)
 				return false;
 		} else if (!macroDefinitions.equals(other.macroDefinitions))
+			return false;
+		if (precompiledHeader == null) {
+			if (other.precompiledHeader != null)
+				return false;
+		} else if (!precompiledHeader.equals(other.precompiledHeader))
 			return false;
 		if (sdks == null) {
 			if (other.sdks != null)
