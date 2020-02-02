@@ -26,7 +26,7 @@ import java.util.Set;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
-import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
+import saker.msvc.impl.ccompile.option.IncludePathOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKSupportUtils;
@@ -42,13 +42,13 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	private String architecture;
 
 	private Set<LibraryPathOption> libraryPaths;
-	private Set<IncludeDirectoryOption> includeDirectories;
+	private Set<IncludePathOption> includeDirectories;
 	private NavigableMap<String, SDKDescription> sdks;
 	private Map<String, String> macroDefinitions;
 	private Set<String> linkSimpleParameters;
 	private Set<String> compileSimpleParameters;
 	private FileLocation precompiledHeader;
-	private Set<IncludeDirectoryOption> forceInclude;
+	private Set<IncludePathOption> forceInclude;
 	private Boolean forceIncludePrecompiledHeader;
 
 	/**
@@ -92,7 +92,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	@Override
-	public Set<IncludeDirectoryOption> getIncludeDirectories() {
+	public Set<IncludePathOption> getIncludeDirectories() {
 		return includeDirectories;
 	}
 
@@ -122,7 +122,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	@Override
-	public Set<IncludeDirectoryOption> getForceInclude() {
+	public Set<IncludePathOption> getForceInclude() {
 		return forceInclude;
 	}
 
@@ -151,7 +151,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.libraryPaths = libraryPaths;
 	}
 
-	public void setIncludeDirectories(Set<IncludeDirectoryOption> includeDirectories) {
+	public void setIncludeDirectories(Set<IncludePathOption> includeDirectories) {
 		this.includeDirectories = includeDirectories;
 	}
 
@@ -176,7 +176,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.precompiledHeader = precompiledHeader;
 	}
 
-	public void setForceInclude(Set<IncludeDirectoryOption> forceInclude) {
+	public void setForceInclude(Set<IncludePathOption> forceInclude) {
 		this.forceInclude = forceInclude;
 	}
 

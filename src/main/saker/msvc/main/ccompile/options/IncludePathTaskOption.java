@@ -25,8 +25,8 @@ import saker.build.file.path.WildcardPath;
 import saker.build.file.path.WildcardPath.ReducedWildcardPath;
 import saker.build.task.TaskContext;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
-import saker.msvc.impl.ccompile.option.FileIncludeDirectoryOption;
-import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
+import saker.msvc.impl.ccompile.option.FileIncludePathOption;
+import saker.msvc.impl.ccompile.option.IncludePathOption;
 import saker.msvc.impl.sdk.option.CommonSDKPathReferenceOption;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.sdk.support.api.SDKPathReference;
@@ -41,18 +41,18 @@ import saker.std.main.file.option.FileLocationTaskOption;
 public interface IncludePathTaskOption {
 	public IncludePathTaskOption clone();
 
-	public Collection<IncludeDirectoryOption> toIncludeDirectories(TaskContext taskcontext);
+	public Collection<IncludePathOption> toIncludeDirectories(TaskContext taskcontext);
 
 	public static IncludePathTaskOption valueOf(FileLocation filelocation) {
 		FileLocationTaskOption.validateFileLocation(filelocation);
 		return new SimpleIncludePathTaskOption(
-				Collections.singleton(new FileIncludeDirectoryOption(filelocation)));
+				Collections.singleton(new FileIncludePathOption(filelocation)));
 	}
 
 	public static IncludePathTaskOption valueOf(FileCollection files) {
-		Set<IncludeDirectoryOption> filelist = new LinkedHashSet<>();
+		Set<IncludePathOption> filelist = new LinkedHashSet<>();
 		for (FileLocation fl : files) {
-			filelist.add(new FileIncludeDirectoryOption(fl));
+			filelist.add(new FileIncludePathOption(fl));
 		}
 		return new SimpleIncludePathTaskOption(ImmutableUtils.unmodifiableSet(filelist));
 	}
@@ -62,7 +62,7 @@ public interface IncludePathTaskOption {
 			return new RelativePathIncludePathTaskOption(path);
 		}
 		return new SimpleIncludePathTaskOption(
-				Collections.singleton(new FileIncludeDirectoryOption(ExecutionFileLocation.create(path))));
+				Collections.singleton(new FileIncludePathOption(ExecutionFileLocation.create(path))));
 	}
 
 	public static IncludePathTaskOption valueOf(WildcardPath path) {
@@ -77,7 +77,7 @@ public interface IncludePathTaskOption {
 		return valueOf(WildcardPath.valueOf(path));
 	}
 
-	public static IncludePathTaskOption valueOf(IncludeDirectoryOption option) {
+	public static IncludePathTaskOption valueOf(IncludePathOption option) {
 		return new SimpleIncludePathTaskOption(Collections.singleton(option));
 	}
 

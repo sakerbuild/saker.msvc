@@ -50,7 +50,7 @@ import saker.msvc.impl.ccompile.FileCompilationConfiguration;
 import saker.msvc.impl.ccompile.FileCompilationProperties;
 import saker.msvc.impl.ccompile.MSVCCCompileWorkerTaskFactory;
 import saker.msvc.impl.ccompile.MSVCCCompileWorkerTaskIdentifier;
-import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
+import saker.msvc.impl.ccompile.option.IncludePathOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.impl.coptions.preset.PresetCOptions;
 import saker.msvc.impl.util.FileLocationFileNameVisitor;
@@ -211,7 +211,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 					}
 				}
 
-				Map<IncludePathTaskOption, Collection<IncludeDirectoryOption>> calculatedincludediroptions = new HashMap<>();
+				Map<IncludePathTaskOption, Collection<IncludePathOption>> calculatedincludediroptions = new HashMap<>();
 				Map<FileCompilationProperties, String> precompiledheaderoutnamesconfigurations = new HashMap<>();
 
 				//ignore-case comparison of possible output names of the files
@@ -270,9 +270,9 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 							FileLocation pchfilelocation = TaskOptionUtils.toFileLocation(input.getPrecompiledHeader(),
 									taskcontext);
 
-							Set<IncludeDirectoryOption> inputincludedirs = toIncludeDirectoryOptions(taskcontext,
+							Set<IncludePathOption> inputincludedirs = toIncludeDirectoryOptions(taskcontext,
 									calculatedincludediroptions, input.getIncludeDirectories());
-							Set<IncludeDirectoryOption> inputforceincludes = toIncludeDirectoryOptions(taskcontext,
+							Set<IncludePathOption> inputforceincludes = toIncludeDirectoryOptions(taskcontext,
 									calculatedincludediroptions, input.getForceInclude());
 							Boolean forceincludepch = input.getForceIncludePrecompiledHeader();
 
@@ -469,22 +469,22 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 		};
 	}
 
-	private static Set<IncludeDirectoryOption> toIncludeDirectoryOptions(TaskContext taskcontext,
-			Map<IncludePathTaskOption, Collection<IncludeDirectoryOption>> calculatedincludediroptions,
+	private static Set<IncludePathOption> toIncludeDirectoryOptions(TaskContext taskcontext,
+			Map<IncludePathTaskOption, Collection<IncludePathOption>> calculatedincludediroptions,
 			Collection<IncludePathTaskOption> indirtaskopts) {
-		Set<IncludeDirectoryOption> inputincludedirs = new LinkedHashSet<>();
+		Set<IncludePathOption> inputincludedirs = new LinkedHashSet<>();
 		collectIncludeDirectoryOptions(taskcontext, calculatedincludediroptions, indirtaskopts, inputincludedirs);
 		return inputincludedirs;
 	}
 
 	private static void collectIncludeDirectoryOptions(TaskContext taskcontext,
-			Map<IncludePathTaskOption, Collection<IncludeDirectoryOption>> calculatedincludediroptions,
-			Collection<IncludePathTaskOption> indirtaskopts, Set<IncludeDirectoryOption> inputincludedirs) {
+			Map<IncludePathTaskOption, Collection<IncludePathOption>> calculatedincludediroptions,
+			Collection<IncludePathTaskOption> indirtaskopts, Set<IncludePathOption> inputincludedirs) {
 		if (ObjectUtils.isNullOrEmpty(indirtaskopts)) {
 			return;
 		}
 		for (IncludePathTaskOption indirtaskopt : indirtaskopts) {
-			Collection<IncludeDirectoryOption> indiroptions = calculatedincludediroptions.computeIfAbsent(indirtaskopt,
+			Collection<IncludePathOption> indiroptions = calculatedincludediroptions.computeIfAbsent(indirtaskopt,
 					o -> o.toIncludeDirectories(taskcontext));
 			ObjectUtils.addAll(inputincludedirs, indiroptions);
 		}
@@ -520,7 +520,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 	}
 
 	private static void mergeIncludeDirectories(FileCompilationProperties config,
-			Collection<IncludeDirectoryOption> includediroptions) {
+			Collection<IncludePathOption> includediroptions) {
 		if (ObjectUtils.isNullOrEmpty(includediroptions)) {
 			return;
 		}
@@ -529,7 +529,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 	}
 
 	private static void mergeForceIncludes(FileCompilationProperties config,
-			Collection<IncludeDirectoryOption> includeoptions) {
+			Collection<IncludePathOption> includeoptions) {
 		if (ObjectUtils.isNullOrEmpty(includeoptions)) {
 			return;
 		}

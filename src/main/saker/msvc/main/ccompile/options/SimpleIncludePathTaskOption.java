@@ -19,17 +19,17 @@ import java.util.Collection;
 import java.util.Set;
 
 import saker.build.task.TaskContext;
-import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
+import saker.msvc.impl.ccompile.option.IncludePathOption;
 
 public final class SimpleIncludePathTaskOption implements IncludePathTaskOption {
-	private final Set<IncludeDirectoryOption> directoryoptions;
+	private final Set<IncludePathOption> directoryoptions;
 
-	public SimpleIncludePathTaskOption(Set<IncludeDirectoryOption> directoryoptions) {
+	public SimpleIncludePathTaskOption(Set<IncludePathOption> directoryoptions) {
 		this.directoryoptions = directoryoptions;
 	}
 
 	@Override
-	public Collection<IncludeDirectoryOption> toIncludeDirectories(TaskContext tc) {
+	public Collection<IncludePathOption> toIncludeDirectories(TaskContext tc) {
 		return directoryoptions;
 	}
 

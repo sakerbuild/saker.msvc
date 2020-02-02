@@ -15,8 +15,8 @@
  */
 package saker.msvc.impl.ccompile.option;
 
-public interface IncludeDirectoryOption {
-	public void accept(IncludeDirectoryVisitor visitor);
+public interface IncludePathOption {
+	public void accept(IncludePathVisitor visitor);
 
 	@Override
 	public boolean equals(Object obj);

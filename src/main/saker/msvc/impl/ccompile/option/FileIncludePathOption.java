@@ -23,7 +23,7 @@ import java.io.ObjectOutput;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.std.api.file.location.FileLocation;
 
-public class FileIncludeDirectoryOption implements FileIncludeDirectory, IncludeDirectoryOption, Externalizable {
+public class FileIncludePathOption implements FileIncludePath, IncludePathOption, Externalizable {
 	private static final long serialVersionUID = 1L;
 
 	private FileLocation fileLocation;
@@ -31,15 +31,15 @@ public class FileIncludeDirectoryOption implements FileIncludeDirectory, Include
 	/**
 	 * For {@link Externalizable}.
 	 */
-	public FileIncludeDirectoryOption() {
+	public FileIncludePathOption() {
 	}
 
-	public FileIncludeDirectoryOption(FileLocation fileLocation) {
+	public FileIncludePathOption(FileLocation fileLocation) {
 		this.fileLocation = fileLocation;
 	}
 
 	@Override
-	public void accept(IncludeDirectoryVisitor visitor) {
+	public void accept(IncludePathVisitor visitor) {
 		visitor.visit(this);
 	}
 
@@ -74,7 +74,7 @@ public class FileIncludeDirectoryOption implements FileIncludeDirectory, Include
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		FileIncludeDirectoryOption other = (FileIncludeDirectoryOption) obj;
+		FileIncludePathOption other = (FileIncludePathOption) obj;
 		if (fileLocation == null) {
 			if (other.fileLocation != null)
 				return false;

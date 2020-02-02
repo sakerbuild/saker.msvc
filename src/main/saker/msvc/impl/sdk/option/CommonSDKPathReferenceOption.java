@@ -20,13 +20,13 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-import saker.msvc.impl.ccompile.option.IncludeDirectoryOption;
-import saker.msvc.impl.ccompile.option.IncludeDirectoryVisitor;
+import saker.msvc.impl.ccompile.option.IncludePathOption;
+import saker.msvc.impl.ccompile.option.IncludePathVisitor;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.msvc.impl.clink.option.LibraryPathVisitor;
 import saker.sdk.support.api.SDKPathReference;
 
-public class CommonSDKPathReferenceOption implements IncludeDirectoryOption, LibraryPathOption, Externalizable {
+public class CommonSDKPathReferenceOption implements IncludePathOption, LibraryPathOption, Externalizable {
 	private static final long serialVersionUID = 1L;
 
 	private SDKPathReference pathReference;
@@ -51,7 +51,7 @@ public class CommonSDKPathReferenceOption implements IncludeDirectoryOption, Lib
 	}
 
 	@Override
-	public void accept(IncludeDirectoryVisitor visitor) {
+	public void accept(IncludePathVisitor visitor) {
 		visitor.visit(pathReference);
 	}
 

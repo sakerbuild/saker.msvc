@@ -17,12 +17,12 @@ package saker.msvc.impl.ccompile.option;
 
 import saker.sdk.support.api.SDKPathReference;
 
-public interface IncludeDirectoryVisitor {
-	public default void visit(FileIncludeDirectory includedir) {
-		throw new UnsupportedOperationException("Unsupported include directory: " + includedir);
+public interface IncludePathVisitor {
+	public default void visit(FileIncludePath includepath) {
+		throw new UnsupportedOperationException("Unsupported include path: " + includepath);
 	}
 
-	public default void visit(SDKPathReference includedir) {
-		throw new UnsupportedOperationException("Unsupported include directory: " + includedir);
+	public default void visit(SDKPathReference includepath) {
+		throw new UnsupportedOperationException("Unsupported include path: " + includepath);
 	}
 }
