@@ -24,9 +24,9 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -97,14 +97,14 @@ public class CLMockProcess {
 
 	private static SourceLine nextLine(BufferedReader reader, Deque<SourceLine> pendinglines, SakerPath inputpath)
 			throws IOException {
-		if (pendinglines.isEmpty()) {
-			String nl = reader.readLine();
-			if (nl == null) {
-				return null;
-			}
-			return new SourceLine(inputpath, nl);
+		if (!pendinglines.isEmpty()) {
+			return pendinglines.pollFirst();
 		}
-		return pendinglines.pollFirst();
+		String nl = reader.readLine();
+		if (nl == null) {
+			return null;
+		}
+		return new SourceLine(inputpath, nl);
 	}
 
 	private static String getDefineValue(List<String> commands, String word) {
@@ -157,7 +157,7 @@ public class CLMockProcess {
 		boolean includedpch = usepchcmd == null;
 
 		List<SakerPath> includedirs = getIncludeDirectoriesFromCommands(commands);
-		Deque<SourceLine> pendinglines = new ArrayDeque<>();
+		LinkedList<SourceLine> pendinglines = new LinkedList<>();
 		Set<SakerPath> includedpaths = new TreeSet<>();
 		Set<SakerPath> referencedlibs = new TreeSet<>();
 		for (String cmd : commands) {
@@ -186,7 +186,9 @@ public class CLMockProcess {
 				try {
 					SakerPath incpath = SakerPath.valueOf(fipath);
 
-					includeResolvedIncludePath(pendinglines, incpath, stdout, stderr, includedpaths, commands);
+					//TODO this is incorrect, as the transitive includes need to be processed before the next force include is added
+					List<SourceLine> lines = getIncludeLinesPrintNotes(incpath, stderr, includedpaths, commands);
+					pendinglines.addAll(lines);
 				} catch (InvalidPathException | InvalidPathFormatException | IOException e) {
 					printErrorMessage(stdout, "c:\\some\\path\\to\\source", "123", "fatal error", "C1083",
 							"Cannot open include file: '" + fipath + "': No such file or directory");
@@ -346,22 +348,34 @@ public class CLMockProcess {
 		throw new IllegalArgumentException("Unknown language: " + language);
 	}
 
-	private static void includeResolvedIncludePath(Deque<SourceLine> pendinglines, SakerPath includepath,
+	private static void includeResolvedIncludePath(LinkedList<SourceLine> pendinglines, SakerPath includepath,
 			PrintStream stdout, PrintStream stderr, Set<SakerPath> includedpaths, List<String> commands)
 			throws IOException {
-		Path realpath = LocalFileProvider.toRealPath(includepath);
-		List<String> alllines = Files.readAllLines(realpath);
-		includedpaths.add(includepath);
-		//XXX indent the real path based on the include stack
-		if (commands.contains("/showIncludes")) {
-			stderr.println("Note: including file: " + realpath);
-		}
-		for (String l : alllines) {
-			pendinglines.add(new SourceLine(includepath, l));
-		}
+		List<SourceLine> lines = getIncludeLinesPrintNotes(includepath, stderr, includedpaths, commands);
+		pendinglines.addAll(0, lines);
 	}
 
-	private static void includeBracketIncludePath(List<SakerPath> includedirs, Deque<SourceLine> pendinglines,
+	private static List<SourceLine> getIncludeLinesPrintNotes(SakerPath includepath, PrintStream stderr,
+			Set<SakerPath> includedpaths, List<String> commands) throws IOException {
+		List<SourceLine> lines = getIncludeLines(includepath);
+		includedpaths.add(includepath);
+		if (commands.contains("/showIncludes")) {
+			stderr.println("Note: including file: " + LocalFileProvider.toRealPath(includepath));
+		}
+		return lines;
+	}
+
+	private static List<SourceLine> getIncludeLines(SakerPath includepath) throws IOException {
+		List<String> alllines = Files.readAllLines(LocalFileProvider.toRealPath(includepath));
+		//XXX indent the real path based on the include stack
+		List<SourceLine> lines = new ArrayList<>();
+		for (String l : alllines) {
+			lines.add(new SourceLine(includepath, l));
+		}
+		return lines;
+	}
+
+	private static void includeBracketIncludePath(List<SakerPath> includedirs, LinkedList<SourceLine> pendinglines,
 			Set<SakerPath> includedpaths, SakerPath includepath, PrintStream stdout, PrintStream stderr,
 			List<String> commands) {
 		List<Exception> causes = new ArrayList<>();
