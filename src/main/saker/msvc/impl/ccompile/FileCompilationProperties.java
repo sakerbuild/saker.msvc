@@ -52,6 +52,7 @@ public final class FileCompilationProperties implements Externalizable {
 	public void copyFrom(FileCompilationProperties config) {
 		this.language = config.language;
 		this.includeDirectories = config.includeDirectories;
+		this.forceInclude = config.forceInclude;
 		this.macroDefinitions = config.macroDefinitions;
 		this.simpleParameters = config.simpleParameters;
 	}
