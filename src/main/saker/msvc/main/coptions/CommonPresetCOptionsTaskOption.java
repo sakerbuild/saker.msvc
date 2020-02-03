@@ -21,7 +21,6 @@ import java.util.Map;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
-import saker.msvc.main.ccompile.options.MSVCCompilerOptionsVisitor;
 import saker.msvc.main.clink.options.MSVCLinkerOptions;
 import saker.msvc.main.clink.options.MSVCLinkerOptionsVisitor;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
@@ -39,7 +38,7 @@ public final class CommonPresetCOptionsTaskOption implements MSVCLinkerOptions, 
 	}
 
 	@Override
-	public void accept(MSVCCompilerOptionsVisitor visitor) {
+	public void accept(Visitor visitor) {
 		visitor.visit(preset);
 	}
 

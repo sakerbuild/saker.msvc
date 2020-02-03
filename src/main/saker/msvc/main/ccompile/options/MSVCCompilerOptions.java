@@ -81,7 +81,7 @@ import saker.std.main.file.option.FileLocationTaskOption;
 		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE_PRECOMPILED_HEADER + "\n"
 				+ "When merging, true will take precedence for this option."))
 public interface MSVCCompilerOptions {
-	public void accept(MSVCCompilerOptionsVisitor visitor);
+	public void accept(Visitor visitor);
 
 	public default MSVCCompilerOptions clone() {
 		return new SimpleMSVCCCompilerOptions(this);
@@ -137,4 +137,15 @@ public interface MSVCCompilerOptions {
 	public static MSVCCompilerOptions valueOf(COptionsPresetTaskOutput preset) {
 		return new CommonPresetCOptionsTaskOption(preset);
 	}
+
+	public interface Visitor {
+		public default void visit(MSVCCompilerOptions options) {
+			throw new UnsupportedOperationException("Unsupported compilar options: " + options);
+		}
+
+		public default void visit(COptionsPresetTaskOutput options) {
+			throw new UnsupportedOperationException("Unsupported compiler options: " + options);
+		}
+	}
+
 }

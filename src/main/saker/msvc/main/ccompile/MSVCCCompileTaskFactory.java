@@ -55,12 +55,11 @@ import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.impl.coptions.preset.PresetCOptions;
 import saker.msvc.impl.util.FileLocationFileNameVisitor;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
-import saker.msvc.main.ccompile.options.CompilationInputPassOptionVisitor;
+import saker.msvc.main.ccompile.options.CompilationInputPassOption;
 import saker.msvc.main.ccompile.options.CompilationInputPassTaskOption;
 import saker.msvc.main.ccompile.options.FileCompilationInputPass;
 import saker.msvc.main.ccompile.options.IncludePathTaskOption;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
-import saker.msvc.main.ccompile.options.MSVCCompilerOptionsVisitor;
 import saker.msvc.main.ccompile.options.OptionCompilationInputPass;
 import saker.msvc.main.clink.MSVCCLinkTaskFactory;
 import saker.msvc.main.coptions.COptionsPresetTaskFactory;
@@ -75,6 +74,7 @@ import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.nest.utils.FrontendTaskFactory;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKSupportUtils;
+import saker.sdk.support.api.exc.SDKNameConflictException;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 import saker.std.api.file.location.FileLocation;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
@@ -166,7 +166,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 						: this.identifierOption.clone().getIdentifier();
 
 				String architecture;
-				if (this.architectureOption == null) {
+				if (ObjectUtils.isNullOrEmpty(this.architectureOption)) {
 					try {
 						architecture = taskcontext.getTaskUtilities()
 								.getReportEnvironmentDependency(SystemArchitectureEnvironmentProperty.INSTANCE);
@@ -203,7 +203,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 						}
 						SDKDescriptionTaskOption prev = sdkoptions.putIfAbsent(entry.getKey(), sdktaskopt.clone());
 						if (prev != null) {
-							taskcontext.abortExecution(new IllegalArgumentException(
+							taskcontext.abortExecution(new SDKNameConflictException(
 									"SDK with name " + entry.getKey() + " defined multiple times."));
 							return null;
 						}
@@ -240,87 +240,89 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 				for (CompilationInputPassTaskOption inputpass : inputpasses) {
 					CompilationIdentifier[] subid = { null };
 					OptionCompilationInputPass[] suboptioninputpass = { null };
-					inputpass.toCompilationInputPassOption(taskcontext).accept(new CompilationInputPassOptionVisitor() {
-						@Override
-						public void visit(FileCompilationInputPass input) {
-							Collection<FileLocation> filelocations = input.toFileLocations(taskcontext);
-							if (ObjectUtils.isNullOrEmpty(filelocations)) {
-								return;
-							}
-							for (FileLocation filelocation : filelocations) {
-								FileCompilationConfiguration nconfig = createConfigurationForProperties(
-										new FileCompilationProperties(filelocation), null, null);
-								configbuf.add(new ConfigSetupHolder(nconfig));
-							}
-						}
-
-						@Override
-						public void visit(OptionCompilationInputPass input) {
-							Collection<MultiFileLocationTaskOption> files = input.getFiles();
-							if (ObjectUtils.isNullOrEmpty(files)) {
-								return;
-							}
-
-							suboptioninputpass[0] = input;
-							Map<String, String> macrodefinitions = input.getMacroDefinitions();
-							Set<String> simpleparamoption = ImmutableUtils
-									.makeImmutableNavigableSet(input.getSimpleParameters());
-							String passlang = input.getLanguage();
-							FileLocation pchfilelocation = TaskOptionUtils.toFileLocation(input.getPrecompiledHeader(),
-									taskcontext);
-
-							Set<IncludePathOption> inputincludedirs = toIncludeDirectoryOptions(taskcontext,
-									calculatedincludediroptions, input.getIncludeDirectories());
-							Set<IncludePathOption> inputforceincludes = toIncludeDirectoryOptions(taskcontext,
-									calculatedincludediroptions, input.getForceInclude());
-							Boolean forceincludepch = input.getForceIncludePrecompiledHeader();
-
-							for (MultiFileLocationTaskOption filesopt : files) {
-								Collection<FileLocation> filelocations = TaskOptionUtils.toFileLocations(filesopt,
-										taskcontext, TaskTags.TASK_INPUT_FILE);
-								if (ObjectUtils.isNullOrEmpty(filelocations)) {
-									continue;
-								}
-								CompilationIdentifierTaskOption passsubidopt = input.getSubIdentifier();
-								CompilationIdentifier passsubid = CompilationIdentifierTaskOption
-										.getIdentifier(passsubidopt);
-								subid[0] = passsubid;
-								for (FileLocation filelocation : filelocations) {
-									FileCompilationProperties nproperties = new FileCompilationProperties(filelocation);
-									nproperties.setSimpleParameters(simpleparamoption);
-									nproperties.setIncludeDirectories(inputincludedirs);
-									nproperties.setMacroDefinitions(macrodefinitions);
-									nproperties.setForceInclude(inputforceincludes);
-
-									FileCompilationConfiguration nconfig = createConfigurationForProperties(nproperties,
-											passsubid, passlang);
-									if (Boolean.TRUE.equals(forceincludepch)) {
-										nconfig.setPrecompiledHeaderForceInclude(true);
+					inputpass.toCompilationInputPassOption(taskcontext)
+							.accept(new CompilationInputPassOption.Visitor() {
+								@Override
+								public void visit(FileCompilationInputPass input) {
+									Collection<FileLocation> filelocations = input.toFileLocations(taskcontext);
+									if (ObjectUtils.isNullOrEmpty(filelocations)) {
+										return;
 									}
-									configbuf.add(new ConfigSetupHolder(nconfig, pchfilelocation));
+									for (FileLocation filelocation : filelocations) {
+										FileCompilationConfiguration nconfig = createConfigurationForProperties(
+												new FileCompilationProperties(filelocation), null, null);
+										configbuf.add(new ConfigSetupHolder(nconfig));
+									}
 								}
-							}
-						}
 
-						private FileCompilationConfiguration createConfigurationForProperties(
-								FileCompilationProperties properties, CompilationIdentifier passsubid,
-								String optionlanguage) {
-							FileLocation filelocation = properties.getFileLocation();
-							filelocation.accept(filenamevisitor);
-							String pathfilename = filenamevisitor.getFileName();
-							if (pathfilename == null) {
-								throw new IllegalArgumentException(
-										"Input file doesn't have file name: " + filelocation);
-							}
-							String outfname = getOutFileName(pathfilename, outnames, passsubid);
-							String language = getLanguageBasedOnFileName(optionlanguage, pathfilename);
+								@Override
+								public void visit(OptionCompilationInputPass input) {
+									Collection<MultiFileLocationTaskOption> files = input.getFiles();
+									if (ObjectUtils.isNullOrEmpty(files)) {
+										return;
+									}
 
-							FileCompilationConfiguration nconfig = new FileCompilationConfiguration(outfname,
-									properties);
-							properties.setLanguage(language);
-							return nconfig;
-						}
-					});
+									suboptioninputpass[0] = input;
+									Map<String, String> macrodefinitions = input.getMacroDefinitions();
+									Set<String> simpleparamoption = ImmutableUtils
+											.makeImmutableNavigableSet(input.getSimpleParameters());
+									String passlang = input.getLanguage();
+									FileLocation pchfilelocation = TaskOptionUtils
+											.toFileLocation(input.getPrecompiledHeader(), taskcontext);
+
+									Set<IncludePathOption> inputincludedirs = toIncludeDirectoryOptions(taskcontext,
+											calculatedincludediroptions, input.getIncludeDirectories());
+									Set<IncludePathOption> inputforceincludes = toIncludeDirectoryOptions(taskcontext,
+											calculatedincludediroptions, input.getForceInclude());
+									Boolean forceincludepch = input.getForceIncludePrecompiledHeader();
+
+									for (MultiFileLocationTaskOption filesopt : files) {
+										Collection<FileLocation> filelocations = TaskOptionUtils
+												.toFileLocations(filesopt, taskcontext, TaskTags.TASK_INPUT_FILE);
+										if (ObjectUtils.isNullOrEmpty(filelocations)) {
+											continue;
+										}
+										CompilationIdentifierTaskOption passsubidopt = input.getSubIdentifier();
+										CompilationIdentifier passsubid = CompilationIdentifierTaskOption
+												.getIdentifier(passsubidopt);
+										subid[0] = passsubid;
+										for (FileLocation filelocation : filelocations) {
+											FileCompilationProperties nproperties = new FileCompilationProperties(
+													filelocation);
+											nproperties.setSimpleParameters(simpleparamoption);
+											nproperties.setIncludeDirectories(inputincludedirs);
+											nproperties.setMacroDefinitions(macrodefinitions);
+											nproperties.setForceInclude(inputforceincludes);
+
+											FileCompilationConfiguration nconfig = createConfigurationForProperties(
+													nproperties, passsubid, passlang);
+											if (Boolean.TRUE.equals(forceincludepch)) {
+												nconfig.setPrecompiledHeaderForceInclude(true);
+											}
+											configbuf.add(new ConfigSetupHolder(nconfig, pchfilelocation));
+										}
+									}
+								}
+
+								private FileCompilationConfiguration createConfigurationForProperties(
+										FileCompilationProperties properties, CompilationIdentifier passsubid,
+										String optionlanguage) {
+									FileLocation filelocation = properties.getFileLocation();
+									filelocation.accept(filenamevisitor);
+									String pathfilename = filenamevisitor.getFileName();
+									if (pathfilename == null) {
+										throw new IllegalArgumentException(
+												"Input file doesn't have file name: " + filelocation);
+									}
+									String outfname = getOutFileName(pathfilename, outnames, passsubid);
+									String language = getLanguageBasedOnFileName(optionlanguage, pathfilename);
+
+									FileCompilationConfiguration nconfig = new FileCompilationConfiguration(outfname,
+											properties);
+									properties.setLanguage(language);
+									return nconfig;
+								}
+							});
 
 					CompilationIdentifier targetmergeidentifier = CompilationIdentifier.concat(optionidentifier,
 							subid[0]);
@@ -329,7 +331,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 						FileCompilationConfiguration config = configholder.config;
 						FileCompilationProperties configproperties = config.getProperties();
 						String configlanguage = configproperties.getLanguage();
-						MSVCCompilerOptionsVisitor optionsvisitor = new MSVCCompilerOptionsVisitor() {
+						MSVCCompilerOptions.Visitor optionsvisitor = new MSVCCompilerOptions.Visitor() {
 							@Override
 							public void visit(MSVCCompilerOptions options) {
 								if (!CompilerUtils.canMergeIdentifiers(targetmergeidentifier,

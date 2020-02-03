@@ -16,5 +16,16 @@
 package saker.msvc.main.ccompile.options;
 
 public interface CompilationInputPassOption {
-	public void accept(CompilationInputPassOptionVisitor visitor);
+	public void accept(Visitor visitor);
+
+	public interface Visitor {
+		public default void visit(FileCompilationInputPass input) {
+			throw new UnsupportedOperationException("Unsupported input: " + input);
+		}
+
+		public default void visit(OptionCompilationInputPass input) {
+			throw new UnsupportedOperationException("Unsupported input: " + input);
+		}
+	}
+
 }

@@ -91,7 +91,7 @@ public class SimpleMSVCCCompilerOptions implements MSVCCompilerOptions {
 	}
 
 	@Override
-	public void accept(MSVCCompilerOptionsVisitor visitor) {
+	public void accept(Visitor visitor) {
 		visitor.visit(this);
 	}
 

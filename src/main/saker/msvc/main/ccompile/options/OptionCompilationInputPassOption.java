@@ -53,7 +53,7 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public void accept(CompilationInputPassOptionVisitor visitor) {
+	public void accept(Visitor visitor) {
 		visitor.visit(this);
 	}
 
