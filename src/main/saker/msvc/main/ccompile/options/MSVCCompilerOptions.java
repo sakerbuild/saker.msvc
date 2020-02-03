@@ -33,7 +33,6 @@ import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
-import saker.std.api.file.location.FileLocation;
 import saker.std.main.file.option.FileLocationTaskOption;
 
 @NestInformation("Represents an options configuration to be used with " + MSVCCCompileTaskFactory.TASK_NAME + "().\n"

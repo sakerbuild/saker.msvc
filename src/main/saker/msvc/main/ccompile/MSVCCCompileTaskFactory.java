@@ -77,7 +77,6 @@ import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKSupportUtils;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 import saker.std.api.file.location.FileLocation;
-import saker.std.main.file.option.FileLocationTaskOption;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 import saker.std.main.file.utils.TaskOptionUtils;
 

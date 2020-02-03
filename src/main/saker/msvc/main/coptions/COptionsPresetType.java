@@ -27,12 +27,30 @@ import saker.nest.scriptinfo.reflection.annot.NestTypeInformation;
 		enumValues = {
 
 				@NestFieldInformation(value = COptionsPresetType.CONSOLE,
-						info = @NestInformation("Preset type for console based applications.")),
+						info = @NestInformation("Preset type for console based applications.\n"
+								+ "The preset includes the /SUBSYSTEM:CONSOLE simple linker parameter, and adds "
+								+ "appropriate include directories and library paths to access the Windows SDK.\n"
+								+ "The _CONSOLE preprocessor definition is added.")),
 				@NestFieldInformation(value = COptionsPresetType.DLL,
-						info = @NestInformation("Preset type for DLL (Dynamic Link Library) creation.")),
+						info = @NestInformation("Preset type for DLL (Dynamic Link Library) creation.\n"
+								+ "The preset includes the /DLL /SUBSYSTEM:WINDOWS simple linker parameters and adds "
+								+ "appropriate include directories and library paths to access the Windows SDK.\n"
+								+ "The _WINDOWS, _WINDLL prepreocessor definitions are added.")),
+				@NestFieldInformation(value = COptionsPresetType.OPTIMIZE_RELEASE,
+						info = @NestInformation("Preset that includes command line arguments for release optimization.\n"
+								+ "The /GL /Gy /O2 /Oi simple parameters are added for compilation. Also defines the "
+								+ "NDEBUG macro without any value (/DNDEBUG).\n"
+								+ "The /LTCG /OPT:REF /OPT:ICF simple parameters are added for linking.")),
+				@NestFieldInformation(value = COptionsPresetType.OPTIMIZE_DEBUG,
+						info = @NestInformation("Preset that includes command line arguments for debug optimization.\n"
+								+ "The /Od simple parameters are added for compilation. Also defines the "
+								+ "_DEBUG macro without any value (/D_DEBUG).\n"
+								+ "The preset doesn't include any linker parameters.")),
 
 		})
 public class COptionsPresetType {
 	public static final String CONSOLE = "console";
 	public static final String DLL = "dll";
+	public static final String OPTIMIZE_RELEASE = "optimize-release";
+	public static final String OPTIMIZE_DEBUG = "optimize-debug";
 }

@@ -16,6 +16,7 @@
 package saker.msvc.impl.coptions.preset;
 
 import java.util.Collection;
+import java.util.TreeMap;
 
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.msvc.impl.MSVCUtils;
@@ -23,6 +24,7 @@ import saker.msvc.impl.ccompile.option.IncludePathOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.msvc.impl.sdk.WindowsKitsSDKReference;
 import saker.msvc.impl.sdk.option.CommonSDKPathReferenceOption;
+import saker.msvc.main.coptions.COptionsPresetType;
 import saker.sdk.support.api.SDKSupportUtils;
 
 public class COptionPresets {
@@ -56,19 +58,15 @@ public class COptionPresets {
 				new CommonSDKPathReferenceOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 						WindowsKitsSDKReference.INCLUDE_SHARED), }));
 
-		x86.setPresetIdentifier("console" + "-x86");
-		x64.setPresetIdentifier("console" + "-x64");
-		basepreset.setPresetIdentifier("console");
+		TreeMap<String, String> macrodefs = new TreeMap<>();
+		macrodefs.put("_CONSOLE", "");
+		basepreset.setMacroDefinitions(ImmutableUtils.unmodifiableNavigableMap(macrodefs));
+		
+		x86.setPresetIdentifier(COptionsPresetType.CONSOLE + "-x86");
+		x64.setPresetIdentifier(COptionsPresetType.CONSOLE + "-x64");
+		basepreset.setPresetIdentifier(COptionsPresetType.CONSOLE);
 
 		CONSOLE_PRESETS = ImmutableUtils.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset, x64, x86 });
-	}
-
-	private static final Collection<SimplePresetCOptions> DEBUG_PRESETS;
-	static {
-		SimplePresetCOptions debugpreset = new SimplePresetCOptions();
-		debugpreset.setPresetIdentifier("debug");
-		debugpreset.setLinkSimpleParameters(ImmutableUtils.makeImmutableNavigableSet(new String[] { "/DEBUG" }));
-		DEBUG_PRESETS = ImmutableUtils.makeImmutableHashSet(new SimplePresetCOptions[] { debugpreset });
 	}
 
 	private static final Collection<SimplePresetCOptions> DLL_PRESETS;
@@ -101,11 +99,63 @@ public class COptionPresets {
 				new CommonSDKPathReferenceOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 						WindowsKitsSDKReference.INCLUDE_SHARED), }));
 
-		x86.setPresetIdentifier("dll" + "-x86");
-		x64.setPresetIdentifier("dll" + "-x64");
-		basepreset.setPresetIdentifier("dll");
+		TreeMap<String, String> macrodefs = new TreeMap<>();
+		macrodefs.put("_WINDOWS", "");
+		macrodefs.put("_WINDLL", "");
+		basepreset.setMacroDefinitions(ImmutableUtils.unmodifiableNavigableMap(macrodefs));
+
+		x86.setPresetIdentifier(COptionsPresetType.DLL + "-x86");
+		x64.setPresetIdentifier(COptionsPresetType.DLL + "-x64");
+		basepreset.setPresetIdentifier(COptionsPresetType.DLL);
 
 		DLL_PRESETS = ImmutableUtils.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset, x64, x86 });
+	}
+
+	//based on Visual Studio default command line for console apps
+	private static final Collection<SimplePresetCOptions> OPTIMIZE_DEBUG_PRESETS;
+	static {
+		SimplePresetCOptions basepreset = new SimplePresetCOptions();
+		basepreset.setPresetIdentifier("optimize-debug");
+		basepreset.setCompileSimpleParameters(ImmutableUtils.makeImmutableNavigableSet(new String[] {
+				// /Od (Disable (Debug)) : Turns off all optimizations in the program and speeds compilation.
+				"/Od",
+
+		}));
+		TreeMap<String, String> macrodefs = new TreeMap<>();
+		macrodefs.put("_DEBUG", "");
+		basepreset.setMacroDefinitions(ImmutableUtils.unmodifiableNavigableMap(macrodefs));
+		OPTIMIZE_DEBUG_PRESETS = ImmutableUtils.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset });
+	}
+
+	//based on Visual Studio default command line for console apps
+	private static final Collection<SimplePresetCOptions> OPTIMIZE_RELEASE_PRESETS;
+	static {
+		SimplePresetCOptions basepreset = new SimplePresetCOptions();
+		basepreset.setPresetIdentifier(COptionsPresetType.OPTIMIZE_RELEASE);
+		basepreset.setLinkSimpleParameters(ImmutableUtils.makeImmutableNavigableSet(new String[] {
+				// /LTCG (Link-time Code Generation)
+				"/LTCG",
+				// /OPT:REF eliminates functions and data that are never referenced
+				"/OPT:REF",
+				// /OPT:ICF Use ICF[=iterations] to perform identical COMDAT folding.
+				"/OPT:ICF"
+
+		}));
+		basepreset.setCompileSimpleParameters(ImmutableUtils.makeImmutableNavigableSet(new String[] {
+				// /GL (Whole Program Optimization)		
+				"/GL",
+				// /Gy (Enable Function-Level Linking)
+				"/Gy",
+				// /O1, /O2 (Minimize Size, Maximize Speed)
+				"/O2", // equivalent to: /Og /Oi /Ot /Oy /Ob2 /GF /Gy
+				// /Oi (Generate Intrinsic Functions)
+				"/Oi",
+
+		}));
+		TreeMap<String, String> macrodefs = new TreeMap<>();
+		macrodefs.put("NDEBUG", "");
+		basepreset.setMacroDefinitions(ImmutableUtils.unmodifiableNavigableMap(macrodefs));
+		OPTIMIZE_RELEASE_PRESETS = ImmutableUtils.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset });
 	}
 
 	public static Collection<? extends SimplePresetCOptions> getConsolePresets() {
@@ -116,10 +166,13 @@ public class COptionPresets {
 		return DLL_PRESETS;
 	}
 
-	//XXX disabled until proper implementation
-//	public static Collection<? extends SimplePresetCOptions> getDebugPresets() {
-//		return DEBUG_PRESETS;
-//	}
+	public static Collection<? extends SimplePresetCOptions> getOptimizeRelease() {
+		return OPTIMIZE_RELEASE_PRESETS;
+	}
+
+	public static Collection<? extends SimplePresetCOptions> getOptimizeDebug() {
+		return OPTIMIZE_DEBUG_PRESETS;
+	}
 
 	private COptionPresets() {
 		throw new UnsupportedOperationException();

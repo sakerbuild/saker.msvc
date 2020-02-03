@@ -96,10 +96,14 @@ public class COptionsPresetTaskFactory extends FrontendTaskFactory<Object> {
 							presets.addAll(COptionPresets.getDLLPresets());
 							break;
 						}
-//						case "debug": {
-//							presets.addAll(COptionPresets.getDebugPresets());
-//							break;
-//						}
+						case COptionsPresetType.OPTIMIZE_RELEASE: {
+							presets.addAll(COptionPresets.getOptimizeRelease());
+							break;
+						}
+						case COptionsPresetType.OPTIMIZE_DEBUG: {
+							presets.addAll(COptionPresets.getOptimizeDebug());
+							break;
+						}
 						default: {
 							taskcontext.abortExecution(
 									new IllegalArgumentException("Unrecognized C options preset type: " + presetNames));
