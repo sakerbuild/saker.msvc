@@ -49,6 +49,10 @@ import saker.process.api.SakerProcess;
 import saker.process.api.SakerProcessBuilder;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKReference;
+import saker.std.api.file.location.ExecutionFileLocation;
+import saker.std.api.file.location.FileLocation;
+import saker.std.api.file.location.FileLocationVisitor;
+import saker.std.api.file.location.LocalFileLocation;
 import testing.saker.msvc.TestFlag;
 
 public class MSVCUtils {
@@ -402,4 +406,34 @@ public class MSVCUtils {
 		}
 		return versions::contains;
 	}
+
+	public static String getFileName(FileLocation fl) {
+		//TODO use SakerStandardUtils from saker.standard 0.8.1
+		if (fl == null) {
+			return null;
+		}
+		FileLocationFileNameVisitor visitor = new FileLocationFileNameVisitor();
+		fl.accept(visitor);
+		return visitor.result;
+	}
+
+	@Deprecated
+	private static class FileLocationFileNameVisitor implements FileLocationVisitor {
+		public String result;
+
+		public FileLocationFileNameVisitor() {
+		}
+
+		@Override
+		public void visit(LocalFileLocation loc) {
+			result = loc.getLocalPath().getFileName();
+		}
+
+		@Override
+		public void visit(ExecutionFileLocation loc) {
+			result = loc.getPath().getFileName();
+		}
+
+	}
+
 }

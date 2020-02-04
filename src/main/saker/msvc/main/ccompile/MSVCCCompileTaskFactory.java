@@ -53,7 +53,6 @@ import saker.msvc.impl.ccompile.MSVCCCompileWorkerTaskIdentifier;
 import saker.msvc.impl.ccompile.option.IncludePathOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.impl.coptions.preset.PresetCOptions;
-import saker.msvc.impl.util.FileLocationFileNameVisitor;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.options.CompilationInputPassOption;
 import saker.msvc.main.ccompile.options.CompilationInputPassTaskOption;
@@ -234,8 +233,6 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 					sdkdescriptions.putIfAbsent(entry.getKey(), desc[0]);
 				}
 
-				FileLocationFileNameVisitor filenamevisitor = new FileLocationFileNameVisitor();
-
 				List<ConfigSetupHolder> configbuf = new ArrayList<>();
 				for (CompilationInputPassTaskOption inputpass : inputpasses) {
 					CompilationIdentifier[] subid = { null };
@@ -308,8 +305,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 										FileCompilationProperties properties, CompilationIdentifier passsubid,
 										String optionlanguage) {
 									FileLocation filelocation = properties.getFileLocation();
-									filelocation.accept(filenamevisitor);
-									String pathfilename = filenamevisitor.getFileName();
+									String pathfilename = MSVCUtils.getFileName(filelocation);
 									if (pathfilename == null) {
 										throw new IllegalArgumentException(
 												"Input file doesn't have file name: " + filelocation);
@@ -425,8 +421,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 
 							String pchoutfilename = precompiledheaderoutnamesconfigurations.get(pchprops);
 							if (pchoutfilename == null) {
-								configholder.precompiledHeader.accept(filenamevisitor);
-								String pchfilename = filenamevisitor.getFileName();
+								String pchfilename = MSVCUtils
+										.getFileName(configholder.precompiledHeader);
 
 								pchoutfilename = getOutFileName(pchfilename, outnames, null);
 								precompiledheaderoutnamesconfigurations.put(pchprops, pchoutfilename);

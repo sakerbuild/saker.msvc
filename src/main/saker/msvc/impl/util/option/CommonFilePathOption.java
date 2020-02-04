@@ -1,4 +1,4 @@
-package saker.msvc.impl.sdk.option;
+package saker.msvc.impl.util.option;
 
 import java.io.Externalizable;
 import java.io.IOException;

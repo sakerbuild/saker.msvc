@@ -28,7 +28,7 @@ import saker.build.task.dependencies.FileCollectionStrategy;
 import saker.build.task.utils.dependencies.WildcardFileCollectionStrategy;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.msvc.impl.ccompile.option.IncludePathOption;
-import saker.msvc.impl.sdk.option.CommonFilePathOption;
+import saker.msvc.impl.util.option.CommonFilePathOption;
 import saker.std.api.file.location.ExecutionFileLocation;
 
 final class WildcardIncludePathTaskOption implements IncludePathTaskOption {

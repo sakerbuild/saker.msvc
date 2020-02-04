@@ -101,7 +101,6 @@ import saker.msvc.impl.ccompile.option.IncludePathOption;
 import saker.msvc.impl.ccompile.option.IncludePathVisitor;
 import saker.msvc.impl.util.CollectingProcessIOConsumer;
 import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
-import saker.msvc.impl.util.FileLocationFileNameVisitor;
 import saker.msvc.impl.util.InnerTaskMirrorHandler;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
@@ -1069,7 +1068,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				FileCompilationProperties pchproperties = compilationentryproperties
 						.withFileLocation(compilationconfiguration.getPrecompiledHeaderFileLocation());
 				SakerPath pchoutdir = getPrecompiledHeaderOutputDirectoryPath(outputdirpath);
-				pchname = FileLocationFileNameVisitor.getFileName(pchproperties.getFileLocation());
+				pchname = MSVCUtils.getFileName(pchproperties.getFileLocation());
 				pchoutpath = executioncontext.toMirrorPath(pchoutdir.resolve(pchoutfilename + ".pch"));
 
 				localfp.createDirectories(pchoutpath.getParent());

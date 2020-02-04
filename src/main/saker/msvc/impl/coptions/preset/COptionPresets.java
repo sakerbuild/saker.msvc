@@ -23,7 +23,7 @@ import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.ccompile.option.IncludePathOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.msvc.impl.sdk.WindowsKitsSDKReference;
-import saker.msvc.impl.sdk.option.CommonSDKPathReferenceOption;
+import saker.msvc.impl.util.option.CommonSDKPathReferenceOption;
 import saker.msvc.main.coptions.COptionsPresetType;
 import saker.sdk.support.api.SDKSupportUtils;
 

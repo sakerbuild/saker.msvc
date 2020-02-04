@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package saker.msvc.impl.sdk.option;
+package saker.msvc.impl.util.option;
 
 import java.io.Externalizable;
 import java.io.IOException;
