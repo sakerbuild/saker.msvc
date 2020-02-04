@@ -22,7 +22,6 @@ import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
 import saker.msvc.main.clink.options.MSVCLinkerOptions;
-import saker.msvc.main.clink.options.MSVCLinkerOptionsVisitor;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 
 public final class CommonPresetCOptionsTaskOption implements MSVCLinkerOptions, MSVCCompilerOptions {
@@ -33,12 +32,12 @@ public final class CommonPresetCOptionsTaskOption implements MSVCLinkerOptions, 
 	}
 
 	@Override
-	public void accept(MSVCLinkerOptionsVisitor visitor) {
+	public void accept(MSVCCompilerOptions.Visitor visitor) {
 		visitor.visit(preset);
 	}
 
 	@Override
-	public void accept(Visitor visitor) {
+	public void accept(MSVCLinkerOptions.Visitor visitor) {
 		visitor.visit(preset);
 	}
 

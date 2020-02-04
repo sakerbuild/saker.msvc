@@ -64,7 +64,7 @@ final class WildcardLinkerInputTaskOption
 	}
 
 	@Override
-	public void accept(LinkerInputPassOptionVisitor visitor) {
+	public void accept(Visitor visitor) {
 		visitor.visit(this);
 	}
 }

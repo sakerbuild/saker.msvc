@@ -46,7 +46,7 @@ public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 	}
 
 	@Override
-	public void accept(MSVCLinkerOptionsVisitor visitor) {
+	public void accept(Visitor visitor) {
 		visitor.visit(this);
 	}
 

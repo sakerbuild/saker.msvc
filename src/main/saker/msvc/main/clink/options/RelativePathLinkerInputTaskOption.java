@@ -47,7 +47,7 @@ final class RelativePathLinkerInputTaskOption
 	}
 
 	@Override
-	public void accept(LinkerInputPassOptionVisitor visitor) {
+	public void accept(Visitor visitor) {
 		visitor.visit(this);
 	}
 }

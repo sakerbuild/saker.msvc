@@ -62,7 +62,7 @@ import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 		info = @NestInformation(TaskDocs.LINK_SIMPLE_PARAMETERS + "\n"
 				+ "When merging, duplicate parameters are removed automatically."))
 public interface MSVCLinkerOptions {
-	public void accept(MSVCLinkerOptionsVisitor visitor);
+	public void accept(Visitor visitor);
 
 	public default MSVCLinkerOptions clone() {
 		return new SimpleMSVCLinkerOptions(this);
@@ -95,4 +95,15 @@ public interface MSVCLinkerOptions {
 	public static MSVCLinkerOptions valueOf(COptionsPresetTaskOutput preset) {
 		return new CommonPresetCOptionsTaskOption(preset);
 	}
+
+	public interface Visitor {
+		public default void visit(MSVCLinkerOptions options) {
+			throw new UnsupportedOperationException("Unsupported linker options: " + options);
+		}
+
+		public default void visit(COptionsPresetTaskOutput options) {
+			throw new UnsupportedOperationException("Unsupported linker options: " + options);
+		}
+	}
+
 }

@@ -56,10 +56,9 @@ import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
 import saker.msvc.main.clink.options.CompilerOutputLinkerInputPass;
 import saker.msvc.main.clink.options.FileLinkerInputPass;
 import saker.msvc.main.clink.options.LinkerInputPassOption;
-import saker.msvc.main.clink.options.LinkerInputPassOptionVisitor;
 import saker.msvc.main.clink.options.LinkerInputPassTaskOption;
 import saker.msvc.main.clink.options.MSVCLinkerOptions;
-import saker.msvc.main.clink.options.MSVCLinkerOptionsVisitor;
+import saker.msvc.main.clink.options.MSVCLinkerOptions.Visitor;
 import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
@@ -74,6 +73,7 @@ import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.nest.utils.FrontendTaskFactory;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKSupportUtils;
+import saker.sdk.support.api.exc.SDKNameConflictException;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileLocation;
@@ -159,7 +159,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 			public CompilationIdentifierTaskOption identifierOption;
 
 			@SakerInput(value = "LibraryPath")
-			public Collection<CompilationPathTaskOption> compilationPathOption;
+			public Collection<CompilationPathTaskOption> libraryPathOption;
 
 			@SakerInput(value = { "SDKs" })
 			public Map<String, SDKDescriptionTaskOption> sdksOption;
@@ -197,8 +197,8 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 						linkeroptions.add(linkeropt.clone());
 					}
 				}
-				if (!ObjectUtils.isNullOrEmpty(this.compilationPathOption)) {
-					for (CompilationPathTaskOption libpathtaskopt : this.compilationPathOption) {
+				if (!ObjectUtils.isNullOrEmpty(this.libraryPathOption)) {
+					for (CompilationPathTaskOption libpathtaskopt : this.libraryPathOption) {
 						if (libpathtaskopt == null) {
 							continue;
 						}
@@ -210,7 +210,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 						SDKDescriptionTaskOption sdktaskopt = entry.getValue();
 						String sdkname = entry.getKey();
 						if (sdkoptions.containsKey(sdkname)) {
-							taskcontext.abortExecution(new IllegalArgumentException(
+							taskcontext.abortExecution(new SDKNameConflictException(
 									"SDK with name " + sdkname + " defined multiple times."));
 							return null;
 						}
@@ -251,8 +251,6 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculatedlibpathoptions = new HashMap<>();
 				NavigableMap<String, SDKDescription> nullablesdkdescriptions = new TreeMap<>(
 						SDKSupportUtils.getSDKNameComparator());
-				NavigableMap<String, SDKDescription> infersdkdescriptions = new TreeMap<>(
-						SDKSupportUtils.getSDKNameComparator());
 				NavigableSet<String> simpleparams = new TreeSet<>(MSVCUtils.getLinkerParameterIgnoreCaseComparator());
 				ObjectUtils.addAll(simpleparams, simpleparamoption);
 
@@ -271,7 +269,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				}
 
 				for (LinkerInputPassTaskOption inputoption : inputtaskoptions) {
-					addLinkerInputs(inputoption, taskcontext, inputfiles, architecture, infersdkdescriptions);
+					addLinkerInputs(inputoption, taskcontext, inputfiles, architecture);
 				}
 
 				for (CompilationPathTaskOption libpathopt : libpathoptions) {
@@ -281,7 +279,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				}
 
 				for (MSVCLinkerOptions options : linkeroptions) {
-					options.accept(new MSVCLinkerOptionsVisitor() {
+					options.accept(new Visitor() {
 						@Override
 						public void visit(MSVCLinkerOptions options) {
 							if (!MSVCCompilerOptions.canMergeArchitectures(architecture, options.getArchitecture())) {
@@ -305,8 +303,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 							Collection<LinkerInputPassTaskOption> optinput = options.getLinkerInput();
 							if (!ObjectUtils.isNullOrEmpty(optinput)) {
 								for (LinkerInputPassTaskOption opttaskin : optinput) {
-									addLinkerInputs(opttaskin, taskcontext, inputfiles, architecture,
-											infersdkdescriptions);
+									addLinkerInputs(opttaskin, taskcontext, inputfiles, architecture);
 								}
 							}
 						}
@@ -328,10 +325,6 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 							}
 						}
 					});
-				}
-
-				for (Entry<String, SDKDescription> inferentry : infersdkdescriptions.entrySet()) {
-					nullablesdkdescriptions.putIfAbsent(inferentry.getKey(), inferentry.getValue());
 				}
 
 				nullablesdkdescriptions.putIfAbsent(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.DEFAULT_MSVC_SDK_DESCRIPTION);
@@ -377,7 +370,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 			private String inferArchitecture(Collection<LinkerInputPassOption> inputoptions) {
 				String[] result = { null };
 				for (LinkerInputPassOption option : inputoptions) {
-					option.accept(new LinkerInputPassOptionVisitor() {
+					option.accept(new LinkerInputPassOption.Visitor() {
 						@Override
 						public void visit(CompilerOutputLinkerInputPass input) {
 							result[0] = input.getCompilerOutput().getArchitecture();
@@ -397,7 +390,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 			private CompilationIdentifier inferCompilationIdentifier(Collection<LinkerInputPassOption> inputoptions) {
 				Set<String> parts = new LinkedHashSet<>();
 				for (LinkerInputPassOption option : inputoptions) {
-					option.accept(new LinkerInputPassOptionVisitor() {
+					option.accept(new LinkerInputPassOption.Visitor() {
 						@Override
 						public void visit(CompilerOutputLinkerInputPass input) {
 							CompilationIdentifier outputid = input.getCompilerOutput().getIdentifier();
@@ -415,52 +408,39 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				return CompilationIdentifier.valueOf(StringUtils.toStringJoin("-", parts));
 			}
 
-			private void addLinkerInputs(LinkerInputPassTaskOption inputoption, TaskContext taskcontext,
-					Set<FileLocation> inputfiles, String architecture,
-					NavigableMap<String, SDKDescription> infersdkdescriptions) {
-				inputoption.toLinkerInputPassOption(taskcontext).accept(new LinkerInputPassOptionVisitor() {
-					@Override
-					public void visit(FileLinkerInputPass input) {
-						Collection<FileLocation> filelocations = input.toFileLocations(taskcontext);
-						ObjectUtils.addAll(inputfiles, filelocations);
-					}
-
-					@Override
-					public void visit(CompilerOutputLinkerInputPass input) {
-						MSVCCompilerWorkerTaskOutput compileroutput = input.getCompilerOutput();
-						String outputarchitecture = compileroutput.getArchitecture();
-						if (outputarchitecture != null) {
-							if (!outputarchitecture.equalsIgnoreCase(architecture)) {
-								SakerLog.warning().taskScriptPosition(taskcontext)
-										.println("Linker input architecture mismatch: " + outputarchitecture + " for "
-												+ architecture);
-							}
-						}
-						Map<String, SDKDescription> outputsdks = compileroutput.getSDKs();
-						if (!ObjectUtils.isNullOrEmpty(outputsdks)) {
-							for (Entry<String, SDKDescription> entry : outputsdks.entrySet()) {
-								SDKDescription outputsdk = entry.getValue();
-								SDKDescription prev = infersdkdescriptions.putIfAbsent(entry.getKey(), outputsdk);
-								if (prev != null && !prev.equals(outputsdk)) {
-									SakerLog.warning().taskScriptPosition(taskcontext)
-											.println("SDK configuration mismatch for: " + entry.getKey() + " with "
-													+ outputsdk + " and " + prev);
-								}
-							}
-						}
-
-						Collection<SakerPath> filepaths = compileroutput.getObjectFilePaths();
-						if (filepaths == null) {
-							throw new IllegalArgumentException("null object file paths for compiler putput.");
-						}
-						Set<FileLocation> filelocations = new LinkedHashSet<>();
-						for (SakerPath objfilepath : filepaths) {
-							filelocations.add(ExecutionFileLocation.create(objfilepath));
-						}
-						inputfiles.addAll(filelocations);
-					}
-				});
-			}
 		};
+	}
+
+	private static void addLinkerInputs(LinkerInputPassTaskOption inputoption, TaskContext taskcontext,
+			Set<FileLocation> inputfiles, String architecture) {
+		inputoption.toLinkerInputPassOption(taskcontext).accept(new LinkerInputPassOption.Visitor() {
+			@Override
+			public void visit(FileLinkerInputPass input) {
+				Collection<FileLocation> filelocations = input.toFileLocations(taskcontext);
+				ObjectUtils.addAll(inputfiles, filelocations);
+			}
+
+			@Override
+			public void visit(CompilerOutputLinkerInputPass input) {
+				MSVCCompilerWorkerTaskOutput compileroutput = input.getCompilerOutput();
+				String outputarchitecture = compileroutput.getArchitecture();
+				if (outputarchitecture != null) {
+					if (!outputarchitecture.equalsIgnoreCase(architecture)) {
+						SakerLog.warning().taskScriptPosition(taskcontext).println(
+								"Linker input architecture mismatch: " + outputarchitecture + " for " + architecture);
+					}
+				}
+
+				Collection<SakerPath> filepaths = compileroutput.getObjectFilePaths();
+				if (filepaths == null) {
+					throw new IllegalArgumentException("null object file paths for compiler putput.");
+				}
+				Set<FileLocation> filelocations = new LinkedHashSet<>();
+				for (SakerPath objfilepath : filepaths) {
+					filelocations.add(ExecutionFileLocation.create(objfilepath));
+				}
+				inputfiles.addAll(filelocations);
+			}
+		});
 	}
 }

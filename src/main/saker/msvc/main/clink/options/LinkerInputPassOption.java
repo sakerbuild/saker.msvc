@@ -16,5 +16,16 @@
 package saker.msvc.main.clink.options;
 
 public interface LinkerInputPassOption {
-	public void accept(LinkerInputPassOptionVisitor visitor);
+	public void accept(Visitor visitor);
+
+	public interface Visitor {
+		public default void visit(FileLinkerInputPass input) {
+			throw new UnsupportedOperationException("Unsupported input: " + input);
+		}
+
+		public default void visit(CompilerOutputLinkerInputPass input) {
+			throw new UnsupportedOperationException("Unsupported input: " + input);
+		}
+	}
+
 }

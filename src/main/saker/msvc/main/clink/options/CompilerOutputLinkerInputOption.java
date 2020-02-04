@@ -18,7 +18,7 @@ package saker.msvc.main.clink.options;
 import saker.build.task.TaskContext;
 import saker.msvc.api.ccompile.MSVCCompilerWorkerTaskOutput;
 
-public class CompilerOutputLinkerInputOption
+class CompilerOutputLinkerInputOption
 		implements CompilerOutputLinkerInputPass, LinkerInputPassTaskOption, LinkerInputPassOption {
 	private MSVCCompilerWorkerTaskOutput compilerOutput;
 
@@ -42,7 +42,7 @@ public class CompilerOutputLinkerInputOption
 	}
 
 	@Override
-	public void accept(LinkerInputPassOptionVisitor visitor) {
+	public void accept(Visitor visitor) {
 		visitor.visit(this);
 	}
 }

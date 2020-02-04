@@ -44,7 +44,7 @@ final class FileLinkerInputOption implements LinkerInputPassTaskOption, FileLink
 	}
 
 	@Override
-	public void accept(LinkerInputPassOptionVisitor visitor) {
+	public void accept(Visitor visitor) {
 		visitor.visit(this);
 	}
 }
