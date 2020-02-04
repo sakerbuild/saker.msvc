@@ -96,8 +96,8 @@ import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.ccompile.CompilerState.CompiledFileState;
 import saker.msvc.impl.ccompile.CompilerState.PrecompiledHeaderState;
-import saker.msvc.impl.ccompile.option.FileIncludePath;
-import saker.msvc.impl.ccompile.option.IncludePathOption;
+import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.FileCompilationPathOption;
 import saker.msvc.impl.util.CollectingProcessIOConsumer;
 import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
 import saker.msvc.impl.util.InnerTaskMirrorHandler;
@@ -178,24 +178,14 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 	}
 
-	private static void collectFileDeltaPaths(Collection<? extends FileChangeDelta> deltas,
-			Collection<SakerPath> result) {
-		if (ObjectUtils.isNullOrEmpty(deltas)) {
-			return;
-		}
-		for (FileChangeDelta delta : deltas) {
-			result.add(delta.getFilePath());
-		}
+	@Override
+	public Set<String> getCapabilities() {
+		return WORKER_TASK_CAPABILITIES;
 	}
 
-	private static class DeltaDetectedException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-
-		public static final DeltaDetectedException INSTANCE = new DeltaDetectedException();
-
-		public DeltaDetectedException() {
-			super(null, null, false, false);
-		}
+	@Override
+	public Task<? extends Object> createTask(ExecutionContext executioncontext) {
+		return this;
 	}
 
 	@Override
@@ -218,10 +208,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				.getDirectoryCreate(architecture);
 
 		SakerPath outdirpath = outdir.getSakerPath();
-
-		List<FileCompilationConfiguration> compilationentries = new ArrayList<>(this.files);
-
-		NavigableMap<String, CompiledFileState> stateexecutioncompiledfiles = new TreeMap<>();
 
 		TaskExecutionEnvironmentSelector envselector = SDKSupportUtils
 				.getSDKBasedClusterExecutionEnvironmentSelector(sdkDescriptions.values());
@@ -249,6 +235,9 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		nstate.setSdkDescriptions(sdkDescriptions);
 		nstate.setEnvironmentSelection(envselectionresult);
 		nstate.setPrecompiledHeaders(nprecompiledheaders);
+
+		NavigableMap<String, CompiledFileState> stateexecutioncompiledfiles = new TreeMap<>();
+		List<FileCompilationConfiguration> compilationentries = new ArrayList<>(this.files);
 
 		if (prevoutput != null) {
 			for (Entry<RootFileProviderKey, NavigableMap<SakerPath, PrecompiledHeaderState>> entry : prevoutput
@@ -411,12 +400,12 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 		for (CompiledFileState filestate : stateexecutioncompiledfiles.values()) {
 			FileCompilationConfiguration compilationconfig = filestate.getCompilationConfiguration();
-			Collection<IncludePathOption> includedirs = compilationconfig.getProperties().getIncludeDirectories();
+			Collection<CompilationPathOption> includedirs = compilationconfig.getProperties().getIncludeDirectories();
 			if (!ObjectUtils.isNullOrEmpty(includedirs)) {
-				for (IncludePathOption includediroption : includedirs) {
-					includediroption.accept(new IncludePathOption.Visitor() {
+				for (CompilationPathOption includediroption : includedirs) {
+					includediroption.accept(new CompilationPathOption.Visitor() {
 						@Override
-						public void visit(FileIncludePath includedir) {
+						public void visit(FileCompilationPathOption includedir) {
 							includedir.getFileLocation().accept(new FileLocationVisitor() {
 								@Override
 								public void visit(ExecutionFileLocation loc) {
@@ -462,28 +451,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 					}
 				});
 		//use the nothing predicate to only delete the files which were removed
-		outdir.synchronize(new DirectoryVisitPredicate() {
-			@Override
-			public DirectoryVisitPredicate directoryVisitor(String arg0, SakerDirectory arg1) {
-				return null;
-			}
-
-			@Override
-			public boolean visitFile(String name, SakerFile file) {
-				return false;
-			}
-
-			@Override
-			public boolean visitDirectory(String name, SakerDirectory directory) {
-				return false;
-			}
-
-			@Override
-			public NavigableSet<String> getSynchronizeFilesToKeep() {
-				//don't remove the pch subdir
-				return ImmutableUtils.singletonNavigableSet(PRECOMPILED_HEADERS_SUBDIRECTORY_NAME);
-			}
-		});
+		outdir.synchronize(new NothingKeepKnownDirectoryVisitPredicate());
 
 		if (!nstate.isAllCompilationSucceeded()) {
 			taskcontext.abortExecution(new IOException("Compilation failed."));
@@ -494,6 +462,49 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				sdkDescriptions);
 		result.setObjectFilePaths(nstate.getOutputObjectFilePaths());
 		return result;
+	}
+
+	private static void collectFileDeltaPaths(Collection<? extends FileChangeDelta> deltas,
+			Collection<SakerPath> result) {
+		if (ObjectUtils.isNullOrEmpty(deltas)) {
+			return;
+		}
+		for (FileChangeDelta delta : deltas) {
+			result.add(delta.getFilePath());
+		}
+	}
+
+	private static final class NothingKeepKnownDirectoryVisitPredicate implements DirectoryVisitPredicate {
+		@Override
+		public DirectoryVisitPredicate directoryVisitor(String arg0, SakerDirectory arg1) {
+			return null;
+		}
+
+		@Override
+		public boolean visitFile(String name, SakerFile file) {
+			return false;
+		}
+
+		@Override
+		public boolean visitDirectory(String name, SakerDirectory directory) {
+			return false;
+		}
+
+		@Override
+		public NavigableSet<String> getSynchronizeFilesToKeep() {
+			//don't remove the pch subdir
+			return ImmutableUtils.singletonNavigableSet(PRECOMPILED_HEADERS_SUBDIRECTORY_NAME);
+		}
+	}
+
+	private static class DeltaDetectedException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+
+		public static final DeltaDetectedException INSTANCE = new DeltaDetectedException();
+
+		public DeltaDetectedException() {
+			super(null, null, false, false);
+		}
 	}
 
 	private static void reportAdditionDontCareDependenciesForFileNamesIncludeDirectory(TaskContext taskcontext,
@@ -646,16 +657,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 	protected static SakerPath getPrecompiledHeaderOutputDirectoryPath(SakerPath outputdirpath) {
 		return outputdirpath.resolve(PRECOMPILED_HEADERS_SUBDIRECTORY_NAME);
-	}
-
-	@Override
-	public Set<String> getCapabilities() {
-		return WORKER_TASK_CAPABILITIES;
-	}
-
-	@Override
-	public Task<? extends Object> createTask(ExecutionContext executioncontext) {
-		return this;
 	}
 
 	@Override
@@ -1183,24 +1184,11 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 			CompilerInnerTaskResult result;
 			if (procresult != 0) {
-				if (depinfo.processOutput.isEmpty()) {
-					//failed to start or something
-					CompilerDiagnostic errordiag = new CompilerDiagnostic(null, SakerLog.SEVERITY_ERROR, -1, null,
-							"cl exited with error code: " + procresult + " (0x" + Integer.toHexString(procresult)
-									+ ")");
-					depinfo.diagnostics.add(errordiag);
-					printDiagnostic(taskcontext, null, errordiag);
-				}
 				result = CompilerInnerTaskResult.failed(compilationentry);
 			} else {
 				ProviderHolderPathKey objoutpathkey = localfp.getPathKey(objoutpath);
 				taskutilities.addSynchronizeInvalidatedProviderPathFileToDirectory(outputDir, objoutpathkey,
 						outputobjectfilename);
-
-//				taskcontext.invalidate(objoutpathkey);
-//				SakerFile objsakerfile = taskutilities.createProviderPathFile(objectfilename, objoutpathkey);
-//				outputDir.add(objsakerfile);
-//				objsakerfile.synchronize();
 				result = CompilerInnerTaskResult.successful(compilationentry);
 			}
 
@@ -1211,13 +1199,13 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 
 		private List<Path> getIncludePaths(TaskExecutionUtilities taskutilities, SakerEnvironment environment,
-				Collection<IncludePathOption> includeoptions, boolean directories) {
+				Collection<CompilationPathOption> includeoptions, boolean directories) {
 			if (ObjectUtils.isNullOrEmpty(includeoptions)) {
 				return Collections.emptyList();
 			}
 			List<Path> includepaths = new ArrayList<>();
 			if (!ObjectUtils.isNullOrEmpty(includeoptions)) {
-				for (IncludePathOption incopt : includeoptions) {
+				for (CompilationPathOption incopt : includeoptions) {
 					Path incpath = getIncludePath(taskutilities, environment, incopt, directories);
 					includepaths.add(incpath);
 				}
@@ -1226,11 +1214,11 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 
 		private Path getIncludePath(TaskExecutionUtilities taskutilities, SakerEnvironment environment,
-				IncludePathOption includediroption, boolean directories) {
+				CompilationPathOption includediroption, boolean directories) {
 			Path[] includepath = { null };
-			includediroption.accept(new IncludePathOption.Visitor() {
+			includediroption.accept(new CompilationPathOption.Visitor() {
 				@Override
-				public void visit(FileIncludePath includedir) {
+				public void visit(FileCompilationPathOption includedir) {
 					includedir.getFileLocation().accept(new FileLocationVisitor() {
 						@Override
 						public void visit(ExecutionFileLocation loc) {
@@ -1316,6 +1304,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 					printDiagnostic(taskcontext, null, errordiag);
 				}
 			} else {
+				Matcher errmatcher = null;
 				try (UnsyncByteArrayOutputStream processout = new UnsyncByteArrayOutputStream()) {
 					try (DataInputUnsyncByteArrayInputStream reader = new DataInputUnsyncByteArrayInputStream(
 							stdoutbytecontents)) {
@@ -1323,7 +1312,11 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 							if (line.isEmpty()) {
 								continue;
 							}
-							Matcher errmatcher = CL_OUTPUT_ERROR_PATTERN.matcher(line);
+							if (errmatcher == null) {
+								errmatcher = CL_OUTPUT_ERROR_PATTERN.matcher(line);
+							} else {
+								errmatcher.reset(line);
+							}
 							if (errmatcher.matches()) {
 								String file = errmatcher.group(CL_OUTPUT_ERROR_GROUP_FILE);
 								String linenum = errmatcher.group(CL_OUTPUT_ERROR_GROUP_LINENUM);
@@ -1509,8 +1502,11 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		} else {
 			log.path(sourcefilepath);
 		}
-
-		log.println((clerror == null ? "" : clerror + ": ") + desc);
+		if (clerror == null) {
+			log.println(desc);
+		} else {
+			log.println(clerror + ": " + desc);
+		}
 	}
 
 }

@@ -18,13 +18,13 @@ package saker.msvc.main.clink.options;
 import java.util.Collection;
 
 import saker.build.task.TaskContext;
-import saker.msvc.impl.clink.option.LibraryPathOption;
+import saker.msvc.impl.option.CompilationPathOption;
 
 public class SimpleLibraryPathTaskOption implements LibraryPathTaskOption {
 
-	private Collection<LibraryPathOption> libraryPath;
+	private Collection<CompilationPathOption> libraryPath;
 
-	public SimpleLibraryPathTaskOption(Collection<LibraryPathOption> libraryPath) {
+	public SimpleLibraryPathTaskOption(Collection<CompilationPathOption> libraryPath) {
 		this.libraryPath = libraryPath;
 	}
 
@@ -34,7 +34,7 @@ public class SimpleLibraryPathTaskOption implements LibraryPathTaskOption {
 	}
 
 	@Override
-	public Collection<LibraryPathOption> toLibraryPath(TaskContext taskcontext) {
+	public Collection<CompilationPathOption> toLibraryPath(TaskContext taskcontext) {
 		return libraryPath;
 	}
 

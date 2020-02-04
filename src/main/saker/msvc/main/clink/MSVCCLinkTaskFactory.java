@@ -47,9 +47,9 @@ import saker.msvc.api.ccompile.MSVCCompilerWorkerTaskOutput;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.clink.MSVCCLinkWorkerTaskFactory;
 import saker.msvc.impl.clink.MSVCCLinkWorkerTaskIdentifier;
-import saker.msvc.impl.clink.option.LibraryPathOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.impl.coptions.preset.PresetCOptions;
+import saker.msvc.impl.option.CompilationPathOption;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
@@ -158,7 +158,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 			public CompilationIdentifierTaskOption identifierOption;
 
 			@SakerInput(value = "LibraryPath")
-			public Collection<LibraryPathTaskOption> libraryPathOption;
+			public Collection<LibraryPathTaskOption> CompilationPathOption;
 
 			@SakerInput(value = { "SDKs" })
 			public Map<String, SDKDescriptionTaskOption> sdksOption;
@@ -196,8 +196,8 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 						linkeroptions.add(linkeropt.clone());
 					}
 				}
-				if (!ObjectUtils.isNullOrEmpty(this.libraryPathOption)) {
-					for (LibraryPathTaskOption libpathtaskopt : this.libraryPathOption) {
+				if (!ObjectUtils.isNullOrEmpty(this.CompilationPathOption)) {
+					for (LibraryPathTaskOption libpathtaskopt : this.CompilationPathOption) {
 						if (libpathtaskopt == null) {
 							continue;
 						}
@@ -246,8 +246,8 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 
 				Set<FileLocation> inputfiles = new LinkedHashSet<>();
 
-				Set<LibraryPathOption> librarypath = new LinkedHashSet<>();
-				Map<LibraryPathTaskOption, Collection<LibraryPathOption>> calculatedlibpathoptions = new HashMap<>();
+				Set<CompilationPathOption> librarypath = new LinkedHashSet<>();
+				Map<LibraryPathTaskOption, Collection<CompilationPathOption>> calculatedlibpathoptions = new HashMap<>();
 				NavigableMap<String, SDKDescription> nullablesdkdescriptions = new TreeMap<>(
 						SDKSupportUtils.getSDKNameComparator());
 				NavigableMap<String, SDKDescription> infersdkdescriptions = new TreeMap<>(
@@ -274,7 +274,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				}
 
 				for (LibraryPathTaskOption libpathopt : libpathoptions) {
-					Collection<LibraryPathOption> libpaths = calculatedlibpathoptions.computeIfAbsent(libpathopt,
+					Collection<CompilationPathOption> libpaths = calculatedlibpathoptions.computeIfAbsent(libpathopt,
 							o -> o.toLibraryPath(taskcontext));
 					ObjectUtils.addAll(librarypath, libpaths);
 				}
@@ -293,7 +293,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 							Collection<LibraryPathTaskOption> optlibrarypath = options.getLibraryPath();
 							if (!ObjectUtils.isNullOrEmpty(optlibrarypath)) {
 								for (LibraryPathTaskOption libpathtaskoption : optlibrarypath) {
-									Collection<LibraryPathOption> libpaths = calculatedlibpathoptions
+									Collection<CompilationPathOption> libpaths = calculatedlibpathoptions
 											.computeIfAbsent(libpathtaskoption, o -> o.toLibraryPath(taskcontext));
 									ObjectUtils.addAll(librarypath, libpaths);
 								}

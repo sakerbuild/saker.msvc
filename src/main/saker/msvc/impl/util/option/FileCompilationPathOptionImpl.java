@@ -6,14 +6,11 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 import saker.build.thirdparty.saker.util.io.SerialUtils;
-import saker.msvc.impl.ccompile.option.FileIncludePath;
-import saker.msvc.impl.ccompile.option.IncludePathOption;
-import saker.msvc.impl.clink.option.FileLibraryPath;
-import saker.msvc.impl.clink.option.LibraryPathOption;
+import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.FileCompilationPathOption;
 import saker.std.api.file.location.FileLocation;
 
-public class CommonFilePathOption
-		implements FileLibraryPath, FileIncludePath, IncludePathOption, LibraryPathOption, Externalizable {
+public class FileCompilationPathOptionImpl implements FileCompilationPathOption, CompilationPathOption, Externalizable {
 	private static final long serialVersionUID = 1L;
 
 	private FileLocation fileLocation;
@@ -21,20 +18,15 @@ public class CommonFilePathOption
 	/**
 	 * For {@link Externalizable}.
 	 */
-	public CommonFilePathOption() {
+	public FileCompilationPathOptionImpl() {
 	}
 
-	public CommonFilePathOption(FileLocation fileLocation) {
+	public FileCompilationPathOptionImpl(FileLocation fileLocation) {
 		this.fileLocation = fileLocation;
 	}
 
 	@Override
-	public void accept(LibraryPathOption.Visitor visitor) {
-		visitor.visit(this);
-	}
-
-	@Override
-	public void accept(IncludePathOption.Visitor visitor) {
+	public void accept(CompilationPathOption.Visitor visitor) {
 		visitor.visit(this);
 	}
 
@@ -69,7 +61,7 @@ public class CommonFilePathOption
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		CommonFilePathOption other = (CommonFilePathOption) obj;
+		FileCompilationPathOptionImpl other = (FileCompilationPathOptionImpl) obj;
 		if (fileLocation == null) {
 			if (other.fileLocation != null)
 				return false;

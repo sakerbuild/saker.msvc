@@ -19,8 +19,7 @@ import java.util.Map;
 import java.util.Set;
 
 import saker.compiler.utils.api.CompilationIdentifier;
-import saker.msvc.impl.ccompile.option.IncludePathOption;
-import saker.msvc.impl.clink.option.LibraryPathOption;
+import saker.msvc.impl.option.CompilationPathOption;
 import saker.sdk.support.api.SDKDescription;
 import saker.std.api.file.location.FileLocation;
 
@@ -37,7 +36,7 @@ public interface PresetCOptions {
 	//for option merging
 	public String getArchitecture();
 
-	public Set<IncludePathOption> getIncludeDirectories();
+	public Set<CompilationPathOption> getIncludeDirectories();
 
 	public Map<String, SDKDescription> getSDKs();
 
@@ -45,13 +44,13 @@ public interface PresetCOptions {
 
 	public Set<String> getSimpleCompilerParameters();
 
-	public Set<LibraryPathOption> getLibraryPath();
+	public Set<CompilationPathOption> getLibraryPath();
 
 	public Set<String> getSimpleLinkerParameters();
 
 	public FileLocation getPrecompiledHeader();
 
-	public Set<IncludePathOption> getForceInclude();
+	public Set<CompilationPathOption> getForceInclude();
 
 	public Boolean getForceIncludePrecompiledHeader();
 

@@ -59,8 +59,8 @@ import saker.build.thirdparty.saker.util.function.Functionals;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.MSVCUtils;
-import saker.msvc.impl.clink.option.FileLibraryPath;
-import saker.msvc.impl.clink.option.LibraryPathOption;
+import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.FileCompilationPathOption;
 import saker.msvc.impl.util.ByteSinkProcessIOConsumer;
 import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
@@ -84,7 +84,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			.makeImmutableNavigableSet(new String[] { CAPABILITY_INNER_TASKS_COMPUTATIONAL });
 
 	private Set<FileLocation> inputs;
-	private Set<LibraryPathOption> libraryPath;
+	private Set<CompilationPathOption> libraryPath;
 	private NavigableMap<String, SDKDescription> sdkDescriptions;
 	private NavigableSet<String> simpleParameters;
 
@@ -98,7 +98,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		this.inputs = inputs;
 	}
 
-	public void setLibraryPath(Set<LibraryPathOption> libraryPath) {
+	public void setLibraryPath(Set<CompilationPathOption> libraryPath) {
 		this.libraryPath = libraryPath;
 	}
 
@@ -283,7 +283,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 		private TaskExecutionEnvironmentSelector environmentSelector;
 		private Set<FileLocation> inputs;
-		private Set<LibraryPathOption> libraryPath;
+		private Set<CompilationPathOption> libraryPath;
 		private NavigableMap<String, SDKDescription> sdkDescriptions;
 		private NavigableSet<String> simpleParameters;
 		private String architecture;
@@ -297,7 +297,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		}
 
 		public LinkerInnerTaskFactory(TaskExecutionEnvironmentSelector environmentSelector, Set<FileLocation> inputs,
-				Set<LibraryPathOption> libraryPath, NavigableMap<String, SDKDescription> sdkDescriptions,
+				Set<CompilationPathOption> libraryPath, NavigableMap<String, SDKDescription> sdkDescriptions,
 				NavigableSet<String> simpleParameters, String architecture, SakerPath outdirpath, String passid) {
 			this.environmentSelector = environmentSelector;
 			this.inputs = inputs;
@@ -340,10 +340,10 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 			SakerEnvironment environment = taskcontext.getExecutionContext().getEnvironment();
 			if (!ObjectUtils.isNullOrEmpty(this.libraryPath)) {
-				for (LibraryPathOption libpathoption : this.libraryPath) {
-					libpathoption.accept(new LibraryPathOption.Visitor() {
+				for (CompilationPathOption libpathoption : this.libraryPath) {
+					libpathoption.accept(new CompilationPathOption.Visitor() {
 						@Override
-						public void visit(FileLibraryPath libpath) {
+						public void visit(FileCompilationPathOption libpath) {
 							libpath.getFileLocation().accept(new FileLocationVisitor() {
 								@Override
 								public void visit(ExecutionFileLocation loc) {

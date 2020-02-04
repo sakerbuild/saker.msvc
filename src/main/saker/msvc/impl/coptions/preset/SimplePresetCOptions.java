@@ -26,8 +26,7 @@ import java.util.Set;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
-import saker.msvc.impl.ccompile.option.IncludePathOption;
-import saker.msvc.impl.clink.option.LibraryPathOption;
+import saker.msvc.impl.option.CompilationPathOption;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKSupportUtils;
 import saker.std.api.file.location.FileLocation;
@@ -41,14 +40,14 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	private String language;
 	private String architecture;
 
-	private Set<LibraryPathOption> libraryPaths;
-	private Set<IncludePathOption> includeDirectories;
+	private Set<CompilationPathOption> libraryPaths;
+	private Set<CompilationPathOption> includeDirectories;
 	private NavigableMap<String, SDKDescription> sdks;
 	private Map<String, String> macroDefinitions;
 	private Set<String> linkSimpleParameters;
 	private Set<String> compileSimpleParameters;
 	private FileLocation precompiledHeader;
-	private Set<IncludePathOption> forceInclude;
+	private Set<CompilationPathOption> forceInclude;
 	private Boolean forceIncludePrecompiledHeader;
 
 	/**
@@ -87,12 +86,12 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	@Override
-	public Set<LibraryPathOption> getLibraryPath() {
+	public Set<CompilationPathOption> getLibraryPath() {
 		return libraryPaths;
 	}
 
 	@Override
-	public Set<IncludePathOption> getIncludeDirectories() {
+	public Set<CompilationPathOption> getIncludeDirectories() {
 		return includeDirectories;
 	}
 
@@ -122,7 +121,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	@Override
-	public Set<IncludePathOption> getForceInclude() {
+	public Set<CompilationPathOption> getForceInclude() {
 		return forceInclude;
 	}
 
@@ -147,11 +146,11 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.architecture = architecture;
 	}
 
-	public void setLibraryPaths(Set<LibraryPathOption> libraryPaths) {
+	public void setLibraryPaths(Set<CompilationPathOption> libraryPaths) {
 		this.libraryPaths = libraryPaths;
 	}
 
-	public void setIncludeDirectories(Set<IncludePathOption> includeDirectories) {
+	public void setIncludeDirectories(Set<CompilationPathOption> includeDirectories) {
 		this.includeDirectories = includeDirectories;
 	}
 
@@ -176,7 +175,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.precompiledHeader = precompiledHeader;
 	}
 
-	public void setForceInclude(Set<IncludePathOption> forceInclude) {
+	public void setForceInclude(Set<CompilationPathOption> forceInclude) {
 		this.forceInclude = forceInclude;
 	}
 

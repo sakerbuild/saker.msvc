@@ -20,8 +20,8 @@ import java.util.Collections;
 
 import saker.build.file.path.SakerPath;
 import saker.build.task.TaskContext;
-import saker.msvc.impl.clink.option.LibraryPathOption;
-import saker.msvc.impl.util.option.CommonFilePathOption;
+import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.util.option.FileCompilationPathOptionImpl;
 import saker.std.api.file.location.ExecutionFileLocation;
 
 final class RelativePathLibraryPathTaskOption implements LibraryPathTaskOption {
@@ -37,8 +37,8 @@ final class RelativePathLibraryPathTaskOption implements LibraryPathTaskOption {
 	}
 
 	@Override
-	public Collection<LibraryPathOption> toLibraryPath(TaskContext taskcontext) {
-		return Collections.singleton(new CommonFilePathOption(
+	public Collection<CompilationPathOption> toLibraryPath(TaskContext taskcontext) {
+		return Collections.singleton(new FileCompilationPathOptionImpl(
 				ExecutionFileLocation.create(taskcontext.getTaskWorkingDirectoryPath().resolve(path))));
 	}
 

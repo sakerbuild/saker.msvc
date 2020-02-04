@@ -25,6 +25,8 @@ import saker.build.runtime.execution.ExecutionProperty;
 import saker.build.task.EnvironmentSelectionResult;
 import saker.build.task.TaskExecutionEnvironmentSelector;
 
+@Deprecated
+//TODO use saker.standard
 public class EnvironmentSelectionTestExecutionProperty
 		implements ExecutionProperty<EnvironmentSelectionResult>, Externalizable {
 	private static final long serialVersionUID = 1L;

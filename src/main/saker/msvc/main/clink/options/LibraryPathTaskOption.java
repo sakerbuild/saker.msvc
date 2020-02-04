@@ -25,9 +25,9 @@ import saker.build.file.path.WildcardPath;
 import saker.build.file.path.WildcardPath.ReducedWildcardPath;
 import saker.build.task.TaskContext;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
-import saker.msvc.impl.clink.option.LibraryPathOption;
-import saker.msvc.impl.util.option.CommonFilePathOption;
-import saker.msvc.impl.util.option.CommonSDKPathReferenceOption;
+import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.util.option.FileCompilationPathOptionImpl;
+import saker.msvc.impl.util.option.SDKPathReferenceCompilationPathOption;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.sdk.support.api.SDKPathReference;
 import saker.std.api.file.location.ExecutionFileLocation;
@@ -40,17 +40,17 @@ import saker.std.main.file.option.FileLocationTaskOption;
 public interface LibraryPathTaskOption {
 	public LibraryPathTaskOption clone();
 
-	public Collection<LibraryPathOption> toLibraryPath(TaskContext taskcontext);
+	public Collection<CompilationPathOption> toLibraryPath(TaskContext taskcontext);
 
 	public static LibraryPathTaskOption valueOf(FileLocation filelocation) {
 		FileLocationTaskOption.validateFileLocation(filelocation);
-		return new SimpleLibraryPathTaskOption(Collections.singleton(new CommonFilePathOption(filelocation)));
+		return new SimpleLibraryPathTaskOption(Collections.singleton(new FileCompilationPathOptionImpl(filelocation)));
 	}
 
 	public static LibraryPathTaskOption valueOf(FileCollection files) {
-		Set<LibraryPathOption> filelist = new LinkedHashSet<>();
+		Set<CompilationPathOption> filelist = new LinkedHashSet<>();
 		for (FileLocation fl : files) {
-			filelist.add(new CommonFilePathOption(fl));
+			filelist.add(new FileCompilationPathOptionImpl(fl));
 		}
 		return new SimpleLibraryPathTaskOption(ImmutableUtils.unmodifiableSet(filelist));
 	}
@@ -60,7 +60,7 @@ public interface LibraryPathTaskOption {
 			return new RelativePathLibraryPathTaskOption(path);
 		}
 		return new SimpleLibraryPathTaskOption(
-				Collections.singleton(new CommonFilePathOption(ExecutionFileLocation.create(path))));
+				Collections.singleton(new FileCompilationPathOptionImpl(ExecutionFileLocation.create(path))));
 	}
 
 	public static LibraryPathTaskOption valueOf(WildcardPath path) {
@@ -75,11 +75,11 @@ public interface LibraryPathTaskOption {
 		return valueOf(WildcardPath.valueOf(path));
 	}
 
-	public static LibraryPathTaskOption valueOf(LibraryPathOption option) {
+	public static LibraryPathTaskOption valueOf(CompilationPathOption option) {
 		return new SimpleLibraryPathTaskOption(Collections.singleton(option));
 	}
 
 	public static LibraryPathTaskOption valueOf(SDKPathReference pathreference) {
-		return valueOf(new CommonSDKPathReferenceOption(pathreference));
+		return valueOf(new SDKPathReferenceCompilationPathOption(pathreference));
 	}
 }

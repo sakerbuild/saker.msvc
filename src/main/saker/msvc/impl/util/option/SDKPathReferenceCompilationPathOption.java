@@ -20,11 +20,10 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-import saker.msvc.impl.ccompile.option.IncludePathOption;
-import saker.msvc.impl.clink.option.LibraryPathOption;
+import saker.msvc.impl.option.CompilationPathOption;
 import saker.sdk.support.api.SDKPathReference;
 
-public class CommonSDKPathReferenceOption implements IncludePathOption, LibraryPathOption, Externalizable {
+public class SDKPathReferenceCompilationPathOption implements CompilationPathOption, Externalizable {
 	private static final long serialVersionUID = 1L;
 
 	private SDKPathReference pathReference;
@@ -32,24 +31,19 @@ public class CommonSDKPathReferenceOption implements IncludePathOption, LibraryP
 	/**
 	 * For {@link Externalizable}.
 	 */
-	public CommonSDKPathReferenceOption() {
+	public SDKPathReferenceCompilationPathOption() {
 	}
 
-	public CommonSDKPathReferenceOption(SDKPathReference pathReference) {
+	public SDKPathReferenceCompilationPathOption(SDKPathReference pathReference) {
 		this.pathReference = pathReference;
 	}
 
-	public CommonSDKPathReferenceOption(String sdkname, String pathidentifier) {
+	public SDKPathReferenceCompilationPathOption(String sdkname, String pathidentifier) {
 		this.pathReference = SDKPathReference.create(sdkname, pathidentifier);
 	}
 
 	@Override
-	public void accept(LibraryPathOption.Visitor visitor) {
-		visitor.visit(pathReference);
-	}
-
-	@Override
-	public void accept(IncludePathOption.Visitor visitor) {
+	public void accept(CompilationPathOption.Visitor visitor) {
 		visitor.visit(pathReference);
 	}
 
@@ -79,7 +73,7 @@ public class CommonSDKPathReferenceOption implements IncludePathOption, LibraryP
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		CommonSDKPathReferenceOption other = (CommonSDKPathReferenceOption) obj;
+		SDKPathReferenceCompilationPathOption other = (SDKPathReferenceCompilationPathOption) obj;
 		if (pathReference == null) {
 			if (other.pathReference != null)
 				return false;
