@@ -13,47 +13,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package saker.msvc.main.ccompile.options;
+package saker.msvc.main.options;
 
 import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.NavigableMap;
+import java.util.Collections;
 
-import saker.build.file.SakerFile;
 import saker.build.file.path.SakerPath;
-import saker.build.file.path.WildcardPath;
-import saker.build.task.CommonTaskContentDescriptors;
 import saker.build.task.TaskContext;
-import saker.build.task.dependencies.FileCollectionStrategy;
-import saker.build.task.utils.dependencies.WildcardFileCollectionStrategy;
-import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.msvc.impl.option.CompilationPathOption;
 import saker.msvc.impl.util.option.FileCompilationPathOptionImpl;
 import saker.std.api.file.location.ExecutionFileLocation;
 
-final class WildcardIncludePathTaskOption implements IncludePathTaskOption {
-	private final WildcardPath path;
+final class RelativePathCompilationPathTaskOption implements CompilationPathTaskOption {
+	private final SakerPath path;
 
-	public WildcardIncludePathTaskOption(WildcardPath path) {
+	public RelativePathCompilationPathTaskOption(SakerPath path) {
 		this.path = path;
 	}
 
 	@Override
-	public Collection<CompilationPathOption> toIncludeDirectories(TaskContext tc) {
-		FileCollectionStrategy collectionstrategy = WildcardFileCollectionStrategy.create(path);
-		NavigableMap<SakerPath, SakerFile> files = tc.getTaskUtilities().collectFilesReportAdditionDependency(null,
-				collectionstrategy);
-		tc.getTaskUtilities().reportInputFileDependency(null,
-				ObjectUtils.singleValueMap(files.navigableKeySet(), CommonTaskContentDescriptors.PRESENT));
-		LinkedHashSet<CompilationPathOption> result = new LinkedHashSet<>();
-		for (SakerPath filepath : files.navigableKeySet()) {
-			result.add(new FileCompilationPathOptionImpl(ExecutionFileLocation.create(filepath)));
-		}
-		return result;
+	public Collection<CompilationPathOption> toCompilationPaths(TaskContext tc) {
+		return Collections.singleton(new FileCompilationPathOptionImpl(
+				ExecutionFileLocation.create(tc.getTaskWorkingDirectoryPath().resolve(path))));
 	}
 
 	@Override
-	public IncludePathTaskOption clone() {
+	public CompilationPathTaskOption clone() {
 		return this;
 	}
 
@@ -73,7 +58,7 @@ final class WildcardIncludePathTaskOption implements IncludePathTaskOption {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		WildcardIncludePathTaskOption other = (WildcardIncludePathTaskOption) obj;
+		RelativePathCompilationPathTaskOption other = (RelativePathCompilationPathTaskOption) obj;
 		if (path == null) {
 			if (other.path != null)
 				return false;
@@ -81,5 +66,5 @@ final class WildcardIncludePathTaskOption implements IncludePathTaskOption {
 			return false;
 		return true;
 	}
-	
+
 }

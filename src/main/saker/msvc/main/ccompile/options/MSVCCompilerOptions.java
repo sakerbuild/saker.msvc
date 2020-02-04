@@ -26,9 +26,12 @@ import saker.msvc.main.coptions.CommonPresetCOptionsTaskOption;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.CompilationLanguage;
+import saker.msvc.main.doc.TaskDocs.DocIncludeDirectoryPathTaskOption;
+import saker.msvc.main.doc.TaskDocs.DocIncludeFilePathTaskOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionKeyOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionValueOption;
 import saker.msvc.main.doc.TaskDocs.SimpleCompilerParameterOption;
+import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
@@ -50,7 +53,7 @@ import saker.std.main.file.option.FileLocationTaskOption;
 		type = @NestTypeUsage(ArchitectureType.class),
 		info = @NestInformation(TaskDocs.OPTIONS_ARCHITECTURE))
 @NestFieldInformation(value = "IncludeDirectories",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeDirectoryPathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
 @NestFieldInformation(value = "MacroDefinitions",
 		type = @NestTypeUsage(value = Map.class,
@@ -74,7 +77,7 @@ import saker.std.main.file.option.FileLocationTaskOption;
 				+ "When merging, only a single precompiled header may be used. An exception "
 				+ "is thrown in case of conflict."))
 @NestFieldInformation(value = "ForceInclude",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeFilePathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE))
 @NestFieldInformation(value = "ForceIncludePrecompiledHeader",
 		type = @NestTypeUsage(boolean.class),
@@ -99,7 +102,7 @@ public interface MSVCCompilerOptions {
 		return null;
 	}
 
-	public default Collection<IncludePathTaskOption> getIncludeDirectories() {
+	public default Collection<CompilationPathTaskOption> getIncludeDirectories() {
 		return null;
 	}
 
@@ -119,7 +122,7 @@ public interface MSVCCompilerOptions {
 		return null;
 	}
 
-	public default Collection<IncludePathTaskOption> getForceInclude() {
+	public default Collection<CompilationPathTaskOption> getForceInclude() {
 		return null;
 	}
 

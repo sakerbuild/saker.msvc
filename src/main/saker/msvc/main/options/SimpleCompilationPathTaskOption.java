@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package saker.msvc.main.ccompile.options;
+package saker.msvc.main.options;
 
 import java.util.Collection;
 import java.util.Set;
@@ -21,20 +21,20 @@ import java.util.Set;
 import saker.build.task.TaskContext;
 import saker.msvc.impl.option.CompilationPathOption;
 
-public final class SimpleIncludePathTaskOption implements IncludePathTaskOption {
+public final class SimpleCompilationPathTaskOption implements CompilationPathTaskOption {
 	private final Set<CompilationPathOption> directoryoptions;
 
-	public SimpleIncludePathTaskOption(Set<CompilationPathOption> directoryoptions) {
+	public SimpleCompilationPathTaskOption(Set<CompilationPathOption> directoryoptions) {
 		this.directoryoptions = directoryoptions;
 	}
 
 	@Override
-	public Collection<CompilationPathOption> toIncludeDirectories(TaskContext tc) {
+	public Collection<CompilationPathOption> toCompilationPaths(TaskContext tc) {
 		return directoryoptions;
 	}
 
 	@Override
-	public IncludePathTaskOption clone() {
+	public CompilationPathTaskOption clone() {
 		return this;
 	}
 
@@ -54,7 +54,7 @@ public final class SimpleIncludePathTaskOption implements IncludePathTaskOption 
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		SimpleIncludePathTaskOption other = (SimpleIncludePathTaskOption) obj;
+		SimpleCompilationPathTaskOption other = (SimpleCompilationPathTaskOption) obj;
 		if (directoryoptions == null) {
 			if (other.directoryoptions != null)
 				return false;

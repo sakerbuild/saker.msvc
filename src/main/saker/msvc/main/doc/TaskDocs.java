@@ -22,9 +22,7 @@ import saker.build.file.path.SakerPath;
 import saker.build.scripting.model.info.TypeInformationKind;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
-import saker.msvc.main.ccompile.options.IncludePathTaskOption;
 import saker.msvc.main.clink.MSVCCLinkTaskFactory;
-import saker.msvc.main.clink.options.LibraryPathTaskOption;
 import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.coptions.COptionsPresetType;
 import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
@@ -244,7 +242,7 @@ public class TaskDocs {
 			info = @NestInformation(TaskDocs.OPTIONS_ARCHITECTURE))
 
 	@NestFieldInformation(value = "IncludeDirectories",
-			type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
+			type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeDirectoryPathTaskOption.class),
 			info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
 	@NestFieldInformation(value = "SDKs",
 			type = @NestTypeUsage(value = Map.class,
@@ -263,13 +261,31 @@ public class TaskDocs {
 					+ "When merging, duplicate parameters are removed automatically."))
 
 	@NestFieldInformation(value = "LibraryPath",
-			type = @NestTypeUsage(value = Collection.class, elementTypes = LibraryPathTaskOption.class),
+			type = @NestTypeUsage(value = Collection.class, elementTypes = DocLibraryPathTaskOption.class),
 			info = @NestInformation(TaskDocs.LINK_LIBRARY_PATH))
 	@NestFieldInformation(value = "LinkSimpleParameters",
 			type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleLinkerParameterOption.class),
 			info = @NestInformation(TaskDocs.LINK_SIMPLE_PARAMETERS + "\n"
 					+ "When merging, duplicate parameters are removed automatically."))
 	public static class DocPresetCOptions {
+	}
+
+	@NestInformation("Represents a library path that is searched for libraries when linking objects.\n"
+			+ "The option accepts simple paths, wildcards, file locations, file collections, and SDK paths.")
+	@NestTypeInformation(qualifiedName = "LibraryPathTaskOption")
+	public static class DocLibraryPathTaskOption {
+	}
+
+	@NestInformation("Represents an include directory for C/C++ compilation.\n"
+			+ "Include directories are used to resolve #include directives in source code by the preprocessor.\n"
+			+ "The option accepts simple paths, wildcards, file locations, file collections, and SDK paths.")
+	@NestTypeInformation(qualifiedName = "IncludeDirectoryPathTaskOption")
+	public static class DocIncludeDirectoryPathTaskOption {
+	}
+
+	@NestInformation("Represents an include file path for C/C++ compilation.\n")
+	@NestTypeInformation(qualifiedName = "ForceIncludeFilePathTaskOption")
+	public static class DocIncludeFilePathTaskOption {
 	}
 
 }

@@ -21,13 +21,14 @@ import java.util.Map;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.function.Functionals;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
+import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 
 public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 	private CompilationIdentifierTaskOption identifier;
 	private String architecture;
 	private Collection<LinkerInputPassTaskOption> input;
-	private Collection<LibraryPathTaskOption> libraryPath;
+	private Collection<CompilationPathTaskOption> libraryPath;
 	private Map<String, SDKDescriptionTaskOption> sdks;
 	private Collection<String> simpleParameters;
 
@@ -38,7 +39,7 @@ public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 		this.identifier = ObjectUtils.clone(copy.getIdentifier(), CompilationIdentifierTaskOption::clone);
 		this.architecture = copy.getArchitecture();
 		this.input = ObjectUtils.cloneArrayList(copy.getLinkerInput(), LinkerInputPassTaskOption::clone);
-		this.libraryPath = ObjectUtils.cloneArrayList(copy.getLibraryPath());
+		this.libraryPath = ObjectUtils.cloneArrayList(copy.getLibraryPath(), CompilationPathTaskOption::clone);
 		this.sdks = ObjectUtils.cloneTreeMap(copy.getSDKs(), Functionals.identityFunction(),
 				SDKDescriptionTaskOption::clone);
 		this.simpleParameters = ObjectUtils.cloneArrayList(copy.getSimpleLinkerParameters());
@@ -65,7 +66,7 @@ public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 	}
 
 	@Override
-	public Collection<LibraryPathTaskOption> getLibraryPath() {
+	public Collection<CompilationPathTaskOption> getLibraryPath() {
 		return libraryPath;
 	}
 

@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package saker.msvc.main.clink.options;
+package saker.msvc.main.options;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -28,58 +28,55 @@ import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.msvc.impl.option.CompilationPathOption;
 import saker.msvc.impl.util.option.FileCompilationPathOptionImpl;
 import saker.msvc.impl.util.option.SDKPathReferenceCompilationPathOption;
-import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.sdk.support.api.SDKPathReference;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileCollection;
 import saker.std.api.file.location.FileLocation;
 import saker.std.main.file.option.FileLocationTaskOption;
 
-@NestInformation("Represents a library path that is searched for libraries when linking objects.\n"
-		+ "The option accepts simple paths, wildcards, file locations, file collections, and SDK paths.")
-public interface LibraryPathTaskOption {
-	public LibraryPathTaskOption clone();
+public interface CompilationPathTaskOption {
+	public CompilationPathTaskOption clone();
 
-	public Collection<CompilationPathOption> toLibraryPath(TaskContext taskcontext);
+	public Collection<CompilationPathOption> toCompilationPaths(TaskContext taskcontext);
 
-	public static LibraryPathTaskOption valueOf(FileLocation filelocation) {
+	public static CompilationPathTaskOption valueOf(FileLocation filelocation) {
 		FileLocationTaskOption.validateFileLocation(filelocation);
-		return new SimpleLibraryPathTaskOption(Collections.singleton(new FileCompilationPathOptionImpl(filelocation)));
+		return new SimpleCompilationPathTaskOption(Collections.singleton(new FileCompilationPathOptionImpl(filelocation)));
 	}
 
-	public static LibraryPathTaskOption valueOf(FileCollection files) {
+	public static CompilationPathTaskOption valueOf(FileCollection files) {
 		Set<CompilationPathOption> filelist = new LinkedHashSet<>();
 		for (FileLocation fl : files) {
 			filelist.add(new FileCompilationPathOptionImpl(fl));
 		}
-		return new SimpleLibraryPathTaskOption(ImmutableUtils.unmodifiableSet(filelist));
+		return new SimpleCompilationPathTaskOption(ImmutableUtils.unmodifiableSet(filelist));
 	}
 
-	public static LibraryPathTaskOption valueOf(SakerPath path) {
+	public static CompilationPathTaskOption valueOf(SakerPath path) {
 		if (!path.isAbsolute()) {
-			return new RelativePathLibraryPathTaskOption(path);
+			return new RelativePathCompilationPathTaskOption(path);
 		}
-		return new SimpleLibraryPathTaskOption(
+		return new SimpleCompilationPathTaskOption(
 				Collections.singleton(new FileCompilationPathOptionImpl(ExecutionFileLocation.create(path))));
 	}
 
-	public static LibraryPathTaskOption valueOf(WildcardPath path) {
+	public static CompilationPathTaskOption valueOf(WildcardPath path) {
 		ReducedWildcardPath reduced = path.reduce();
 		if (reduced.getWildcard() == null) {
 			return valueOf(reduced.getFile());
 		}
-		return new WildcardLibraryPathTaskOption(path);
+		return new WildcardCompilationPathTaskOption(path);
 	}
 
-	public static LibraryPathTaskOption valueOf(String path) {
+	public static CompilationPathTaskOption valueOf(String path) {
 		return valueOf(WildcardPath.valueOf(path));
 	}
 
-	public static LibraryPathTaskOption valueOf(CompilationPathOption option) {
-		return new SimpleLibraryPathTaskOption(Collections.singleton(option));
+	public static CompilationPathTaskOption valueOf(CompilationPathOption option) {
+		return new SimpleCompilationPathTaskOption(Collections.singleton(option));
 	}
 
-	public static LibraryPathTaskOption valueOf(SDKPathReference pathreference) {
+	public static CompilationPathTaskOption valueOf(SDKPathReference pathreference) {
 		return valueOf(new SDKPathReferenceCompilationPathOption(pathreference));
 	}
 }

@@ -55,7 +55,6 @@ import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
 import saker.msvc.main.clink.options.CompilerOutputLinkerInputPass;
 import saker.msvc.main.clink.options.FileLinkerInputPass;
-import saker.msvc.main.clink.options.LibraryPathTaskOption;
 import saker.msvc.main.clink.options.LinkerInputPassOption;
 import saker.msvc.main.clink.options.LinkerInputPassOptionVisitor;
 import saker.msvc.main.clink.options.LinkerInputPassTaskOption;
@@ -65,7 +64,9 @@ import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.DocCLinkerWorkerTaskOutput;
+import saker.msvc.main.doc.TaskDocs.DocLibraryPathTaskOption;
 import saker.msvc.main.doc.TaskDocs.SimpleLinkerParameterOption;
+import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestParameterInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTaskInformation;
@@ -114,7 +115,7 @@ import saker.std.api.file.location.FileLocation;
 				+ "If not specified, the identifier is determined based on the current working directory, "
 				+ "or assigned to \"default\", however, it won't be subject to option merging."))
 @NestParameterInformation(value = "LibraryPath",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = LibraryPathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocLibraryPathTaskOption.class),
 		info = @NestInformation(TaskDocs.LINK_LIBRARY_PATH))
 @NestParameterInformation(value = "SDKs",
 		type = @NestTypeUsage(value = Map.class,
@@ -158,7 +159,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 			public CompilationIdentifierTaskOption identifierOption;
 
 			@SakerInput(value = "LibraryPath")
-			public Collection<LibraryPathTaskOption> CompilationPathOption;
+			public Collection<CompilationPathTaskOption> compilationPathOption;
 
 			@SakerInput(value = { "SDKs" })
 			public Map<String, SDKDescriptionTaskOption> sdksOption;
@@ -173,7 +174,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 			public Object run(TaskContext taskcontext) throws Exception {
 				Collection<LinkerInputPassTaskOption> inputtaskoptions = new ArrayList<>();
 				Collection<MSVCLinkerOptions> linkeroptions = new ArrayList<>();
-				Collection<LibraryPathTaskOption> libpathoptions = new ArrayList<>();
+				Collection<CompilationPathTaskOption> libpathoptions = new ArrayList<>();
 				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(
 						SDKSupportUtils.getSDKNameComparator());
 				Collection<String> simpleparamoption = ImmutableUtils.makeImmutableList(this.simpleParametersOption);
@@ -196,8 +197,8 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 						linkeroptions.add(linkeropt.clone());
 					}
 				}
-				if (!ObjectUtils.isNullOrEmpty(this.CompilationPathOption)) {
-					for (LibraryPathTaskOption libpathtaskopt : this.CompilationPathOption) {
+				if (!ObjectUtils.isNullOrEmpty(this.compilationPathOption)) {
+					for (CompilationPathTaskOption libpathtaskopt : this.compilationPathOption) {
 						if (libpathtaskopt == null) {
 							continue;
 						}
@@ -247,7 +248,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				Set<FileLocation> inputfiles = new LinkedHashSet<>();
 
 				Set<CompilationPathOption> librarypath = new LinkedHashSet<>();
-				Map<LibraryPathTaskOption, Collection<CompilationPathOption>> calculatedlibpathoptions = new HashMap<>();
+				Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculatedlibpathoptions = new HashMap<>();
 				NavigableMap<String, SDKDescription> nullablesdkdescriptions = new TreeMap<>(
 						SDKSupportUtils.getSDKNameComparator());
 				NavigableMap<String, SDKDescription> infersdkdescriptions = new TreeMap<>(
@@ -273,9 +274,9 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 					addLinkerInputs(inputoption, taskcontext, inputfiles, architecture, infersdkdescriptions);
 				}
 
-				for (LibraryPathTaskOption libpathopt : libpathoptions) {
+				for (CompilationPathTaskOption libpathopt : libpathoptions) {
 					Collection<CompilationPathOption> libpaths = calculatedlibpathoptions.computeIfAbsent(libpathopt,
-							o -> o.toLibraryPath(taskcontext));
+							o -> o.toCompilationPaths(taskcontext));
 					ObjectUtils.addAll(librarypath, libpaths);
 				}
 
@@ -290,11 +291,11 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 									options.getIdentifier() == null ? null : options.getIdentifier().getIdentifier())) {
 								return;
 							}
-							Collection<LibraryPathTaskOption> optlibrarypath = options.getLibraryPath();
+							Collection<CompilationPathTaskOption> optlibrarypath = options.getLibraryPath();
 							if (!ObjectUtils.isNullOrEmpty(optlibrarypath)) {
-								for (LibraryPathTaskOption libpathtaskoption : optlibrarypath) {
+								for (CompilationPathTaskOption libpathtaskoption : optlibrarypath) {
 									Collection<CompilationPathOption> libpaths = calculatedlibpathoptions
-											.computeIfAbsent(libpathtaskoption, o -> o.toLibraryPath(taskcontext));
+											.computeIfAbsent(libpathtaskoption, o -> o.toCompilationPaths(taskcontext));
 									ObjectUtils.addAll(librarypath, libpaths);
 								}
 							}

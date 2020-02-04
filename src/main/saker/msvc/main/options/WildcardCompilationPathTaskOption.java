@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package saker.msvc.main.clink.options;
+package saker.msvc.main.options;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -31,31 +31,30 @@ import saker.msvc.impl.option.CompilationPathOption;
 import saker.msvc.impl.util.option.FileCompilationPathOptionImpl;
 import saker.std.api.file.location.ExecutionFileLocation;
 
-class WildcardLibraryPathTaskOption implements LibraryPathTaskOption {
+final class WildcardCompilationPathTaskOption implements CompilationPathTaskOption {
+	private final WildcardPath path;
 
-	private WildcardPath path;
-
-	public WildcardLibraryPathTaskOption(WildcardPath path) {
+	public WildcardCompilationPathTaskOption(WildcardPath path) {
 		this.path = path;
 	}
 
 	@Override
-	public LibraryPathTaskOption clone() {
-		return this;
-	}
-
-	@Override
-	public Collection<CompilationPathOption> toLibraryPath(TaskContext taskcontext) {
+	public Collection<CompilationPathOption> toCompilationPaths(TaskContext tc) {
 		FileCollectionStrategy collectionstrategy = WildcardFileCollectionStrategy.create(path);
-		NavigableMap<SakerPath, SakerFile> files = taskcontext.getTaskUtilities()
-				.collectFilesReportAdditionDependency(null, collectionstrategy);
-		taskcontext.getTaskUtilities().reportInputFileDependency(null,
+		NavigableMap<SakerPath, SakerFile> files = tc.getTaskUtilities().collectFilesReportAdditionDependency(null,
+				collectionstrategy);
+		tc.getTaskUtilities().reportInputFileDependency(null,
 				ObjectUtils.singleValueMap(files.navigableKeySet(), CommonTaskContentDescriptors.PRESENT));
 		LinkedHashSet<CompilationPathOption> result = new LinkedHashSet<>();
 		for (SakerPath filepath : files.navigableKeySet()) {
 			result.add(new FileCompilationPathOptionImpl(ExecutionFileLocation.create(filepath)));
 		}
 		return result;
+	}
+
+	@Override
+	public CompilationPathTaskOption clone() {
+		return this;
 	}
 
 	@Override
@@ -74,7 +73,7 @@ class WildcardLibraryPathTaskOption implements LibraryPathTaskOption {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		WildcardLibraryPathTaskOption other = (WildcardLibraryPathTaskOption) obj;
+		WildcardCompilationPathTaskOption other = (WildcardCompilationPathTaskOption) obj;
 		if (path == null) {
 			if (other.path != null)
 				return false;
@@ -82,5 +81,5 @@ class WildcardLibraryPathTaskOption implements LibraryPathTaskOption {
 			return false;
 		return true;
 	}
-
+	
 }

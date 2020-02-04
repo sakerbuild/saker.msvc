@@ -57,7 +57,6 @@ import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.options.CompilationInputPassOption;
 import saker.msvc.main.ccompile.options.CompilationInputPassTaskOption;
 import saker.msvc.main.ccompile.options.FileCompilationInputPass;
-import saker.msvc.main.ccompile.options.IncludePathTaskOption;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
 import saker.msvc.main.ccompile.options.OptionCompilationInputPass;
 import saker.msvc.main.clink.MSVCCLinkTaskFactory;
@@ -65,6 +64,7 @@ import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.DocCCompilerWorkerTaskOutput;
+import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.msvc.main.util.TaskTags;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestParameterInformation;
@@ -209,7 +209,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 					}
 				}
 
-				Map<IncludePathTaskOption, Collection<CompilationPathOption>> calculatedincludediroptions = new HashMap<>();
+				Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculatedincludediroptions = new HashMap<>();
 				Map<FileCompilationProperties, String> precompiledheaderoutnamesconfigurations = new HashMap<>();
 
 				//ignore-case comparison of possible output names of the files
@@ -471,22 +471,22 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 	}
 
 	private static Set<CompilationPathOption> toIncludePathOptions(TaskContext taskcontext,
-			Map<IncludePathTaskOption, Collection<CompilationPathOption>> calculatedincludediroptions,
-			Collection<IncludePathTaskOption> indirtaskopts) {
+			Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculatedincludediroptions,
+			Collection<CompilationPathTaskOption> indirtaskopts) {
 		Set<CompilationPathOption> inputincludedirs = new LinkedHashSet<>();
 		collectIncludeDirectoryOptions(taskcontext, calculatedincludediroptions, indirtaskopts, inputincludedirs);
 		return inputincludedirs;
 	}
 
 	private static void collectIncludeDirectoryOptions(TaskContext taskcontext,
-			Map<IncludePathTaskOption, Collection<CompilationPathOption>> calculatedincludediroptions,
-			Collection<IncludePathTaskOption> indirtaskopts, Set<CompilationPathOption> inputincludedirs) {
+			Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculatedincludediroptions,
+			Collection<CompilationPathTaskOption> indirtaskopts, Set<CompilationPathOption> inputincludedirs) {
 		if (ObjectUtils.isNullOrEmpty(indirtaskopts)) {
 			return;
 		}
-		for (IncludePathTaskOption indirtaskopt : indirtaskopts) {
+		for (CompilationPathTaskOption indirtaskopt : indirtaskopts) {
 			Collection<CompilationPathOption> indiroptions = calculatedincludediroptions.computeIfAbsent(indirtaskopt,
-					o -> o.toIncludeDirectories(taskcontext));
+					o -> o.toCompilationPaths(taskcontext));
 			ObjectUtils.addAll(inputincludedirs, indiroptions);
 		}
 	}

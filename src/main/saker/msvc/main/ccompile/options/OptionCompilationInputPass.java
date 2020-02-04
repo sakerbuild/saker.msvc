@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
+import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.std.main.file.option.FileLocationTaskOption;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 
@@ -27,7 +28,7 @@ public interface OptionCompilationInputPass {
 
 	public String getLanguage();
 
-	public Collection<IncludePathTaskOption> getIncludeDirectories();
+	public Collection<CompilationPathTaskOption> getIncludeDirectories();
 
 	public CompilationIdentifierTaskOption getSubIdentifier();
 
@@ -39,7 +40,7 @@ public interface OptionCompilationInputPass {
 
 	public FileLocationTaskOption getPrecompiledHeader();
 
-	public Collection<IncludePathTaskOption> getForceInclude();
+	public Collection<CompilationPathTaskOption> getForceInclude();
 
 	public Boolean getForceIncludePrecompiledHeader();
 }

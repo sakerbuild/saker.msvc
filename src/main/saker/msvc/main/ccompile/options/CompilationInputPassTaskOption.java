@@ -29,9 +29,12 @@ import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.CompilationLanguage;
+import saker.msvc.main.doc.TaskDocs.DocIncludeFilePathTaskOption;
+import saker.msvc.main.doc.TaskDocs.DocIncludeDirectoryPathTaskOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionKeyOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionValueOption;
 import saker.msvc.main.doc.TaskDocs.SimpleCompilerParameterOption;
+import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
@@ -52,7 +55,7 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 				+ "The specified files are directly passed to the backend compiler (cl.exe)."))
 
 @NestFieldInformation(value = "IncludeDirectories",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeDirectoryPathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
 @NestFieldInformation(value = "CompilerOptions",
 		type = @NestTypeUsage(value = Collection.class, elementTypes = MSVCCompilerOptions.class),
@@ -87,7 +90,7 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 		type = @NestTypeUsage(FileLocationTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_PRECOMPILED_HEADER))
 @NestFieldInformation(value = "ForceInclude",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = IncludePathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeFilePathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE))
 @NestFieldInformation(value = "ForceIncludePrecompiledHeader",
 		type = @NestTypeUsage(boolean.class),
@@ -103,7 +106,7 @@ public interface CompilationInputPassTaskOption {
 		return null;
 	}
 
-	public default Collection<IncludePathTaskOption> getIncludeDirectories() {
+	public default Collection<CompilationPathTaskOption> getIncludeDirectories() {
 		return null;
 	}
 
@@ -131,7 +134,7 @@ public interface CompilationInputPassTaskOption {
 		return null;
 	}
 
-	public default Collection<IncludePathTaskOption> getForceInclude() {
+	public default Collection<CompilationPathTaskOption> getForceInclude() {
 		return null;
 	}
 

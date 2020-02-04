@@ -22,33 +22,34 @@ import saker.build.task.TaskContext;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
+import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.std.main.file.option.FileLocationTaskOption;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 
 public class OptionCompilationInputPassOption
 		implements OptionCompilationInputPass, CompilationInputPassOption, CompilationInputPassTaskOption {
 	private Collection<MultiFileLocationTaskOption> files;
-	private Collection<IncludePathTaskOption> includeDirectories;
+	private Collection<CompilationPathTaskOption> includeDirectories;
 	private CompilationIdentifierTaskOption subIdentifier;
 	private Map<String, String> macroDefinitions;
 	private Collection<String> simpleParameters;
 	private Collection<MSVCCompilerOptions> compilerOptions;
 	private String language;
 	private FileLocationTaskOption precompiledHeader;
-	private Collection<IncludePathTaskOption> forceInclude;
+	private Collection<CompilationPathTaskOption> forceInclude;
 	private Boolean forceIncludePrecompiledHeader;
 
 	public OptionCompilationInputPassOption(CompilationInputPassTaskOption copy) {
 		this.files = ObjectUtils.cloneArrayList(copy.getFiles(), MultiFileLocationTaskOption::clone);
 		this.includeDirectories = ObjectUtils.cloneArrayList(copy.getIncludeDirectories(),
-				IncludePathTaskOption::clone);
+				CompilationPathTaskOption::clone);
 		this.subIdentifier = ObjectUtils.clone(copy.getSubIdentifier(), CompilationIdentifierTaskOption::clone);
 		this.macroDefinitions = ImmutableUtils.makeImmutableNavigableMap(copy.getMacroDefinitions());
 		this.simpleParameters = ImmutableUtils.makeImmutableList(copy.getSimpleParameters());
 		this.compilerOptions = ObjectUtils.cloneArrayList(copy.getCompilerOptions(), MSVCCompilerOptions::clone);
 		this.language = copy.getLanguage();
 		this.precompiledHeader = ObjectUtils.clone(copy.getPrecompiledHeader(), FileLocationTaskOption::clone);
-		this.forceInclude = ObjectUtils.cloneArrayList(copy.getForceInclude(), IncludePathTaskOption::clone);
+		this.forceInclude = ObjectUtils.cloneArrayList(copy.getForceInclude(), CompilationPathTaskOption::clone);
 		this.forceIncludePrecompiledHeader = copy.getForceIncludePrecompiledHeader();
 	}
 
@@ -73,7 +74,7 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public Collection<IncludePathTaskOption> getIncludeDirectories() {
+	public Collection<CompilationPathTaskOption> getIncludeDirectories() {
 		return includeDirectories;
 	}
 
@@ -103,7 +104,7 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public Collection<IncludePathTaskOption> getForceInclude() {
+	public Collection<CompilationPathTaskOption> getForceInclude() {
 		return forceInclude;
 	}
 

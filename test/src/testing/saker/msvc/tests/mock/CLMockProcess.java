@@ -156,6 +156,9 @@ public class CLMockProcess {
 		}
 		boolean includedpch = usepchcmd == null;
 
+		int langmultiplier = getLanguageMockMultipler(language);
+		int targetmultiplier = getArchitectureMultiplier(targetarch);
+
 		List<SakerPath> includedirs = getIncludeDirectoriesFromCommands(commands);
 		LinkedList<SourceLine> pendinglines = new LinkedList<>();
 		Set<SakerPath> includedpaths = new TreeSet<>();
@@ -300,8 +303,7 @@ public class CLMockProcess {
 					}
 					lineval = Integer.parseInt(defineval);
 				}
-				int langmultiplier = getLanguageMockMultipler(language);
-				outps.println(lineval * langmultiplier * getArchitectureMultiplier(targetarch));
+				outps.println(lineval * langmultiplier * targetmultiplier);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

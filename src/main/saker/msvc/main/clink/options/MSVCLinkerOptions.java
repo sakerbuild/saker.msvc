@@ -24,7 +24,9 @@ import saker.msvc.main.clink.MSVCCLinkTaskFactory;
 import saker.msvc.main.coptions.CommonPresetCOptionsTaskOption;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
+import saker.msvc.main.doc.TaskDocs.DocLibraryPathTaskOption;
 import saker.msvc.main.doc.TaskDocs.SimpleLinkerParameterOption;
+import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
@@ -47,11 +49,12 @@ import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 		info = @NestInformation(TaskDocs.LINK_INPUT))
 
 @NestFieldInformation(value = "LibraryPath",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = LibraryPathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocLibraryPathTaskOption.class),
 		info = @NestInformation(TaskDocs.LINK_LIBRARY_PATH))
 @NestFieldInformation(value = "SDKs",
 		type = @NestTypeUsage(value = Map.class,
-				elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class, SDKDescriptionTaskOption.class }),
+				elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class,
+						SDKDescriptionTaskOption.class }),
 		info = @NestInformation(TaskDocs.OPTION_SDKS + "\n"
 				+ "When merging, duplicate SDK definitions are not overwritten."))
 @NestFieldInformation(value = "SimpleLinkerParameters",
@@ -77,7 +80,7 @@ public interface MSVCLinkerOptions {
 		return null;
 	}
 
-	public default Collection<LibraryPathTaskOption> getLibraryPath() {
+	public default Collection<CompilationPathTaskOption> getLibraryPath() {
 		return null;
 	}
 
