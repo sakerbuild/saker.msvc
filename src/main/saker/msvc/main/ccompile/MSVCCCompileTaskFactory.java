@@ -247,7 +247,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 									}
 									for (FileLocation filelocation : filelocations) {
 										FileCompilationConfiguration nconfig = createConfigurationForProperties(
-												new FileCompilationProperties(filelocation), null, null);
+												new FileCompilationProperties(filelocation));
 										configbuf.add(new ConfigSetupHolder(nconfig));
 									}
 								}
@@ -317,6 +317,11 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 											properties);
 									properties.setLanguage(language);
 									return nconfig;
+								}
+
+								private FileCompilationConfiguration createConfigurationForProperties(
+										FileCompilationProperties properties) {
+									return createConfigurationForProperties(properties, null, null);
 								}
 							});
 
@@ -421,8 +426,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 
 							String pchoutfilename = precompiledheaderoutnamesconfigurations.get(pchprops);
 							if (pchoutfilename == null) {
-								String pchfilename = MSVCUtils
-										.getFileName(configholder.precompiledHeader);
+								String pchfilename = MSVCUtils.getFileName(configholder.precompiledHeader);
 
 								pchoutfilename = getOutFileName(pchfilename, outnames, null);
 								precompiledheaderoutnamesconfigurations.put(pchprops, pchoutfilename);

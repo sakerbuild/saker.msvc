@@ -15,12 +15,25 @@
  */
 package saker.msvc.impl.ccompile.option;
 
+import saker.sdk.support.api.SDKPathReference;
+
 public interface IncludePathOption {
-	public void accept(IncludePathVisitor visitor);
+	public void accept(Visitor visitor);
 
 	@Override
 	public boolean equals(Object obj);
 
 	@Override
 	public int hashCode();
+
+	public interface Visitor {
+		public default void visit(FileIncludePath includepath) {
+			throw new UnsupportedOperationException("Unsupported include path: " + includepath);
+		}
+
+		public default void visit(SDKPathReference includepath) {
+			throw new UnsupportedOperationException("Unsupported include path: " + includepath);
+		}
+	}
+
 }

@@ -61,7 +61,6 @@ import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.clink.option.FileLibraryPath;
 import saker.msvc.impl.clink.option.LibraryPathOption;
-import saker.msvc.impl.clink.option.LibraryPathVisitor;
 import saker.msvc.impl.util.ByteSinkProcessIOConsumer;
 import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
@@ -342,7 +341,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			SakerEnvironment environment = taskcontext.getExecutionContext().getEnvironment();
 			if (!ObjectUtils.isNullOrEmpty(this.libraryPath)) {
 				for (LibraryPathOption libpathoption : this.libraryPath) {
-					libpathoption.accept(new LibraryPathVisitor() {
+					libpathoption.accept(new LibraryPathOption.Visitor() {
 						@Override
 						public void visit(FileLibraryPath libpath) {
 							libpath.getFileLocation().accept(new FileLocationVisitor() {

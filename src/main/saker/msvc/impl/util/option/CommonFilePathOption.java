@@ -8,10 +8,8 @@ import java.io.ObjectOutput;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.msvc.impl.ccompile.option.FileIncludePath;
 import saker.msvc.impl.ccompile.option.IncludePathOption;
-import saker.msvc.impl.ccompile.option.IncludePathVisitor;
 import saker.msvc.impl.clink.option.FileLibraryPath;
 import saker.msvc.impl.clink.option.LibraryPathOption;
-import saker.msvc.impl.clink.option.LibraryPathVisitor;
 import saker.std.api.file.location.FileLocation;
 
 public class CommonFilePathOption
@@ -31,12 +29,12 @@ public class CommonFilePathOption
 	}
 
 	@Override
-	public void accept(LibraryPathVisitor visitor) {
+	public void accept(LibraryPathOption.Visitor visitor) {
 		visitor.visit(this);
 	}
 
 	@Override
-	public void accept(IncludePathVisitor visitor) {
+	public void accept(IncludePathOption.Visitor visitor) {
 		visitor.visit(this);
 	}
 

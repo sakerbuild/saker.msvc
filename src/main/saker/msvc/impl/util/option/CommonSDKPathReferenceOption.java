@@ -21,9 +21,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 import saker.msvc.impl.ccompile.option.IncludePathOption;
-import saker.msvc.impl.ccompile.option.IncludePathVisitor;
 import saker.msvc.impl.clink.option.LibraryPathOption;
-import saker.msvc.impl.clink.option.LibraryPathVisitor;
 import saker.sdk.support.api.SDKPathReference;
 
 public class CommonSDKPathReferenceOption implements IncludePathOption, LibraryPathOption, Externalizable {
@@ -46,12 +44,12 @@ public class CommonSDKPathReferenceOption implements IncludePathOption, LibraryP
 	}
 
 	@Override
-	public void accept(LibraryPathVisitor visitor) {
+	public void accept(LibraryPathOption.Visitor visitor) {
 		visitor.visit(pathReference);
 	}
 
 	@Override
-	public void accept(IncludePathVisitor visitor) {
+	public void accept(IncludePathOption.Visitor visitor) {
 		visitor.visit(pathReference);
 	}
 

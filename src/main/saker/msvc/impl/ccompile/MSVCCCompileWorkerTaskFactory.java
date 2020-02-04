@@ -98,7 +98,6 @@ import saker.msvc.impl.ccompile.CompilerState.CompiledFileState;
 import saker.msvc.impl.ccompile.CompilerState.PrecompiledHeaderState;
 import saker.msvc.impl.ccompile.option.FileIncludePath;
 import saker.msvc.impl.ccompile.option.IncludePathOption;
-import saker.msvc.impl.ccompile.option.IncludePathVisitor;
 import saker.msvc.impl.util.CollectingProcessIOConsumer;
 import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
 import saker.msvc.impl.util.InnerTaskMirrorHandler;
@@ -415,7 +414,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			Collection<IncludePathOption> includedirs = compilationconfig.getProperties().getIncludeDirectories();
 			if (!ObjectUtils.isNullOrEmpty(includedirs)) {
 				for (IncludePathOption includediroption : includedirs) {
-					includediroption.accept(new IncludePathVisitor() {
+					includediroption.accept(new IncludePathOption.Visitor() {
 						@Override
 						public void visit(FileIncludePath includedir) {
 							includedir.getFileLocation().accept(new FileLocationVisitor() {
@@ -1229,7 +1228,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		private Path getIncludePath(TaskExecutionUtilities taskutilities, SakerEnvironment environment,
 				IncludePathOption includediroption, boolean directories) {
 			Path[] includepath = { null };
-			includediroption.accept(new IncludePathVisitor() {
+			includediroption.accept(new IncludePathOption.Visitor() {
 				@Override
 				public void visit(FileIncludePath includedir) {
 					includedir.getFileLocation().accept(new FileLocationVisitor() {

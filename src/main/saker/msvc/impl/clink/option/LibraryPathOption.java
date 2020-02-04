@@ -15,12 +15,26 @@
  */
 package saker.msvc.impl.clink.option;
 
+import saker.sdk.support.api.SDKPathReference;
+
 public interface LibraryPathOption {
-	public void accept(LibraryPathVisitor visitor);
+	public void accept(Visitor visitor);
 
 	@Override
 	public boolean equals(Object obj);
 
 	@Override
 	public int hashCode();
+
+	public interface Visitor {
+		public default void visit(FileLibraryPath libpath) {
+			throw new UnsupportedOperationException("Unsupported library path: " + libpath);
+		}
+
+		public default void visit(SDKPathReference libpath) {
+			throw new UnsupportedOperationException("Unsupported library path: " + libpath);
+		}
+
+	}
+
 }
