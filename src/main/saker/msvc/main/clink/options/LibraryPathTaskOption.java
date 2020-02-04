@@ -25,8 +25,8 @@ import saker.build.file.path.WildcardPath;
 import saker.build.file.path.WildcardPath.ReducedWildcardPath;
 import saker.build.task.TaskContext;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
-import saker.msvc.impl.clink.option.FileLibraryPathOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
+import saker.msvc.impl.sdk.option.CommonFilePathOption;
 import saker.msvc.impl.sdk.option.CommonSDKPathReferenceOption;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.sdk.support.api.SDKPathReference;
@@ -44,13 +44,13 @@ public interface LibraryPathTaskOption {
 
 	public static LibraryPathTaskOption valueOf(FileLocation filelocation) {
 		FileLocationTaskOption.validateFileLocation(filelocation);
-		return new SimpleLibraryPathTaskOption(Collections.singleton(new FileLibraryPathOption(filelocation)));
+		return new SimpleLibraryPathTaskOption(Collections.singleton(new CommonFilePathOption(filelocation)));
 	}
 
 	public static LibraryPathTaskOption valueOf(FileCollection files) {
 		Set<LibraryPathOption> filelist = new LinkedHashSet<>();
 		for (FileLocation fl : files) {
-			filelist.add(new FileLibraryPathOption(fl));
+			filelist.add(new CommonFilePathOption(fl));
 		}
 		return new SimpleLibraryPathTaskOption(ImmutableUtils.unmodifiableSet(filelist));
 	}
@@ -60,7 +60,7 @@ public interface LibraryPathTaskOption {
 			return new RelativePathLibraryPathTaskOption(path);
 		}
 		return new SimpleLibraryPathTaskOption(
-				Collections.singleton(new FileLibraryPathOption(ExecutionFileLocation.create(path))));
+				Collections.singleton(new CommonFilePathOption(ExecutionFileLocation.create(path))));
 	}
 
 	public static LibraryPathTaskOption valueOf(WildcardPath path) {

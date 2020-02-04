@@ -176,7 +176,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		ObjectUtils.requireComparator(sdkdescriptions, SDKSupportUtils.getSDKNameComparator());
 		this.sdkDescriptions = sdkdescriptions;
 		if (!sdkdescriptions.containsKey(MSVCUtils.SDK_NAME_MSVC)) {
-			throw new IllegalArgumentException("MSVC SDK unspecified for compilation.");
+			throw new SDKNotFoundException("MSVC SDK unspecified for compilation.");
 		}
 	}
 

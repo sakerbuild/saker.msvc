@@ -25,8 +25,8 @@ import saker.build.file.path.WildcardPath;
 import saker.build.file.path.WildcardPath.ReducedWildcardPath;
 import saker.build.task.TaskContext;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
-import saker.msvc.impl.ccompile.option.FileIncludePathOption;
 import saker.msvc.impl.ccompile.option.IncludePathOption;
+import saker.msvc.impl.sdk.option.CommonFilePathOption;
 import saker.msvc.impl.sdk.option.CommonSDKPathReferenceOption;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.sdk.support.api.SDKPathReference;
@@ -45,14 +45,13 @@ public interface IncludePathTaskOption {
 
 	public static IncludePathTaskOption valueOf(FileLocation filelocation) {
 		FileLocationTaskOption.validateFileLocation(filelocation);
-		return new SimpleIncludePathTaskOption(
-				Collections.singleton(new FileIncludePathOption(filelocation)));
+		return new SimpleIncludePathTaskOption(Collections.singleton(new CommonFilePathOption(filelocation)));
 	}
 
 	public static IncludePathTaskOption valueOf(FileCollection files) {
 		Set<IncludePathOption> filelist = new LinkedHashSet<>();
 		for (FileLocation fl : files) {
-			filelist.add(new FileIncludePathOption(fl));
+			filelist.add(new CommonFilePathOption(fl));
 		}
 		return new SimpleIncludePathTaskOption(ImmutableUtils.unmodifiableSet(filelist));
 	}
@@ -62,7 +61,7 @@ public interface IncludePathTaskOption {
 			return new RelativePathIncludePathTaskOption(path);
 		}
 		return new SimpleIncludePathTaskOption(
-				Collections.singleton(new FileIncludePathOption(ExecutionFileLocation.create(path))));
+				Collections.singleton(new CommonFilePathOption(ExecutionFileLocation.create(path))));
 	}
 
 	public static IncludePathTaskOption valueOf(WildcardPath path) {

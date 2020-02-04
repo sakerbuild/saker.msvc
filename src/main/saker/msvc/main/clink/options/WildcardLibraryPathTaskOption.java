@@ -27,8 +27,8 @@ import saker.build.task.TaskContext;
 import saker.build.task.dependencies.FileCollectionStrategy;
 import saker.build.task.utils.dependencies.WildcardFileCollectionStrategy;
 import saker.build.thirdparty.saker.util.ObjectUtils;
-import saker.msvc.impl.clink.option.FileLibraryPathOption;
 import saker.msvc.impl.clink.option.LibraryPathOption;
+import saker.msvc.impl.sdk.option.CommonFilePathOption;
 import saker.std.api.file.location.ExecutionFileLocation;
 
 class WildcardLibraryPathTaskOption implements LibraryPathTaskOption {
@@ -53,7 +53,7 @@ class WildcardLibraryPathTaskOption implements LibraryPathTaskOption {
 				ObjectUtils.singleValueMap(files.navigableKeySet(), CommonTaskContentDescriptors.PRESENT));
 		LinkedHashSet<LibraryPathOption> result = new LinkedHashSet<>();
 		for (SakerPath filepath : files.navigableKeySet()) {
-			result.add(new FileLibraryPathOption(ExecutionFileLocation.create(filepath)));
+			result.add(new CommonFilePathOption(ExecutionFileLocation.create(filepath)));
 		}
 		return result;
 	}

@@ -20,8 +20,8 @@ import java.util.Collections;
 
 import saker.build.file.path.SakerPath;
 import saker.build.task.TaskContext;
-import saker.msvc.impl.ccompile.option.FileIncludePathOption;
 import saker.msvc.impl.ccompile.option.IncludePathOption;
+import saker.msvc.impl.sdk.option.CommonFilePathOption;
 import saker.std.api.file.location.ExecutionFileLocation;
 
 final class RelativePathIncludePathTaskOption implements IncludePathTaskOption {
@@ -33,7 +33,7 @@ final class RelativePathIncludePathTaskOption implements IncludePathTaskOption {
 
 	@Override
 	public Collection<IncludePathOption> toIncludeDirectories(TaskContext tc) {
-		return Collections.singleton(new FileIncludePathOption(
+		return Collections.singleton(new CommonFilePathOption(
 				ExecutionFileLocation.create(tc.getTaskWorkingDirectoryPath().resolve(path))));
 	}
 

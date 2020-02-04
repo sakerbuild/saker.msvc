@@ -27,8 +27,8 @@ import saker.build.task.TaskContext;
 import saker.build.task.dependencies.FileCollectionStrategy;
 import saker.build.task.utils.dependencies.WildcardFileCollectionStrategy;
 import saker.build.thirdparty.saker.util.ObjectUtils;
-import saker.msvc.impl.ccompile.option.FileIncludePathOption;
 import saker.msvc.impl.ccompile.option.IncludePathOption;
+import saker.msvc.impl.sdk.option.CommonFilePathOption;
 import saker.std.api.file.location.ExecutionFileLocation;
 
 final class WildcardIncludePathTaskOption implements IncludePathTaskOption {
@@ -47,7 +47,7 @@ final class WildcardIncludePathTaskOption implements IncludePathTaskOption {
 				ObjectUtils.singleValueMap(files.navigableKeySet(), CommonTaskContentDescriptors.PRESENT));
 		LinkedHashSet<IncludePathOption> result = new LinkedHashSet<>();
 		for (SakerPath filepath : files.navigableKeySet()) {
-			result.add(new FileIncludePathOption(ExecutionFileLocation.create(filepath)));
+			result.add(new CommonFilePathOption(ExecutionFileLocation.create(filepath)));
 		}
 		return result;
 	}
