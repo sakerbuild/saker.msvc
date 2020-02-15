@@ -173,8 +173,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 	public void setSdkDescriptions(NavigableMap<String, SDKDescription> sdkdescriptions) {
 		ObjectUtils.requireComparator(sdkdescriptions, SDKSupportUtils.getSDKNameComparator());
 		this.sdkDescriptions = sdkdescriptions;
-		if (!sdkdescriptions.containsKey(MSVCUtils.SDK_NAME_MSVC)) {
-			throw new SDKNotFoundException("MSVC SDK unspecified for compilation.");
+		if (sdkdescriptions.get(MSVCUtils.SDK_NAME_MSVC) == null) {
+			throw new SDKNotFoundException(MSVCUtils.SDK_NAME_MSVC + " SDK is not present for compilation.");
 		}
 	}
 
@@ -257,7 +257,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			innertaskparams.setClusterDuplicateFactor(compilationentries.size());
 			innertaskparams.setDuplicationPredicate(new FixedTaskDuplicationPredicate(compilationentries.size()));
 
-			//TODO print the process output and the diagnostics in a locked way
+			//XXX print the process output and the diagnostics in a locked way
 			WorkerTaskCoordinator coordinator = new WorkerTaskCoordinator() {
 				@Override
 				public void headerPrecompiled(CompilerInnerTaskResult result, PathKey outputpathkey,
@@ -274,7 +274,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 						public void visit(ExecutionFileLocation loc) {
 							sourcefilepath[0] = loc.getPath();
 						}
-						//TODO local file location
+						//TODO handle local file location
 					});
 					printDiagnostics(taskcontext, sourcefilepath[0], depinfo.getDiagnostics());
 					nprecompiledheaders
@@ -371,6 +371,11 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				SakerLog.error().verbose().println("Header referencing concurrency error. Referenced header: "
 						+ includepath
 						+ " had transient presence for compiled sources. It is recommended to clean the project.");
+				if (TestFlag.ENABLED) {
+					//this shouldn't happen during testing, so better throw an exception
+					throw new AssertionError(
+							"header concurrency error: " + includecontentdescriptors + " with " + prev);
+				}
 			}
 		}
 

@@ -15,7 +15,7 @@ public class UnityBuildTest extends MSVCTestCase {
 		SakerPath src1cpppath = PATH_WORKING_DIRECTORY.resolve("src/src1.cpp");
 		SakerPath src2cpppath = PATH_WORKING_DIRECTORY.resolve("src/src2.cpp");
 		SakerPath h1hpath = PATH_WORKING_DIRECTORY.resolve("inc/h1.h");
-		SakerPath h2hpath = PATH_WORKING_DIRECTORY.resolve("inc/h1.h");
+		SakerPath h2hpath = PATH_WORKING_DIRECTORY.resolve("inc/h2.h");
 
 		runScriptTask("build");
 		assertEquals(files.getAllBytes(PATH_MAINCPP_OBJ).toString(), compile(LANG_CPP, ARCH_X64, 1, 11, 2, 22, 123));

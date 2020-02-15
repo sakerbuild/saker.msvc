@@ -143,7 +143,7 @@ public interface MSVCCompilerOptions {
 
 	public interface Visitor {
 		public default void visit(MSVCCompilerOptions options) {
-			throw new UnsupportedOperationException("Unsupported compilar options: " + options);
+			throw new UnsupportedOperationException("Unsupported compiler options: " + options);
 		}
 
 		public default void visit(COptionsPresetTaskOutput options) {

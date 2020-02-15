@@ -105,8 +105,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 	public void setSdkDescriptions(NavigableMap<String, SDKDescription> sdkDescriptions) {
 		ObjectUtils.requireComparator(sdkDescriptions, SDKSupportUtils.getSDKNameComparator());
 		this.sdkDescriptions = sdkDescriptions;
-		if (!sdkDescriptions.containsKey(MSVCUtils.SDK_NAME_MSVC)) {
-			throw new IllegalArgumentException("MSVC SDK unspecified for linking.");
+		if (sdkDescriptions.get(MSVCUtils.SDK_NAME_MSVC) == null) {
+			throw new SDKNotFoundException(MSVCUtils.SDK_NAME_MSVC + " SDK is not present for compilation.");
 		}
 	}
 
@@ -164,7 +164,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 					.getSDKBasedClusterExecutionEnvironmentSelector(linkerinnertasksdkdescriptions.values());
 		}
 
-		System.out.println("Linking " + inputs.size() + " files.");
+		int inputsize = inputs.size();
+		System.out.println("Linking " + inputsize + " file" + (inputsize == 1 ? "" : "s") + ".");
 
 		LinkerInnerTaskFactory innertaskfactory = new LinkerInnerTaskFactory(envselector, inputs, libraryPath,
 				linkerinnertasksdkdescriptions, simpleParameters, architecture, outdirpath, passidstr);
@@ -383,18 +384,18 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 							}
 							SDKReference sdkref = getSDKReferenceForName(environment, referencedsdks, sdkname);
 							if (sdkref == null) {
-								throw new IllegalArgumentException("SDK configuration not found for name: " + sdkname
+								throw new SDKNotFoundException("SDK configuration not found for name: " + sdkname
 										+ " required by library path: " + libpath);
 							}
 							try {
 								SakerPath sdkdirpath = libpath.getPath(sdkref);
 								if (sdkdirpath == null) {
-									throw new IllegalArgumentException("No SDK library path found for: " + libpath
+									throw new SDKPathNotFoundException("No SDK library path found for: " + libpath
 											+ " in SDK: " + sdkname + " as " + sdkref);
 								}
 								libpaths.add(LocalFileProvider.toRealPath(sdkdirpath));
 							} catch (Exception e) {
-								throw new IllegalArgumentException("Failed to retrieve SDK library path for: " + libpath
+								throw new SDKPathNotFoundException("Failed to retrieve SDK library path for: " + libpath
 										+ " in SDK: " + sdkname + " as " + sdkref, e);
 							}
 						}

@@ -259,7 +259,6 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 										return;
 									}
 
-									suboptioninputpass[0] = input;
 									Map<String, String> macrodefinitions = input.getMacroDefinitions();
 									Set<String> simpleparamoption = ImmutableUtils
 											.makeImmutableNavigableSet(input.getSimpleParameters());
@@ -273,16 +272,18 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 											calculatedincludediroptions, input.getForceInclude());
 									Boolean forceincludepch = input.getForceIncludePrecompiledHeader();
 
+									CompilationIdentifierTaskOption passsubidopt = input.getSubIdentifier();
+									CompilationIdentifier passsubid = CompilationIdentifierTaskOption
+											.getIdentifier(passsubidopt);
+									subid[0] = passsubid;
+									suboptioninputpass[0] = input;
+
 									for (MultiFileLocationTaskOption filesopt : files) {
 										Collection<FileLocation> filelocations = TaskOptionUtils
 												.toFileLocations(filesopt, taskcontext, TaskTags.TASK_INPUT_FILE);
 										if (ObjectUtils.isNullOrEmpty(filelocations)) {
 											continue;
 										}
-										CompilationIdentifierTaskOption passsubidopt = input.getSubIdentifier();
-										CompilationIdentifier passsubid = CompilationIdentifierTaskOption
-												.getIdentifier(passsubidopt);
-										subid[0] = passsubid;
 										for (FileLocation filelocation : filelocations) {
 											FileCompilationProperties nproperties = new FileCompilationProperties(
 													filelocation);

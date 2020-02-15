@@ -183,12 +183,19 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 
 				CompilationIdentifier optionidentifier = CompilationIdentifierTaskOption.getIdentifier(identifieropt);
 
-				for (LinkerInputPassTaskOption inputtaskoption : this.inputOption) {
-					if (inputtaskoption == null) {
-						continue;
+				if (!ObjectUtils.isNullOrEmpty(this.inputOption)) {
+					for (LinkerInputPassTaskOption inputtaskoption : this.inputOption) {
+						if (inputtaskoption == null) {
+							continue;
+						}
+						inputtaskoptions.add(inputtaskoption.clone());
 					}
-					inputtaskoptions.add(inputtaskoption.clone());
 				}
+				if (ObjectUtils.isNullOrEmpty(inputtaskoptions)) {
+					taskcontext.abortExecution(new IllegalArgumentException("No inputs specified for linking."));
+					return null;
+				}
+
 				if (!ObjectUtils.isNullOrEmpty(this.linkerOptionsOption)) {
 					for (MSVCLinkerOptions linkeropt : this.linkerOptionsOption) {
 						if (linkeropt == null) {
@@ -279,7 +286,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				}
 
 				for (MSVCLinkerOptions options : linkeroptions) {
-					options.accept(new Visitor() {
+					options.accept(new MSVCLinkerOptions.Visitor() {
 						@Override
 						public void visit(MSVCLinkerOptions options) {
 							if (!MSVCCompilerOptions.canMergeArchitectures(architecture, options.getArchitecture())) {
@@ -327,7 +334,11 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 					});
 				}
 
+				//XXX try to infer the MSVC SDK from input compilation task outputs?
 				nullablesdkdescriptions.putIfAbsent(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.DEFAULT_MSVC_SDK_DESCRIPTION);
+				nullablesdkdescriptions.values().removeIf(sdk -> sdk == null);
+				NavigableMap<String, SDKDescription> sdkdescriptions = ImmutableUtils
+						.makeImmutableNavigableMap(nullablesdkdescriptions);
 
 				final CompilationIdentifier identifier;
 				if (optionidentifier == null) {
@@ -351,10 +362,6 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 
 				TaskIdentifier workertaskid = new MSVCCLinkWorkerTaskIdentifier(identifier, architecture);
 
-				NavigableMap<String, SDKDescription> sdkdescriptions = ObjectUtils
-						.cloneTreeMap(nullablesdkdescriptions);
-				sdkdescriptions.values().removeIf(sdk -> sdk == null);
-
 				MSVCCLinkWorkerTaskFactory worker = new MSVCCLinkWorkerTaskFactory();
 				worker.setInputs(inputfiles);
 				worker.setSimpleParameters(simpleparams);
@@ -367,48 +374,48 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				return result;
 			}
 
-			private String inferArchitecture(Collection<LinkerInputPassOption> inputoptions) {
-				String[] result = { null };
-				for (LinkerInputPassOption option : inputoptions) {
-					option.accept(new LinkerInputPassOption.Visitor() {
-						@Override
-						public void visit(CompilerOutputLinkerInputPass input) {
-							result[0] = input.getCompilerOutput().getArchitecture();
-						}
-
-						@Override
-						public void visit(FileLinkerInputPass input) {
-						}
-					});
-					if (result[0] != null) {
-						return result[0];
-					}
-				}
-				return null;
-			}
-
-			private CompilationIdentifier inferCompilationIdentifier(Collection<LinkerInputPassOption> inputoptions) {
-				Set<String> parts = new LinkedHashSet<>();
-				for (LinkerInputPassOption option : inputoptions) {
-					option.accept(new LinkerInputPassOption.Visitor() {
-						@Override
-						public void visit(CompilerOutputLinkerInputPass input) {
-							CompilationIdentifier outputid = input.getCompilerOutput().getIdentifier();
-							parts.addAll(outputid.getParts());
-						}
-
-						@Override
-						public void visit(FileLinkerInputPass input) {
-						}
-					});
-				}
-				if (parts.isEmpty()) {
-					return null;
-				}
-				return CompilationIdentifier.valueOf(StringUtils.toStringJoin("-", parts));
-			}
-
 		};
+	}
+
+	private static String inferArchitecture(Collection<LinkerInputPassOption> inputoptions) {
+		String[] result = { null };
+		for (LinkerInputPassOption option : inputoptions) {
+			option.accept(new LinkerInputPassOption.Visitor() {
+				@Override
+				public void visit(CompilerOutputLinkerInputPass input) {
+					result[0] = input.getCompilerOutput().getArchitecture();
+				}
+
+				@Override
+				public void visit(FileLinkerInputPass input) {
+				}
+			});
+			if (result[0] != null) {
+				return result[0];
+			}
+		}
+		return null;
+	}
+
+	private static CompilationIdentifier inferCompilationIdentifier(Collection<LinkerInputPassOption> inputoptions) {
+		Set<String> parts = new LinkedHashSet<>();
+		for (LinkerInputPassOption option : inputoptions) {
+			option.accept(new LinkerInputPassOption.Visitor() {
+				@Override
+				public void visit(CompilerOutputLinkerInputPass input) {
+					CompilationIdentifier outputid = input.getCompilerOutput().getIdentifier();
+					parts.addAll(outputid.getParts());
+				}
+
+				@Override
+				public void visit(FileLinkerInputPass input) {
+				}
+			});
+		}
+		if (parts.isEmpty()) {
+			return null;
+		}
+		return CompilationIdentifier.valueOf(StringUtils.toStringJoin("-", parts));
 	}
 
 	private static void addLinkerInputs(LinkerInputPassTaskOption inputoption, TaskContext taskcontext,
