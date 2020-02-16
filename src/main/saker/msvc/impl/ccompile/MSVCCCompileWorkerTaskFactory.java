@@ -100,7 +100,6 @@ import saker.msvc.impl.ccompile.CompilerState.PrecompiledHeaderState;
 import saker.msvc.impl.option.CompilationPathOption;
 import saker.msvc.impl.option.FileCompilationPathOption;
 import saker.msvc.impl.util.CollectingProcessIOConsumer;
-import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
 import saker.msvc.impl.util.InnerTaskMirrorHandler;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
@@ -114,6 +113,7 @@ import saker.sdk.support.api.exc.SDKPathNotFoundException;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileLocationVisitor;
 import saker.std.api.file.location.LocalFileLocation;
+import saker.std.api.util.SakerStandardUtils;
 import testing.saker.msvc.TestFlag;
 
 public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<Object>, Externalizable {
@@ -225,7 +225,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		if (envselector != null) {
 			try {
 				envselectionresult = taskcontext.getTaskUtilities()
-						.getReportExecutionDependency(new EnvironmentSelectionTestExecutionProperty(envselector));
+						.getReportExecutionDependency(SakerStandardUtils.createEnvironmentSelectionTestExecutionProperty(envselector));
 			} catch (Exception e) {
 				throw new TaskEnvironmentSelectionFailedException(
 						"Failed to select a suitable build environment for compilation.", e);

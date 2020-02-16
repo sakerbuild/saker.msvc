@@ -63,7 +63,6 @@ import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.option.CompilationPathOption;
 import saker.msvc.impl.option.FileCompilationPathOption;
 import saker.msvc.impl.util.ByteSinkProcessIOConsumer;
-import saker.msvc.impl.util.EnvironmentSelectionTestExecutionProperty;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.clink.MSVCCLinkTaskFactory;
 import saker.sdk.support.api.SDKDescription;
@@ -77,6 +76,7 @@ import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileLocation;
 import saker.std.api.file.location.FileLocationVisitor;
 import saker.std.api.file.location.LocalFileLocation;
+import saker.std.api.util.SakerStandardUtils;
 
 public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Object>, Externalizable {
 	private static final long serialVersionUID = 1L;
@@ -162,8 +162,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		if (envselector != null) {
 			EnvironmentSelectionResult envselectionresult;
 			try {
-				envselectionresult = taskcontext.getTaskUtilities()
-						.getReportExecutionDependency(new EnvironmentSelectionTestExecutionProperty(envselector));
+				envselectionresult = taskcontext.getTaskUtilities().getReportExecutionDependency(
+						SakerStandardUtils.createEnvironmentSelectionTestExecutionProperty(envselector));
 			} catch (Exception e) {
 				throw new TaskEnvironmentSelectionFailedException(
 						"Failed to select a suitable build environment for linking.", e);
