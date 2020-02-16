@@ -23,6 +23,7 @@ import saker.build.task.ParameterizableTask;
 import saker.build.task.TaskContext;
 import saker.build.task.utils.annot.SakerInput;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
+import saker.build.trace.BuildTrace;
 import saker.msvc.impl.sdk.VersionsWindowsKitsSDKDescription;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.clink.MSVCCLinkTaskFactory;
@@ -61,6 +62,10 @@ public class WindowsKitsSDKTaskFactory extends FrontendTaskFactory<SDKDescriptio
 
 			@Override
 			public SDKDescription run(TaskContext taskcontext) throws Exception {
+				if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+					BuildTrace.classifyTask(BuildTrace.CLASSIFICATION_CONFIGURATION);
+				}
+
 				Set<String> versions = ImmutableUtils.makeImmutableNavigableSet(versionsOption);
 				return VersionsWindowsKitsSDKDescription.create(versions);
 			}

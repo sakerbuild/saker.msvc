@@ -57,6 +57,7 @@ import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.function.Functionals;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
+import saker.build.trace.BuildTrace;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.option.CompilationPathOption;
@@ -128,6 +129,10 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 	@Override
 	public Object run(TaskContext taskcontext) throws Exception {
+		if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+			BuildTrace.classifyTask(BuildTrace.CLASSIFICATION_WORKER);
+		}
+
 		TaskIdentifier taskid = taskcontext.getTaskId();
 		if (!(taskid instanceof MSVCCLinkWorkerTaskIdentifier)) {
 			taskcontext.abortExecution(
@@ -138,8 +143,12 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		CompilationIdentifier passcompilationidentifier = workertaskid.getPassIdentifier();
 		String passidstr = passcompilationidentifier.toString();
 		String architecture = workertaskid.getArchitecture();
-		taskcontext
-				.setStandardOutDisplayIdentifier(MSVCCLinkTaskFactory.TASK_NAME + ":" + passidstr + "/" + architecture);
+		String displayid = MSVCCLinkTaskFactory.TASK_NAME + ":" + passidstr + "/" + architecture;
+		taskcontext.setStandardOutDisplayIdentifier(displayid);
+
+		if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+			BuildTrace.setDisplayInformation("msvc.clink:" + passidstr + "/" + architecture, displayid);
+		}
 
 		SakerDirectory outdir = SakerPathFiles.requireBuildDirectory(taskcontext)
 				.getDirectoryCreate(MSVCCLinkTaskFactory.TASK_NAME).getDirectoryCreate(passidstr)
@@ -436,6 +445,11 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 				extension = ".exe";
 			}
 			SakerPath outputexecpath = outDirectoryPath.resolve(passIdentifier + extension);
+
+			if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+				BuildTrace.setDisplayInformation(outputexecpath.getFileName(), null);
+			}
+
 			Path outputmirrorpath = taskcontext.getExecutionContext().toMirrorPath(outputexecpath);
 			commands.add("/OUT:" + outputmirrorpath);
 			for (Path inputpath : inputfilepaths) {
@@ -463,6 +477,11 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 					outputsakerfile.getContentDescriptor());
 
 			LinkerInnerTaskFactoryResult result = new LinkerInnerTaskFactoryResult(outputexecpath);
+
+			if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+				BuildTrace.reportOutputArtifact(outputexecpath, BuildTrace.ARTIFACT_EMBED_DEFAULT);
+			}
+
 			return result;
 		}
 

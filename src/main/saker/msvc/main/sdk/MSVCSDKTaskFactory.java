@@ -25,6 +25,7 @@ import saker.build.task.ParameterizableTask;
 import saker.build.task.TaskContext;
 import saker.build.task.utils.annot.SakerInput;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
+import saker.build.trace.BuildTrace;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.sdk.VersionsMSVCSDKDescription;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
@@ -74,6 +75,10 @@ public class MSVCSDKTaskFactory extends FrontendTaskFactory<SDKDescription> {
 
 			@Override
 			public SDKDescription run(TaskContext taskcontext) throws Exception {
+				if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+					BuildTrace.classifyTask(BuildTrace.CLASSIFICATION_CONFIGURATION);
+				}
+
 				if (regularVersionsOption == null && legacyVersionsOption == null) {
 					//no args specified. use the default
 					return MSVCUtils.DEFAULT_MSVC_SDK_DESCRIPTION;

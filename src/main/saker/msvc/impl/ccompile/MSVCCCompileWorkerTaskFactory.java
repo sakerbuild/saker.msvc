@@ -92,6 +92,7 @@ import saker.build.thirdparty.saker.util.io.ByteArrayRegion;
 import saker.build.thirdparty.saker.util.io.DataInputUnsyncByteArrayInputStream;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.build.thirdparty.saker.util.io.UnsyncByteArrayOutputStream;
+import saker.build.trace.BuildTrace;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.ccompile.CompilerState.CompiledFileState;
@@ -190,6 +191,10 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 	@Override
 	public Object run(TaskContext taskcontext) throws Exception {
+		if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+			BuildTrace.classifyTask(BuildTrace.CLASSIFICATION_WORKER);
+		}
+
 		TaskIdentifier taskid = taskcontext.getTaskId();
 		if (!(taskid instanceof MSVCCCompileWorkerTaskIdentifier)) {
 			taskcontext.abortExecution(
@@ -198,13 +203,17 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 		MSVCCCompileWorkerTaskIdentifier workertaskid = (MSVCCCompileWorkerTaskIdentifier) taskid;
 		CompilationIdentifier passidentifier = workertaskid.getPassIdentifier();
-		String passid = passidentifier.toString();
+		String passidstr = passidentifier.toString();
 		String architecture = workertaskid.getArchitecture();
-		taskcontext
-				.setStandardOutDisplayIdentifier(MSVCCCompileTaskFactory.TASK_NAME + ":" + passid + "/" + architecture);
+		String displayid = MSVCCCompileTaskFactory.TASK_NAME + ":" + passidstr + "/" + architecture;
+		taskcontext.setStandardOutDisplayIdentifier(displayid);
+
+		if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+			BuildTrace.setDisplayInformation("msvc.ccompile:" + passidstr + "/" + architecture, displayid);
+		}
 
 		SakerDirectory outdir = SakerPathFiles.requireBuildDirectory(taskcontext)
-				.getDirectoryCreate(MSVCCCompileTaskFactory.TASK_NAME).getDirectoryCreate(passid)
+				.getDirectoryCreate(MSVCCCompileTaskFactory.TASK_NAME).getDirectoryCreate(passidstr)
 				.getDirectoryCreate(architecture);
 
 		SakerPath outdirpath = outdir.getSakerPath();
@@ -1032,6 +1041,10 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			ExecutionContext executioncontext = taskcontext.getExecutionContext();
 			SakerEnvironment environment = executioncontext.getEnvironment();
 			Path compilefilepath = getCompileFilePath(compilationentryproperties, environment, taskutilities, contents);
+
+			if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+				BuildTrace.setDisplayInformation(compilefilepath.getFileName().toString(), null);
+			}
 
 			List<Path> includedirpaths = getIncludePaths(taskutilities, environment,
 					compilationentryproperties.getIncludeDirectories(), true);

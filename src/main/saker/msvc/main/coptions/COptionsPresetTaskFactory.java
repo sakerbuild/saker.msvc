@@ -25,6 +25,7 @@ import saker.build.task.ParameterizableTask;
 import saker.build.task.TaskContext;
 import saker.build.task.utils.annot.SakerInput;
 import saker.build.thirdparty.saker.util.ObjectUtils;
+import saker.build.trace.BuildTrace;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.coptions.preset.COptionPresets;
@@ -75,6 +76,10 @@ public class COptionsPresetTaskFactory extends FrontendTaskFactory<Object> {
 
 			@Override
 			public Object run(TaskContext taskcontext) throws Exception {
+				if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+					BuildTrace.classifyTask(BuildTrace.CLASSIFICATION_CONFIGURATION);
+				}
+
 				if (ObjectUtils.isNullOrEmpty(presetNames)) {
 					taskcontext.abortExecution(new NullPointerException(
 							(presetNames == null ? "null" : "empty") + " preset names argument specified."));

@@ -40,6 +40,7 @@ import saker.build.task.utils.dependencies.EqualityTaskOutputChangeDetector;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.StringUtils;
+import saker.build.trace.BuildTrace;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.compiler.utils.api.CompilerUtils;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
@@ -58,7 +59,6 @@ import saker.msvc.main.clink.options.FileLinkerInputPass;
 import saker.msvc.main.clink.options.LinkerInputPassOption;
 import saker.msvc.main.clink.options.LinkerInputPassTaskOption;
 import saker.msvc.main.clink.options.MSVCLinkerOptions;
-import saker.msvc.main.clink.options.MSVCLinkerOptions.Visitor;
 import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
@@ -172,6 +172,10 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 
 			@Override
 			public Object run(TaskContext taskcontext) throws Exception {
+				if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
+					BuildTrace.classifyTask(BuildTrace.CLASSIFICATION_FRONTEND);
+				}
+
 				Collection<LinkerInputPassTaskOption> inputtaskoptions = new ArrayList<>();
 				Collection<MSVCLinkerOptions> linkeroptions = new ArrayList<>();
 				Collection<CompilationPathTaskOption> libpathoptions = new ArrayList<>();
