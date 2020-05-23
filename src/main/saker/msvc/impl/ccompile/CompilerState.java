@@ -122,6 +122,8 @@ public class CompilerState implements Externalizable {
 		 */
 		private NavigableSet<SakerPath> failedIncludes;
 
+		private boolean successful;
+
 		/**
 		 * For {@link Externalizable}.
 		 */
@@ -132,6 +134,14 @@ public class CompilerState implements Externalizable {
 				FileCompilationConfiguration compilationConfiguration) {
 			this.inputContents = inputContents;
 			this.compilationConfiguration = compilationConfiguration;
+		}
+
+		public void setSuccessful(boolean successful) {
+			this.successful = successful;
+		}
+
+		public boolean isSuccessful() {
+			return successful;
 		}
 
 		public SakerPath getOutputObjectPath() {
@@ -189,6 +199,7 @@ public class CompilerState implements Externalizable {
 			out.writeObject(compilationConfiguration);
 			out.writeObject(outputObjectPath);
 			out.writeObject(outputObjectContents);
+			out.writeBoolean(successful);
 			SerialUtils.writeExternalCollection(out, diagnostics);
 			SerialUtils.writeExternalCollection(out, includes);
 			SerialUtils.writeExternalCollection(out, failedIncludes);
@@ -200,6 +211,7 @@ public class CompilerState implements Externalizable {
 			compilationConfiguration = (FileCompilationConfiguration) in.readObject();
 			outputObjectPath = (SakerPath) in.readObject();
 			outputObjectContents = (ContentDescriptor) in.readObject();
+			successful = in.readBoolean();
 			diagnostics = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 			includes = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 			failedIncludes = SerialUtils.readExternalSortedImmutableNavigableSet(in);

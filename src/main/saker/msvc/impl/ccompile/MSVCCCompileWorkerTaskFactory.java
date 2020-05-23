@@ -347,6 +347,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 						compiledfilestate.setDiagnostics(depinfo.getDiagnostics());
 						compiledfilestate.setIncludes(depinfo.getIncludes());
 						compiledfilestate.setFailedIncludes(depinfo.getFailedIncludes());
+						compiledfilestate.setSuccessful(compilationresult.isSuccessful());
 						if (compilationresult.isSuccessful()) {
 							String outputobjectfilename = compilationresult.getOutputObjectName();
 							if (outputobjectfilename != null) {
@@ -375,7 +376,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 
 		nstate.setExecutionCompiledFiles(stateexecutioncompiledfiles);
-		stateexecutioncompiledfiles.keySet().forEach(System.out::println);
 
 		NavigableSet<SakerPath> allreferencedincludes = nstate.getAllReferencedIncludes();
 		NavigableSet<SakerPath> allfailedincludes = nstate.getAllReferencedFailedIncludes();
@@ -622,12 +622,14 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			includeadditionfilenames.add(adddelta.getFilePath().getFileName());
 		}
 
+		boolean[] hadfailure = { false };
+
 		NavigableMap<String, CompiledFileState> prevcompiledfiles = new TreeMap<>(
 				prevoutput.getExecutionCompiledFiles());
 		for (Iterator<FileCompilationConfiguration> it = compilationentries.iterator(); it.hasNext();) {
 			FileCompilationConfiguration compilationentry = it.next();
 			String outfilename = compilationentry.getOutFileName();
-			CompiledFileState prevfilestate = prevcompiledfiles.remove(outfilename);
+			CompiledFileState prevfilestate = prevcompiledfiles.get(outfilename);
 			if (prevfilestate == null) {
 				//wasn't compiled previously, compile now
 				continue;
@@ -664,6 +666,10 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 					printDiagnostics(taskcontext, sourcefilepath, prevfilestate);
 					stateexecutioncompiledfiles.put(outfilename, prevfilestate);
 
+					if (!prevfilestate.isSuccessful()) {
+						hadfailure[0] = true;
+					}
+
 					it.remove();
 				}
 
@@ -681,6 +687,23 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				PrecompiledHeaderState pchstate = it.next();
 				NavigableSet<SakerPath> pchincludes = pchstate.getIncludes();
 				if (isAnyIncludeRelatedChange(includechanges, includeadditionfilenames, pchincludes)) {
+					it.remove();
+					continue;
+				}
+			}
+		}
+		if (hadfailure[0]) {
+			//we've had a compilation failure from the previous run
+			//for which the source file and any dependencies wasn't changed
+			//the build task WILL FAIL
+			//however, to improve incremental user experience we should
+			//recompile the modified files, but not the ones which had no previous state
+			for (Iterator<FileCompilationConfiguration> it = compilationentries.iterator(); it.hasNext();) {
+				FileCompilationConfiguration compilationentry = it.next();
+				String outfilename = compilationentry.getOutFileName();
+				CompiledFileState prevfilestate = prevcompiledfiles.get(outfilename);
+				if (prevfilestate == null) {
+					//wasn't compiled previously, don't compile it now either
 					it.remove();
 					continue;
 				}
