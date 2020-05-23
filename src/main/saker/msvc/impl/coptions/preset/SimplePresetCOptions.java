@@ -154,7 +154,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.includeDirectories = includeDirectories;
 	}
 
-	public void setSdks(NavigableMap<String, SDKDescription> sdks) {
+	public void setSDKs(NavigableMap<String, SDKDescription> sdks) {
 		ObjectUtils.requireComparator(sdks, SDKSupportUtils.getSDKNameComparator());
 		this.sdks = sdks;
 	}

@@ -56,12 +56,9 @@ import saker.std.api.file.location.LocalFileLocation;
 import testing.saker.msvc.TestFlag;
 
 public class MSVCUtils {
-	public static final String SDK_NAME_WINDOWS_KITS = "WindowsKits";
+	public static final String SDK_NAME_WINDOWS_KITS = WindowsKitsSDKReference.SDK_NAME;
 
-	public static final String SDK_NAME_MSVC = "MSVC";
-	public static final String MSVC_IDENTIFIER_LIB_X64 = "lib.x64";
-	public static final String MSVC_IDENTIFIER_LIB_X86 = "lib.x86";
-	public static final String MSVC_IDENTIFIER_INCLUDE = "include";
+	public static final String SDK_NAME_MSVC = AbstractVCToolsSDKReference.SDK_NAME;
 
 	public static final String VC_EXECUTABLE_NAME_CL = "cl";
 	public static final String VC_EXECUTABLE_NAME_LINK = "link";

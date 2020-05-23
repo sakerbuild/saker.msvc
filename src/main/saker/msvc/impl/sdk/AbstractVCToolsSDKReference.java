@@ -25,6 +25,8 @@ import saker.sdk.support.api.SDKReference;
 
 public abstract class AbstractVCToolsSDKReference implements SDKReference, Externalizable {
 	private static final long serialVersionUID = 1L;
+	
+	public static final String SDK_NAME = "MSVC";
 
 	public static final String PREFIX_WORKING_DIRECTORY = "workdir.";
 	public static final String PREFIX_EXE = "exe.";

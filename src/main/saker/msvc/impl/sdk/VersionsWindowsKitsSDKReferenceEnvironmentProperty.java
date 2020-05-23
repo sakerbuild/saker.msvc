@@ -30,6 +30,7 @@ import saker.build.runtime.environment.SakerEnvironment;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.msvc.impl.MSVCUtils;
 import saker.sdk.support.api.SDKReference;
+import saker.sdk.support.api.exc.SDKNotFoundException;
 import testing.saker.msvc.TestFlag;
 
 public class VersionsWindowsKitsSDKReferenceEnvironmentProperty
@@ -82,7 +83,7 @@ public class VersionsWindowsKitsSDKReferenceEnvironmentProperty
 		if (sdkref != null) {
 			return sdkref;
 		}
-		throw new FileNotFoundException("Windows Kits SDK not found for versions: " + versions);
+		throw new SDKNotFoundException("Windows Kits SDK not found for versions: " + versions);
 	}
 
 	@Override

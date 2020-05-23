@@ -21,6 +21,7 @@ import java.util.TreeMap;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.sdk.AbstractVCToolsSDKReference;
 import saker.msvc.impl.sdk.WindowsKitsSDKReference;
 import saker.msvc.impl.util.option.SDKPathReferenceCompilationPathOption;
 import saker.msvc.main.coptions.COptionsPresetType;
@@ -32,35 +33,39 @@ public class COptionPresets {
 		SimplePresetCOptions x64 = new SimplePresetCOptions();
 		x64.setArchitecture("x64");
 		x64.setLibraryPaths(ImmutableUtils.makeImmutableLinkedHashSet(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.MSVC_IDENTIFIER_LIB_X64),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS, WindowsKitsSDKReference.LIB_X64_UCRT),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_X64),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+						WindowsKitsSDKReference.LIB_X64_UCRT),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 						WindowsKitsSDKReference.LIB_X64_UM), }));
 
 		SimplePresetCOptions x86 = new SimplePresetCOptions();
 		x86.setArchitecture("x86");
 		x86.setLibraryPaths(ImmutableUtils.makeImmutableLinkedHashSet(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.MSVC_IDENTIFIER_LIB_X86),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS, WindowsKitsSDKReference.LIB_X86_UCRT),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_X86),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+						WindowsKitsSDKReference.LIB_X86_UCRT),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 						WindowsKitsSDKReference.LIB_X86_UM), }));
 
 		SimplePresetCOptions basepreset = new SimplePresetCOptions();
-		basepreset.setSdks(ImmutableUtils.singletonNavigableMap(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+		basepreset.setSDKs(ImmutableUtils.singletonNavigableMap(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 				MSVCUtils.DEFAULT_WINDOWS_KITS_SDK_DESCRIPTION, SDKSupportUtils.getSDKNameComparator()));
 		basepreset.setLinkSimpleParameters(
 				ImmutableUtils.makeImmutableNavigableSet(new String[] { "/SUBSYSTEM:CONSOLE" }));
 		basepreset.setIncludeDirectories(ImmutableUtils.makeImmutableLinkedHashSet(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.MSVC_IDENTIFIER_INCLUDE),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS, WindowsKitsSDKReference.INCLUDE_UCRT),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS, WindowsKitsSDKReference.INCLUDE_UM),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.INCLUDE),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+						WindowsKitsSDKReference.INCLUDE_UCRT),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+						WindowsKitsSDKReference.INCLUDE_UM),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 						WindowsKitsSDKReference.INCLUDE_SHARED), }));
 
 		TreeMap<String, String> macrodefs = new TreeMap<>();
 		macrodefs.put("_CONSOLE", "");
 		basepreset.setMacroDefinitions(ImmutableUtils.unmodifiableNavigableMap(macrodefs));
-		
+
 		x86.setPresetIdentifier(COptionsPresetType.CONSOLE + "-x86");
 		x64.setPresetIdentifier(COptionsPresetType.CONSOLE + "-x64");
 		basepreset.setPresetIdentifier(COptionsPresetType.CONSOLE);
@@ -73,28 +78,32 @@ public class COptionPresets {
 		SimplePresetCOptions x64 = new SimplePresetCOptions();
 		x64.setArchitecture("x64");
 		x64.setLibraryPaths(ImmutableUtils.makeImmutableLinkedHashSet(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.MSVC_IDENTIFIER_LIB_X64),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS, WindowsKitsSDKReference.LIB_X64_UCRT),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_X64),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+						WindowsKitsSDKReference.LIB_X64_UCRT),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 						WindowsKitsSDKReference.LIB_X64_UM), }));
 
 		SimplePresetCOptions x86 = new SimplePresetCOptions();
 		x86.setArchitecture("x86");
 		x86.setLibraryPaths(ImmutableUtils.makeImmutableLinkedHashSet(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.MSVC_IDENTIFIER_LIB_X86),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS, WindowsKitsSDKReference.LIB_X86_UCRT),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_X86),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+						WindowsKitsSDKReference.LIB_X86_UCRT),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 						WindowsKitsSDKReference.LIB_X86_UM), }));
 
 		SimplePresetCOptions basepreset = new SimplePresetCOptions();
-		basepreset.setSdks(ImmutableUtils.singletonNavigableMap(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+		basepreset.setSDKs(ImmutableUtils.singletonNavigableMap(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 				MSVCUtils.DEFAULT_WINDOWS_KITS_SDK_DESCRIPTION, SDKSupportUtils.getSDKNameComparator()));
 		basepreset.setLinkSimpleParameters(
 				ImmutableUtils.makeImmutableNavigableSet(new String[] { "/DLL", "/SUBSYSTEM:WINDOWS" }));
 		basepreset.setIncludeDirectories(ImmutableUtils.makeImmutableLinkedHashSet(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.MSVC_IDENTIFIER_INCLUDE),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS, WindowsKitsSDKReference.INCLUDE_UCRT),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS, WindowsKitsSDKReference.INCLUDE_UM),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.INCLUDE),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+						WindowsKitsSDKReference.INCLUDE_UCRT),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
+						WindowsKitsSDKReference.INCLUDE_UM),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_WINDOWS_KITS,
 						WindowsKitsSDKReference.INCLUDE_SHARED), }));
 

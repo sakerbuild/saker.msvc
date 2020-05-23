@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
@@ -67,6 +68,7 @@ import saker.build.task.InnerTaskResultHolder;
 import saker.build.task.InnerTaskResults;
 import saker.build.task.Task;
 import saker.build.task.TaskContext;
+import saker.build.task.TaskDuplicationPredicate;
 import saker.build.task.TaskExecutionEnvironmentSelector;
 import saker.build.task.TaskExecutionUtilities;
 import saker.build.task.TaskExecutionUtilities.MirroredFileContents;
@@ -76,16 +78,17 @@ import saker.build.task.delta.DeltaType;
 import saker.build.task.delta.FileChangeDelta;
 import saker.build.task.exception.TaskEnvironmentSelectionFailedException;
 import saker.build.task.identifier.TaskIdentifier;
-import saker.build.task.utils.FixedTaskDuplicationPredicate;
 import saker.build.task.utils.TaskUtils;
 import saker.build.thirdparty.saker.rmi.annot.transfer.RMISerialize;
 import saker.build.thirdparty.saker.rmi.annot.transfer.RMIWrap;
+import saker.build.thirdparty.saker.rmi.connection.RMIVariables;
 import saker.build.thirdparty.saker.rmi.io.RMIObjectInput;
 import saker.build.thirdparty.saker.rmi.io.RMIObjectOutput;
 import saker.build.thirdparty.saker.rmi.io.wrap.RMIWrapper;
 import saker.build.thirdparty.saker.util.ConcurrentPrependAccumulator;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
+import saker.build.thirdparty.saker.util.ReflectUtils;
 import saker.build.thirdparty.saker.util.function.Functionals;
 import saker.build.thirdparty.saker.util.function.LazySupplier;
 import saker.build.thirdparty.saker.util.io.ByteArrayRegion;
@@ -224,8 +227,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		EnvironmentSelectionResult envselectionresult;
 		if (envselector != null) {
 			try {
-				envselectionresult = taskcontext.getTaskUtilities()
-						.getReportExecutionDependency(SakerStandardUtils.createEnvironmentSelectionTestExecutionProperty(envselector));
+				envselectionresult = taskcontext.getTaskUtilities().getReportExecutionDependency(
+						SakerStandardUtils.createEnvironmentSelectionTestExecutionProperty(envselector));
 			} catch (Exception e) {
 				throw new TaskEnvironmentSelectionFailedException(
 						"Failed to select a suitable build environment for compilation.", e);
@@ -262,12 +265,15 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			System.out.println("Compiling " + sccount + " source file" + (sccount == 1 ? "" : "s") + ".");
 			ConcurrentPrependAccumulator<FileCompilationConfiguration> fileaccumulator = new ConcurrentPrependAccumulator<>(
 					compilationentries);
+			CompilationDuplicationPredicate duplicationpredicate = new CompilationDuplicationPredicate(fileaccumulator);
+
 			InnerTaskExecutionParameters innertaskparams = new InnerTaskExecutionParameters();
 			innertaskparams.setClusterDuplicateFactor(compilationentries.size());
-			innertaskparams.setDuplicationPredicate(new FixedTaskDuplicationPredicate(compilationentries.size()));
+			innertaskparams.setDuplicationPredicate(duplicationpredicate);
 
 			//XXX print the process output and the diagnostics in a locked way
 			WorkerTaskCoordinator coordinator = new WorkerTaskCoordinator() {
+
 				@Override
 				public void headerPrecompiled(CompilerInnerTaskResult result, PathKey outputpathkey,
 						ContentDescriptor outputcontents) {
@@ -300,10 +306,22 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 						RootFileProviderKey fpk) {
 					return nprecompiledheaders.get(fpk);
 				}
+
+				@Override
+				public FileCompilationConfiguration take() {
+					if (duplicationpredicate.isAborted()) {
+						return null;
+					}
+					return fileaccumulator.take();
+				}
+
+				@Override
+				public void setAborted() {
+					duplicationpredicate.setAborted();
+				}
 			};
-			SourceCompilerInnerTaskFactory innertask = new SourceCompilerInnerTaskFactory(coordinator,
-					fileaccumulator::take, outdirpath, architecture, compilerinnertasksdkdescriptions, envselector,
-					outdir);
+			SourceCompilerInnerTaskFactory innertask = new SourceCompilerInnerTaskFactory(coordinator, outdirpath,
+					architecture, compilerinnertasksdkdescriptions, envselector, outdir);
 			InnerTaskResults<CompilerInnerTaskResult> innertaskresults = taskcontext.startInnerTask(innertask,
 					innertaskparams);
 			InnerTaskResultHolder<CompilerInnerTaskResult> resultholder;
@@ -318,6 +336,9 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				FileCompilationConfiguration compilationentry = compilationresult.getCompilationEntry();
 				CompilationDependencyInfo depinfo = compilationresult.getDependencyInfo();
 				taskcontext.getStandardOut().write(depinfo.getProcessOutput());
+				if (!compilationresult.isSuccessful()) {
+					coordinator.setAborted();
+				}
 				compilationentry.getProperties().getFileLocation().accept(new FileLocationVisitor() {
 					@Override
 					public void visit(ExecutionFileLocation loc) {
@@ -354,6 +375,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 
 		nstate.setExecutionCompiledFiles(stateexecutioncompiledfiles);
+		stateexecutioncompiledfiles.keySet().forEach(System.out::println);
 
 		NavigableSet<SakerPath> allreferencedincludes = nstate.getAllReferencedIncludes();
 		NavigableSet<SakerPath> allfailedincludes = nstate.getAllReferencedFailedIncludes();
@@ -486,6 +508,33 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		for (FileChangeDelta delta : deltas) {
 			result.add(delta.getFilePath());
 		}
+	}
+
+	private static final class CompilationDuplicationPredicate implements TaskDuplicationPredicate {
+		private final ConcurrentPrependAccumulator<FileCompilationConfiguration> compilationFiles;
+		private boolean aborted;
+
+		private CompilationDuplicationPredicate(
+				ConcurrentPrependAccumulator<FileCompilationConfiguration> fileaccumulator) {
+			this.compilationFiles = fileaccumulator;
+		}
+
+		@Override
+		public boolean shouldInvokeOnceMore() throws RuntimeException {
+			if (compilationFiles.isEmpty()) {
+				return false;
+			}
+			return !aborted;
+		}
+
+		public void setAborted() {
+			this.aborted = true;
+		}
+
+		public boolean isAborted() {
+			return aborted;
+		}
+
 	}
 
 	private static final class NothingKeepKnownDirectoryVisitPredicate implements DirectoryVisitPredicate {
@@ -869,7 +918,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		@Override
 		public void writeWrapped(RMIObjectOutput out) throws IOException {
 			out.writeRemoteObject(task.coordinator);
-			out.writeRemoteObject(task.fileLocationSuppier);
 			out.writeObject(task.outputDirPath);
 			out.writeObject(task.architecture);
 			out.writeSerializedObject(task.sdkDescriptions);
@@ -882,7 +930,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		public void readWrapped(RMIObjectInput in) throws IOException, ClassNotFoundException {
 			task = new SourceCompilerInnerTaskFactory();
 			task.coordinator = (WorkerTaskCoordinator) in.readObject();
-			task.fileLocationSuppier = (Supplier<FileCompilationConfiguration>) in.readObject();
 			task.outputDirPath = (SakerPath) in.readObject();
 			task.architecture = (String) in.readObject();
 			task.sdkDescriptions = (NavigableMap<String, SDKDescription>) in.readObject();
@@ -902,19 +949,25 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 	}
 
 	public interface WorkerTaskCoordinator {
+		public static final Method METHOD_SET_ABORTED = ReflectUtils.getMethodAssert(WorkerTaskCoordinator.class,
+				"setAborted");
+
 		public void headerPrecompiled(@RMISerialize CompilerInnerTaskResult result, PathKey outputpathkey,
 				@RMISerialize ContentDescriptor outputcontents);
 
 		@RMISerialize
 		public NavigableMap<SakerPath, PrecompiledHeaderState> getPrecompiledHeaderStates(
 				@RMISerialize RootFileProviderKey fpk);
+
+		public FileCompilationConfiguration take();
+
+		public void setAborted();
 	}
 
 	@RMIWrap(SourceCompilerRMIWrapper.class)
 	private static class SourceCompilerInnerTaskFactory
 			implements TaskFactory<CompilerInnerTaskResult>, Task<CompilerInnerTaskResult> {
 		protected WorkerTaskCoordinator coordinator;
-		protected Supplier<FileCompilationConfiguration> fileLocationSuppier;
 		protected SakerPath outputDirPath;
 		protected String architecture;
 		protected NavigableMap<String, SDKDescription> sdkDescriptions;
@@ -941,12 +994,10 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		public SourceCompilerInnerTaskFactory() {
 		}
 
-		public SourceCompilerInnerTaskFactory(WorkerTaskCoordinator coordinator,
-				Supplier<FileCompilationConfiguration> fileLocationSuppier, SakerPath outputDirPath,
+		public SourceCompilerInnerTaskFactory(WorkerTaskCoordinator coordinator, SakerPath outputDirPath,
 				String architecture, NavigableMap<String, SDKDescription> sdkDescriptions,
 				TaskExecutionEnvironmentSelector envselector, SakerDirectory outputDir) {
 			this.coordinator = coordinator;
-			this.fileLocationSuppier = fileLocationSuppier;
 			this.outputDirPath = outputDirPath;
 			this.architecture = architecture;
 			this.sdkDescriptions = sdkDescriptions;
@@ -1030,7 +1081,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		@Override
 		public CompilerInnerTaskResult run(TaskContext taskcontext) throws Exception {
-			FileCompilationConfiguration compilationentry = fileLocationSuppier.get();
+			FileCompilationConfiguration compilationentry = coordinator.take();
 			if (compilationentry == null) {
 				return null;
 			}
@@ -1203,6 +1254,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			CompilerInnerTaskResult result;
 			if (procresult != 0) {
 				result = CompilerInnerTaskResult.failed(compilationentry);
+				RMIVariables.invokeRemoteMethodAsyncOrLocal(coordinator, WorkerTaskCoordinator.METHOD_SET_ABORTED);
 			} else {
 				ProviderHolderPathKey objoutpathkey = localfp.getPathKey(objoutpath);
 				taskutilities.addSynchronizeInvalidatedProviderPathFileToDirectory(outputDir, objoutpathkey,

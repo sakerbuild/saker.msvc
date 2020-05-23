@@ -27,6 +27,8 @@ import saker.sdk.support.api.SDKReference;
 public class WindowsKitsSDKReference implements SDKReference, Externalizable {
 	private static final long serialVersionUID = 1L;
 
+	public static final String SDK_NAME = "WindowsKits";
+
 	public static final String INCLUDE_UCRT = "include.ucrt";
 	public static final String INCLUDE_CPPWINRT = "include.cppwinrt";
 	public static final String INCLUDE_WINRT = "include.winrt";
