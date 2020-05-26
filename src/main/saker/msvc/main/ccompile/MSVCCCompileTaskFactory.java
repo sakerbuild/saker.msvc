@@ -265,8 +265,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 									}
 
 									Map<String, String> macrodefinitions = input.getMacroDefinitions();
-									Set<String> simpleparamoption = ImmutableUtils
-											.makeImmutableNavigableSet(input.getSimpleParameters());
+									List<String> simpleparamoption = ImmutableUtils
+											.makeImmutableList(input.getSimpleParameters());
 									String passlang = input.getLanguage();
 									FileLocation pchfilelocation = TaskOptionUtils
 											.toFileLocation(input.getPrecompiledHeader(), taskcontext);
@@ -438,8 +438,16 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 								precompiledheaderoutnamesconfigurations.put(pchprops, pchoutfilename);
 							}
 							configholder.config.setPrecompiledHeader(configholder.precompiledHeader, pchoutfilename);
-
 						}
+						List<String> sparams = configholder.config.getProperties().getSimpleParameters();
+						for (String sp : sparams) {
+							if (MSVCCCompileWorkerTaskFactory.ALWAYS_PRESENT_CL_PARAMETERS.contains(sp)) {
+								sparams = new ArrayList<>(sparams);
+								sparams.removeAll(MSVCCCompileWorkerTaskFactory.ALWAYS_PRESENT_CL_PARAMETERS);
+								break;
+							}
+						}
+
 						files.add(configholder.config);
 					}
 					configbuf.clear();
@@ -501,11 +509,9 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 		if (ObjectUtils.isNullOrEmpty(simpleparams)) {
 			return;
 		}
-		TreeSet<String> result = ObjectUtils.newTreeSet(config.getSimpleParameters());
-		if (!result.addAll(simpleparams)) {
-			//not changed
-			return;
-		}
+		//do not deduplicate
+		List<String> result = ObjectUtils.newArrayList(config.getSimpleParameters());
+		result.addAll(simpleparams);
 		config.setSimpleParameters(result);
 	}
 

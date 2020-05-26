@@ -30,7 +30,6 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.function.Supplier;
 
 import saker.build.exception.FileMirroringUnavailableException;
@@ -84,10 +83,17 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 	private static final NavigableSet<String> WORKER_TASK_CAPABILITIES = ImmutableUtils
 			.makeImmutableNavigableSet(new String[] { CAPABILITY_INNER_TASKS_COMPUTATIONAL });
 
+	public static final Set<String> ALWAYS_PRESENT_LINK_PARAMETERS = ImmutableUtils
+			.makeImmutableNavigableSet(new String[] {
+//					Suppress logo
+					"/nologo",
+
+			});
+
 	private Set<FileLocation> inputs;
 	private Set<CompilationPathOption> libraryPath;
 	private NavigableMap<String, SDKDescription> sdkDescriptions;
-	private NavigableSet<String> simpleParameters;
+	private List<String> simpleParameters;
 
 	/**
 	 * For {@link Externalizable}.
@@ -111,14 +117,11 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		}
 	}
 
-	public void setSimpleParameters(Set<String> simpleParameters) {
+	public void setSimpleParameters(List<String> simpleParameters) {
 		if (simpleParameters == null) {
-			this.simpleParameters = Collections.emptyNavigableSet();
+			this.simpleParameters = Collections.emptyList();
 		} else {
-			TreeSet<String> nset = new TreeSet<>(MSVCUtils.getLinkerParameterIgnoreCaseComparator());
-			nset.addAll(simpleParameters);
-			nset.remove("/nologo");
-			this.simpleParameters = nset;
+			this.simpleParameters = ImmutableUtils.makeImmutableList(simpleParameters);
 		}
 	}
 
@@ -172,6 +175,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			envselector = SDKSupportUtils
 					.getSDKBasedClusterExecutionEnvironmentSelector(linkerinnertasksdkdescriptions.values());
 		}
+		//TODO else we probably should report a dependency on the resolved sdks
 
 		int inputsize = inputs.size();
 		System.out.println("Linking " + inputsize + " file" + (inputsize == 1 ? "" : "s") + ".");
@@ -196,6 +200,15 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		return this;
 	}
 
+	private static void addAlwaysPresentParameters(List<String> commands) {
+		for (String p : ALWAYS_PRESENT_LINK_PARAMETERS) {
+			if (!commands.contains(p)) {
+				//the simple parameters might've added it already
+				commands.add(p);
+			}
+		}
+	}
+
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		SerialUtils.writeExternalCollection(out, inputs);
@@ -210,8 +223,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		libraryPath = SerialUtils.readExternalImmutableLinkedHashSet(in);
 		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
 				SDKSupportUtils.getSDKNameComparator());
-		simpleParameters = SerialUtils.readExternalSortedImmutableNavigableSet(in,
-				MSVCUtils.getLinkerParameterIgnoreCaseComparator());
+		simpleParameters = SerialUtils.readExternalImmutableList(in);
 	}
 
 	@Override
@@ -295,7 +307,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		private Set<FileLocation> inputs;
 		private Set<CompilationPathOption> libraryPath;
 		private NavigableMap<String, SDKDescription> sdkDescriptions;
-		private NavigableSet<String> simpleParameters;
+		private List<String> simpleParameters;
 		private String architecture;
 		private SakerPath outDirectoryPath;
 		private String passIdentifier;
@@ -308,7 +320,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 		public LinkerInnerTaskFactory(TaskExecutionEnvironmentSelector environmentSelector, Set<FileLocation> inputs,
 				Set<CompilationPathOption> libraryPath, NavigableMap<String, SDKDescription> sdkDescriptions,
-				NavigableSet<String> simpleParameters, String architecture, SakerPath outdirpath, String passid) {
+				List<String> simpleParameters, String architecture, SakerPath outdirpath, String passid) {
 			this.environmentSelector = environmentSelector;
 			this.inputs = inputs;
 			this.libraryPath = libraryPath;
@@ -429,13 +441,13 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 			List<String> commands = new ArrayList<>();
 			commands.add(linkexepath.toString());
-			commands.add("/nologo");
+			commands.addAll(simpleParameters);
+			addAlwaysPresentParameters(commands);
 			commands.add("/MACHINE:" + architecture);
 
 			for (Path lpath : libpaths) {
 				commands.add("/LIBPATH:" + lpath);
 			}
-			commands.addAll(simpleParameters);
 
 			boolean librarylink = simpleParameters.contains("/dll");
 			String extension;
@@ -530,8 +542,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			libraryPath = SerialUtils.readExternalImmutableLinkedHashSet(in);
 			sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
 					SDKSupportUtils.getSDKNameComparator());
-			simpleParameters = SerialUtils.readExternalSortedImmutableNavigableSet(in,
-					MSVCUtils.getLinkerParameterIgnoreCaseComparator());
+			simpleParameters = SerialUtils.readExternalImmutableList(in);
 			architecture = (String) in.readObject();
 			outDirectoryPath = (SakerPath) in.readObject();
 			passIdentifier = (String) in.readObject();

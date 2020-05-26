@@ -16,6 +16,7 @@
 package saker.msvc.impl.coptions.preset;
 
 import java.util.Collection;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import saker.build.thirdparty.saker.util.ImmutableUtils;
@@ -129,7 +130,7 @@ public class COptionPresets {
 				"/Od",
 
 		}));
-		TreeMap<String, String> macrodefs = new TreeMap<>();
+		NavigableMap<String, String> macrodefs = new TreeMap<>();
 		macrodefs.put("_DEBUG", "");
 		basepreset.setMacroDefinitions(ImmutableUtils.unmodifiableNavigableMap(macrodefs));
 		OPTIMIZE_DEBUG_PRESETS = ImmutableUtils.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset });

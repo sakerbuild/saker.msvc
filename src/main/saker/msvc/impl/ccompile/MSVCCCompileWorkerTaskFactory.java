@@ -237,6 +237,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			envselector = SDKSupportUtils
 					.getSDKBasedClusterExecutionEnvironmentSelector(compilerinnertasksdkdescriptions.values());
 		} else {
+			//TODO in this case we probably should report a dependency on the resolved sdks
 			envselectionresult = null;
 		}
 
@@ -268,7 +269,9 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			CompilationDuplicationPredicate duplicationpredicate = new CompilationDuplicationPredicate(fileaccumulator);
 
 			InnerTaskExecutionParameters innertaskparams = new InnerTaskExecutionParameters();
-			innertaskparams.setClusterDuplicateFactor(compilationentries.size());
+			if (envselector != null) {
+				innertaskparams.setClusterDuplicateFactor(compilationentries.size());
+			}
 			innertaskparams.setDuplicationPredicate(duplicationpredicate);
 
 			//XXX print the process output and the diagnostics in a locked way
@@ -745,6 +748,15 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		return outputdirpath.resolve(PRECOMPILED_HEADERS_SUBDIRECTORY_NAME);
 	}
 
+	private static void addAlwaysPresentParameters(List<String> commands) {
+		for (String p : ALWAYS_PRESENT_CL_PARAMETERS) {
+			if (!commands.contains(p)) {
+				//the simple parameters might've added it already
+				commands.add(p);
+			}
+		}
+	}
+
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		SerialUtils.writeExternalCollection(out, files);
@@ -1189,8 +1201,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 							} else {
 								List<String> commands = new ArrayList<>();
 								commands.add(clexepath.toString());
-								commands.addAll(ALWAYS_PRESENT_CL_PARAMETERS);
 								commands.addAll(pchproperties.getSimpleParameters());
+								addAlwaysPresentParameters(commands);
 								commands.add(
 										getLanguageCommandLineOption(pchproperties.getLanguage()) + pchcompilefilepath);
 								commands.add("/Fo" + pchobjpath);
@@ -1247,8 +1259,8 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 			List<String> commands = new ArrayList<>();
 			commands.add(clexepath.toString());
-			commands.addAll(ALWAYS_PRESENT_CL_PARAMETERS);
 			commands.addAll(compilationentryproperties.getSimpleParameters());
+			addAlwaysPresentParameters(commands);
 			commands.add(getLanguageCommandLineOption(compilationentryproperties.getLanguage()) + compilefilepath);
 			commands.add("/Fo" + objoutpath);
 			addIncludeDirectoryCommands(commands, includedirpaths);

@@ -40,7 +40,9 @@ public class FailFastCompileTest extends MSVCTestCase {
 		int c = 0;
 		while (true) {
 			++c;
-			if (validfilepaths.size() == count) {
+			System.out.println("Run " + c);
+			int s = validfilepaths.size();
+			if (s == count) {
 				//should succeed
 				runScriptTask("build");
 				break;
@@ -48,10 +50,11 @@ public class FailFastCompileTest extends MSVCTestCase {
 			assertTaskException(Exception.class, () -> runScriptTask("build"));
 			Map<SakerPath, String> compiledfiles = ImmutableUtils
 					.makeImmutableNavigableMap(getMetric().getCompiledFileClusterNames());
+			assertNotEmpty(compiledfiles);
 
 			//should not rerun once more as nothing changed
 			assertTaskException(Exception.class, () -> runScriptTask("build"));
-			assertEmpty(getMetric().getRunTaskIdResults());
+			assertEmpty(getMetric().getRunTaskIdFactories());
 
 			for (SakerPath fpath : compiledfiles.keySet()) {
 				files.putFile(fpath, "123");

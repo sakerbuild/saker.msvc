@@ -16,6 +16,7 @@
 package saker.msvc.main.ccompile.options;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
@@ -34,7 +35,7 @@ public interface OptionCompilationInputPass {
 
 	public Map<String, String> getMacroDefinitions();
 
-	public Collection<String> getSimpleParameters();
+	public List<String> getSimpleParameters();
 
 	public Collection<MSVCCompilerOptions> getCompilerOptions();
 

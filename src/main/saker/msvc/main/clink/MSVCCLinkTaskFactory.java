@@ -19,13 +19,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import saker.build.exception.PropertyComputationFailedException;
 import saker.build.file.path.SakerPath;
@@ -181,7 +180,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				Collection<CompilationPathTaskOption> libpathoptions = new ArrayList<>();
 				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(
 						SDKSupportUtils.getSDKNameComparator());
-				Collection<String> simpleparamoption = ImmutableUtils.makeImmutableList(this.simpleParametersOption);
+				List<String> simpleparams = ObjectUtils.newArrayList(this.simpleParametersOption);
 				CompilationIdentifierTaskOption identifieropt = ObjectUtils.clone(this.identifierOption,
 						CompilationIdentifierTaskOption::clone);
 
@@ -262,8 +261,6 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculatedlibpathoptions = new HashMap<>();
 				NavigableMap<String, SDKDescription> nullablesdkdescriptions = new TreeMap<>(
 						SDKSupportUtils.getSDKNameComparator());
-				NavigableSet<String> simpleparams = new TreeSet<>(MSVCUtils.getLinkerParameterIgnoreCaseComparator());
-				ObjectUtils.addAll(simpleparams, simpleparamoption);
 
 				for (Entry<String, SDKDescriptionTaskOption> entry : sdkoptions.entrySet()) {
 					SDKDescriptionTaskOption val = entry.getValue();
@@ -337,6 +334,8 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 						}
 					});
 				}
+				
+				simpleparams.removeAll(MSVCCLinkWorkerTaskFactory.ALWAYS_PRESENT_LINK_PARAMETERS);
 
 				//XXX try to infer the MSVC SDK from input compilation task outputs?
 				nullablesdkdescriptions.putIfAbsent(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.DEFAULT_MSVC_SDK_DESCRIPTION);

@@ -15,10 +15,7 @@
  */
 package saker.msvc.impl;
 
-import java.io.Externalizable;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -34,7 +31,6 @@ import java.util.function.Predicate;
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.FileEntry;
 import saker.build.file.provider.LocalFileProvider;
-import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.StringUtils;
 import saker.build.thirdparty.saker.util.function.Functionals;
 import saker.msvc.impl.sdk.AbstractVCToolsSDKReference;
@@ -116,45 +112,6 @@ public class MSVCUtils {
 			return DEFAULT_MSVC_SDK_DESCRIPTION;
 		}
 		return VersionsMSVCSDKDescription.create(regularversions, legacyversions);
-	}
-
-	public static Comparator<String> getLinkerParameterIgnoreCaseComparator() {
-		return IgnoreCaseComparator.INSTANCE;
-	}
-
-	private static final class IgnoreCaseComparator implements Comparator<String>, Externalizable {
-		private static final long serialVersionUID = 1L;
-
-		public static final IgnoreCaseComparator INSTANCE = new IgnoreCaseComparator();
-
-		/**
-		 * For {@link Externalizable}.
-		 */
-		public IgnoreCaseComparator() {
-		}
-
-		@Override
-		public int compare(String o1, String o2) {
-			return o1.compareToIgnoreCase(o2);
-		}
-
-		@Override
-		public void writeExternal(ObjectOutput out) throws IOException {
-		}
-
-		@Override
-		public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		}
-
-		@Override
-		public int hashCode() {
-			return getClass().getName().hashCode();
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			return ObjectUtils.isSameClass(this, obj);
-		}
 	}
 
 	public static SakerPath getVCSDKExecutablePath(SDKReference vcsdk, String hostarchitecture,

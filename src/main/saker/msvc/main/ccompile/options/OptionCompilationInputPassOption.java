@@ -16,6 +16,7 @@
 package saker.msvc.main.ccompile.options;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import saker.build.task.TaskContext;
@@ -32,7 +33,7 @@ public class OptionCompilationInputPassOption
 	private Collection<CompilationPathTaskOption> includeDirectories;
 	private CompilationIdentifierTaskOption subIdentifier;
 	private Map<String, String> macroDefinitions;
-	private Collection<String> simpleParameters;
+	private List<String> simpleParameters;
 	private Collection<MSVCCompilerOptions> compilerOptions;
 	private String language;
 	private FileLocationTaskOption precompiledHeader;
@@ -89,7 +90,7 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public Collection<String> getSimpleParameters() {
+	public List<String> getSimpleParameters() {
 		return simpleParameters;
 	}
 

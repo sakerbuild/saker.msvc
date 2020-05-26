@@ -16,7 +16,6 @@
 package saker.msvc.impl.sdk;
 
 import java.io.Externalizable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
