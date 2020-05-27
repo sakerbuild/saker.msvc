@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import java.util.TreeSet;
 
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.LocalFileProvider;
+import saker.build.thirdparty.saker.util.StringUtils;
 import saker.build.thirdparty.saker.util.io.UnsyncByteArrayOutputStream;
 import testing.saker.msvc.MSVCTestMetric.MetricProcessIOConsumer;
 
@@ -80,7 +82,14 @@ public class LinkMockProcess {
 		List<SakerPath> libpathdirs = getLibPathDirectoriesFromCommands(commands);
 		Set<SakerPath> includedlibs = new TreeSet<>();
 
+		SakerPath winmdpath = null;
+		if (isGenerateWinmd(commands)) {
+			winmdpath = getWinmdPath(commands);
+			Objects.requireNonNull(winmdpath, "winmdpath");
+		}
+
 		UnsyncByteArrayOutputStream fileoutbuf = new UnsyncByteArrayOutputStream();
+		UnsyncByteArrayOutputStream winmdoutbuf = new UnsyncByteArrayOutputStream();
 		try (PrintStream outps = new PrintStream(fileoutbuf)) {
 			if (containsIgnoreCase(commands, "/dll")) {
 				outps.println(MockingMSVCTestMetric.createFileTypeLine(MockingMSVCTestMetric.TYPE_DLL, targetarch));
@@ -89,6 +98,10 @@ public class LinkMockProcess {
 			}
 			outps.println("#version " + version);
 			for (Path inputfile : inputfiles) {
+				winmdoutbuf.write(
+						(StringUtils.toHexString(LocalFileProvider.getInstance().hash(inputfile, "MD5").getHash())
+								+ "\n").getBytes(StandardCharsets.UTF_8));
+
 				try (BufferedReader reader = Files.newBufferedReader(inputfile)) {
 					String firstline = reader.readLine();
 					String expectedtype = MockingMSVCTestMetric.createFileTypeLine(MockingMSVCTestMetric.TYPE_OBJ,
@@ -106,6 +119,9 @@ public class LinkMockProcess {
 		}
 		try {
 			Files.write(LocalFileProvider.toRealPath(outputpath), fileoutbuf.toByteArray());
+			if (winmdpath != null) {
+				Files.write(LocalFileProvider.toRealPath(winmdpath), winmdoutbuf.toByteArray());
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			return -99;
@@ -177,6 +193,9 @@ public class LinkMockProcess {
 					|| cmd.equalsIgnoreCase("/INCREMENTAL:NO")) {
 				continue;
 			}
+			if (StringUtils.startsWithIgnoreCase(cmd, "/WINMD")) {
+				continue;
+			}
 			result.add(LocalFileProvider.toRealPath(SakerPath.valueOf(cmd)));
 		}
 		return result;
@@ -190,6 +209,25 @@ public class LinkMockProcess {
 			}
 		}
 		return result;
+	}
+
+	private static boolean isGenerateWinmd(List<String> commands) {
+		for (String cmd : commands) {
+			if ("/WINMD".equalsIgnoreCase(cmd)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static SakerPath getWinmdPath(List<String> commands) {
+		for (String cmd : commands) {
+			if (!StringUtils.startsWithIgnoreCase(cmd, "/WINMDFILE:")) {
+				continue;
+			}
+			return SakerPath.valueOf(cmd.substring(11));
+		}
+		return null;
 	}
 
 	public static boolean containsIgnoreCase(List<String> commands, String cmd) {

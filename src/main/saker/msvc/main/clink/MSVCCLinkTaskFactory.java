@@ -125,6 +125,12 @@ import saker.std.api.file.location.FileLocation;
 @NestParameterInformation(value = "SimpleParameters",
 		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleLinkerParameterOption.class),
 		info = @NestInformation(TaskDocs.LINK_SIMPLE_PARAMETERS))
+@NestParameterInformation(value = "GenerateWinmd",
+		type = @NestTypeUsage(boolean.class),
+		info = @NestInformation(TaskDocs.LINK_GENERATE_WINMD))
+@NestParameterInformation(value = "BinaryName",
+		type = @NestTypeUsage(String.class),
+		info = @NestInformation(TaskDocs.LINK_BINARY_NAME))
 
 @NestParameterInformation(value = "LinkerOptions",
 		type = @NestTypeUsage(value = Collection.class, elementTypes = MSVCLinkerOptions.class),
@@ -168,6 +174,12 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 
 			@SakerInput(value = { "LinkerOptions" })
 			public Collection<MSVCLinkerOptions> linkerOptionsOption;
+
+			@SakerInput(value = { "GenerateWinmd" })
+			public Boolean generateWinmdOption;
+
+			@SakerInput(value = { "BinaryName" })
+			public String binaryNameOption;
 
 			@Override
 			public Object run(TaskContext taskcontext) throws Exception {
@@ -255,6 +267,9 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 					architecture = this.architectureOption;
 				}
 
+				Boolean[] genwinmd = { generateWinmdOption };
+				String[] binaryname = { binaryNameOption };
+
 				Set<FileLocation> inputfiles = new LinkedHashSet<>();
 
 				Set<CompilationPathOption> librarypath = new LinkedHashSet<>();
@@ -314,6 +329,15 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 									addLinkerInputs(opttaskin, taskcontext, inputfiles, architecture);
 								}
 							}
+							if (Boolean.TRUE.equals(options.getGenerateWinmd())) {
+								genwinmd[0] = Boolean.TRUE;
+							}
+							String optbinname = options.getBinaryName();
+							if (!ObjectUtils.isNullOrEmpty(optbinname)) {
+								if (binaryname[0] == null) {
+									binaryname[0] = optbinname;
+								}
+							}
 						}
 
 						@Override
@@ -334,7 +358,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 						}
 					});
 				}
-				
+
 				simpleparams.removeAll(MSVCCLinkWorkerTaskFactory.ALWAYS_PRESENT_LINK_PARAMETERS);
 
 				//XXX try to infer the MSVC SDK from input compilation task outputs?
@@ -370,6 +394,8 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				worker.setSimpleParameters(simpleparams);
 				worker.setLibraryPath(librarypath);
 				worker.setSdkDescriptions(sdkdescriptions);
+				worker.setGenerateWinmd(genwinmd[0]);
+				worker.setBinaryName(binaryname[0]);
 				taskcontext.startTask(workertaskid, worker, null);
 
 				SimpleStructuredObjectTaskResult result = new SimpleStructuredObjectTaskResult(workertaskid);

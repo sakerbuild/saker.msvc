@@ -61,6 +61,12 @@ import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleLinkerParameterOption.class),
 		info = @NestInformation(TaskDocs.LINK_SIMPLE_PARAMETERS + "\n"
 				+ "When merging, duplicate parameters are removed automatically."))
+@NestFieldInformation(value = "GenerateWinmd",
+		type = @NestTypeUsage(boolean.class),
+		info = @NestInformation(TaskDocs.LINK_GENERATE_WINMD))
+@NestFieldInformation(value = "BinaryName",
+		type = @NestTypeUsage(String.class),
+		info = @NestInformation(TaskDocs.LINK_BINARY_NAME))
 public interface MSVCLinkerOptions {
 	public void accept(Visitor visitor);
 
@@ -89,6 +95,14 @@ public interface MSVCLinkerOptions {
 	}
 
 	public default Collection<String> getSimpleLinkerParameters() {
+		return null;
+	}
+
+	public default Boolean getGenerateWinmd() {
+		return null;
+	}
+
+	public default String getBinaryName() {
 		return null;
 	}
 

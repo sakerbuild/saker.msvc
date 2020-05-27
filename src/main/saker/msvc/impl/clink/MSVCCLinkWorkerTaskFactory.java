@@ -94,6 +94,9 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 	private Set<CompilationPathOption> libraryPath;
 	private NavigableMap<String, SDKDescription> sdkDescriptions;
 	private List<String> simpleParameters;
+	private Boolean generateWinmd;
+
+	private String binaryName;
 
 	/**
 	 * For {@link Externalizable}.
@@ -107,6 +110,10 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 	public void setLibraryPath(Set<CompilationPathOption> libraryPath) {
 		this.libraryPath = libraryPath;
+	}
+
+	public void setGenerateWinmd(Boolean generateWinmd) {
+		this.generateWinmd = generateWinmd;
 	}
 
 	public void setSdkDescriptions(NavigableMap<String, SDKDescription> sdkDescriptions) {
@@ -123,6 +130,10 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		} else {
 			this.simpleParameters = ImmutableUtils.makeImmutableList(simpleParameters);
 		}
+	}
+
+	public void setBinaryName(String binaryName) {
+		this.binaryName = binaryName;
 	}
 
 	@Override
@@ -180,8 +191,13 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		int inputsize = inputs.size();
 		System.out.println("Linking " + inputsize + " file" + (inputsize == 1 ? "" : "s") + ".");
 
+		String binaryname = this.binaryName;
+		if (ObjectUtils.isNullOrEmpty(binaryname)) {
+			binaryname = passidstr;
+		}
+
 		LinkerInnerTaskFactory innertaskfactory = new LinkerInnerTaskFactory(envselector, inputs, libraryPath,
-				linkerinnertasksdkdescriptions, simpleParameters, architecture, outdirpath, passidstr);
+				linkerinnertasksdkdescriptions, simpleParameters, architecture, outdirpath, generateWinmd, binaryname);
 		InnerTaskResults<LinkerInnerTaskFactoryResult> innertaskresults = taskcontext.startInnerTask(innertaskfactory,
 				null);
 		InnerTaskResultHolder<LinkerInnerTaskFactoryResult> nextres = innertaskresults.getNext();
@@ -191,7 +207,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		LinkerInnerTaskFactoryResult innertaskresult = nextres.getResult();
 
 		MSVCLinkerWorkerTaskOutputImpl result = new MSVCLinkerWorkerTaskOutputImpl(passcompilationidentifier,
-				architecture, innertaskresult.getOutputPath());
+				architecture, innertaskresult.getOutputPath(), innertaskresult.getOutputWinmdPath());
 		return result;
 	}
 
@@ -200,9 +216,18 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		return this;
 	}
 
+	private static boolean containsIgnoreCase(Iterable<String> commands, String cmd) {
+		for (String c : commands) {
+			if (c.equalsIgnoreCase(cmd)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private static void addAlwaysPresentParameters(List<String> commands) {
 		for (String p : ALWAYS_PRESENT_LINK_PARAMETERS) {
-			if (!commands.contains(p)) {
+			if (!containsIgnoreCase(commands, p)) {
 				//the simple parameters might've added it already
 				commands.add(p);
 			}
@@ -215,6 +240,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		SerialUtils.writeExternalCollection(out, libraryPath);
 		SerialUtils.writeExternalMap(out, sdkDescriptions);
 		SerialUtils.writeExternalCollection(out, simpleParameters);
+		out.writeObject(generateWinmd);
+		out.writeObject(binaryName);
 	}
 
 	@Override
@@ -224,12 +251,16 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
 				SDKSupportUtils.getSDKNameComparator());
 		simpleParameters = SerialUtils.readExternalImmutableList(in);
+		generateWinmd = SerialUtils.readExternalObject(in);
+		binaryName = SerialUtils.readExternalObject(in);
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((binaryName == null) ? 0 : binaryName.hashCode());
+		result = prime * result + ((generateWinmd == null) ? 0 : generateWinmd.hashCode());
 		result = prime * result + ((inputs == null) ? 0 : inputs.hashCode());
 		result = prime * result + ((libraryPath == null) ? 0 : libraryPath.hashCode());
 		result = prime * result + ((sdkDescriptions == null) ? 0 : sdkDescriptions.hashCode());
@@ -246,6 +277,16 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		if (getClass() != obj.getClass())
 			return false;
 		MSVCCLinkWorkerTaskFactory other = (MSVCCLinkWorkerTaskFactory) obj;
+		if (binaryName == null) {
+			if (other.binaryName != null)
+				return false;
+		} else if (!binaryName.equals(other.binaryName))
+			return false;
+		if (generateWinmd == null) {
+			if (other.generateWinmd != null)
+				return false;
+		} else if (!generateWinmd.equals(other.generateWinmd))
+			return false;
 		if (inputs == null) {
 			if (other.inputs != null)
 				return false;
@@ -273,6 +314,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		private static final long serialVersionUID = 1L;
 
 		private SakerPath outputPath;
+		private SakerPath outputWinmdPath;
 
 		/**
 		 * For {@link Externalizable}.
@@ -280,22 +322,29 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		public LinkerInnerTaskFactoryResult() {
 		}
 
-		public LinkerInnerTaskFactoryResult(SakerPath outputPath) {
+		public LinkerInnerTaskFactoryResult(SakerPath outputPath, SakerPath outputwinmdpath) {
 			this.outputPath = outputPath;
+			this.outputWinmdPath = outputwinmdpath;
 		}
 
 		public SakerPath getOutputPath() {
 			return outputPath;
 		}
 
+		public SakerPath getOutputWinmdPath() {
+			return outputWinmdPath;
+		}
+
 		@Override
 		public void writeExternal(ObjectOutput out) throws IOException {
 			out.writeObject(outputPath);
+			out.writeObject(outputWinmdPath);
 		}
 
 		@Override
 		public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-			outputPath = (SakerPath) in.readObject();
+			outputPath = SerialUtils.readExternalObject(in);
+			outputWinmdPath = SerialUtils.readExternalObject(in);
 		}
 	}
 
@@ -310,7 +359,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 		private List<String> simpleParameters;
 		private String architecture;
 		private SakerPath outDirectoryPath;
-		private String passIdentifier;
+		private Boolean generateWinmd;
+		private String binaryName;
 
 		/**
 		 * For {@link Externalizable}.
@@ -320,7 +370,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 
 		public LinkerInnerTaskFactory(TaskExecutionEnvironmentSelector environmentSelector, Set<FileLocation> inputs,
 				Set<CompilationPathOption> libraryPath, NavigableMap<String, SDKDescription> sdkDescriptions,
-				List<String> simpleParameters, String architecture, SakerPath outdirpath, String passid) {
+				List<String> simpleParameters, String architecture, SakerPath outdirpath, Boolean generateWinmd,
+				String binaryName) {
 			this.environmentSelector = environmentSelector;
 			this.inputs = inputs;
 			this.libraryPath = libraryPath;
@@ -328,7 +379,8 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			this.simpleParameters = simpleParameters;
 			this.architecture = architecture;
 			this.outDirectoryPath = outdirpath;
-			this.passIdentifier = passid;
+			this.generateWinmd = generateWinmd;
+			this.binaryName = binaryName;
 		}
 
 		@Override
@@ -449,14 +501,31 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 				commands.add("/LIBPATH:" + lpath);
 			}
 
-			boolean librarylink = simpleParameters.contains("/dll");
+			boolean librarylink = containsIgnoreCase(simpleParameters, "/dll");
 			String extension;
 			if (librarylink) {
 				extension = ".dll";
 			} else {
 				extension = ".exe";
 			}
-			SakerPath outputexecpath = outDirectoryPath.resolve(passIdentifier + extension);
+			SakerPath outputexecpath = outDirectoryPath.resolve(this.binaryName + extension);
+			SakerPath outputwinmdpath;
+			Path outputwinmdmirrorpath;
+			if (generateWinmd != null) {
+				if (generateWinmd) {
+					outputwinmdpath = outDirectoryPath.resolve(this.binaryName + ".winmd");
+					outputwinmdmirrorpath = taskcontext.getExecutionContext().toMirrorPath(outputwinmdpath);
+					commands.add("/WINMD");
+					commands.add("/WINMDFILE:" + outputwinmdmirrorpath);
+				} else {
+					outputwinmdpath = null;
+					outputwinmdmirrorpath = null;
+					commands.add("/WINMD:NO");
+				}
+			} else {
+				outputwinmdpath = null;
+				outputwinmdmirrorpath = null;
+			}
 
 			if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
 				BuildTrace.setDisplayInformation(outputexecpath.getFileName(), null);
@@ -467,14 +536,16 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			for (Path inputpath : inputfilepaths) {
 				commands.add(inputpath.toString());
 			}
-			LocalFileProvider.getInstance().createDirectories(outputmirrorpath.getParent());
+			LocalFileProvider localfp = LocalFileProvider.getInstance();
+			localfp.createDirectories(outputmirrorpath.getParent());
 
 			int procresult = MSVCUtils.runMSVCProcess(commands, workingdir,
 					new ByteSinkProcessIOConsumer(taskcontext.getStandardOut()), null, true);
 			if (procresult != 0) {
 				throw new IOException("Failed to link: " + procresult + " (0x" + Integer.toHexString(procresult) + ")");
 			}
-			ProviderHolderPathKey outputpathkey = LocalFileProvider.getInstance().getPathKey(outputmirrorpath);
+			ProviderHolderPathKey outputpathkey = localfp.getPathKey(outputmirrorpath);
+
 			taskcontext.invalidate(outputpathkey);
 
 			SakerDirectory outdir = taskcontext.getTaskUtilities().resolveDirectoryAtPath(outDirectoryPath);
@@ -483,12 +554,22 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 					.createProviderPathFile(outputexecpath.getFileName(), outputpathkey);
 			outdir.add(outputsakerfile);
 			outputsakerfile.synchronize();
+			if (outputwinmdmirrorpath != null) {
+				ProviderHolderPathKey outputwinmdpathkey = localfp.getPathKey(outputwinmdmirrorpath);
+				taskcontext.invalidate(outputwinmdpathkey);
+
+				SakerFile outputwinmdsakerfile = taskcontext.getTaskUtilities()
+						.createProviderPathFile(outputwinmdpath.getFileName(), outputwinmdpathkey);
+				outdir.add(outputwinmdsakerfile);
+				outputwinmdsakerfile.synchronize();
+				taskcontext.getTaskUtilities().reportOutputFileDependency(LinkerFileTags.OUTPUT_FILE,
+						outputwinmdsakerfile);
+			}
 
 			taskcontext.getTaskUtilities().reportInputFileDependency(LinkerFileTags.INPUT_FILE, inputdescriptors);
-			taskcontext.reportOutputFileDependency(LinkerFileTags.OUTPUT_FILE, outputexecpath,
-					outputsakerfile.getContentDescriptor());
+			taskcontext.getTaskUtilities().reportOutputFileDependency(LinkerFileTags.OUTPUT_FILE, outputsakerfile);
 
-			LinkerInnerTaskFactoryResult result = new LinkerInnerTaskFactoryResult(outputexecpath);
+			LinkerInnerTaskFactoryResult result = new LinkerInnerTaskFactoryResult(outputexecpath, outputwinmdpath);
 
 			if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
 				BuildTrace.reportOutputArtifact(outputexecpath, BuildTrace.ARTIFACT_EMBED_DEFAULT);
@@ -532,7 +613,7 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			SerialUtils.writeExternalCollection(out, simpleParameters);
 			out.writeObject(architecture);
 			out.writeObject(outDirectoryPath);
-			out.writeObject(passIdentifier);
+			out.writeObject(binaryName);
 		}
 
 		@Override
@@ -543,9 +624,9 @@ public class MSVCCLinkWorkerTaskFactory implements TaskFactory<Object>, Task<Obj
 			sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
 					SDKSupportUtils.getSDKNameComparator());
 			simpleParameters = SerialUtils.readExternalImmutableList(in);
-			architecture = (String) in.readObject();
-			outDirectoryPath = (SakerPath) in.readObject();
-			passIdentifier = (String) in.readObject();
+			architecture = SerialUtils.readExternalObject(in);
+			outDirectoryPath = SerialUtils.readExternalObject(in);
+			binaryName = SerialUtils.readExternalObject(in);
 		}
 
 		//XXX somewhat duplicated with compiler worker factory

@@ -15,12 +15,17 @@
  */
 package testing.saker.msvc.tests;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
+import saker.build.file.path.SakerPath;
 import saker.build.thirdparty.saker.util.StringUtils;
+import saker.build.thirdparty.saker.util.io.UnsyncByteArrayOutputStream;
 import testing.saker.msvc.tests.mock.CLMockProcess;
 import testing.saker.msvc.tests.mock.MockingMSVCTestMetric;
 import testing.saker.nest.util.RepositoryLoadingVariablesMetricEnvironmentTestCase;
@@ -85,6 +90,16 @@ public abstract class MSVCTestCase extends RepositoryLoadingVariablesMetricEnvir
 
 	public static String linkDllVer(String version, String arch, int... lines) {
 		return linkTypeImpl(version, MockingMSVCTestMetric.TYPE_DLL, arch, lines);
+	}
+
+	public String winmd(SakerPath... sourcefiles) throws IOException, NoSuchAlgorithmException {
+		try (UnsyncByteArrayOutputStream winmdoutbuf = new UnsyncByteArrayOutputStream()) {
+			for (SakerPath inputfile : sourcefiles) {
+				winmdoutbuf.write((StringUtils.toHexString(files.hash(inputfile, "MD5").getHash()) + "\n")
+						.getBytes(StandardCharsets.UTF_8));
+			}
+			return winmdoutbuf.toString();
+		}
 	}
 
 	private static String linkTypeImpl(String version, String type, String arch, int... lines) {

@@ -30,6 +30,7 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 	private CompilationIdentifier compilationIdentifier;
 	private String architecture;
 	private SakerPath outputPath;
+	private SakerPath outputWinmdPath;
 
 	/**
 	 * For {@link Externalizable}.
@@ -38,10 +39,11 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 	}
 
 	public MSVCLinkerWorkerTaskOutputImpl(CompilationIdentifier compilationIdentifier, String architecture,
-			SakerPath outputPath) {
+			SakerPath outputPath, SakerPath outputWinmdPath) {
 		this.compilationIdentifier = compilationIdentifier;
 		this.architecture = architecture;
 		this.outputPath = outputPath;
+		this.outputWinmdPath = outputWinmdPath;
 	}
 
 	@Override
@@ -60,10 +62,16 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 	}
 
 	@Override
+	public SakerPath getOutputWinmdPath() {
+		return outputWinmdPath;
+	}
+
+	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		out.writeObject(compilationIdentifier);
 		out.writeObject(architecture);
 		out.writeObject(outputPath);
+		out.writeObject(outputWinmdPath);
 	}
 
 	@Override
@@ -71,6 +79,44 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 		compilationIdentifier = (CompilationIdentifier) in.readObject();
 		architecture = (String) in.readObject();
 		outputPath = (SakerPath) in.readObject();
+		outputWinmdPath = (SakerPath) in.readObject();
+	}
+
+	@Override
+	public int hashCode() {
+		return (compilationIdentifier == null) ? 0 : compilationIdentifier.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		MSVCLinkerWorkerTaskOutputImpl other = (MSVCLinkerWorkerTaskOutputImpl) obj;
+		if (architecture == null) {
+			if (other.architecture != null)
+				return false;
+		} else if (!architecture.equals(other.architecture))
+			return false;
+		if (compilationIdentifier == null) {
+			if (other.compilationIdentifier != null)
+				return false;
+		} else if (!compilationIdentifier.equals(other.compilationIdentifier))
+			return false;
+		if (outputPath == null) {
+			if (other.outputPath != null)
+				return false;
+		} else if (!outputPath.equals(other.outputPath))
+			return false;
+		if (outputWinmdPath == null) {
+			if (other.outputWinmdPath != null)
+				return false;
+		} else if (!outputWinmdPath.equals(other.outputWinmdPath))
+			return false;
+		return true;
 	}
 
 	@Override
@@ -78,7 +124,8 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 		return getClass().getSimpleName() + "["
 				+ (compilationIdentifier != null ? "compilationIdentifier=" + compilationIdentifier + ", " : "")
 				+ (architecture != null ? "architecture=" + architecture + ", " : "")
-				+ (outputPath != null ? "outputPath=" + outputPath : "") + "]";
+				+ (outputPath != null ? "outputPath=" + outputPath + ", " : "")
+				+ (outputWinmdPath != null ? "outputWinmdPath=" + outputWinmdPath : "") + "]";
 	}
 
 }

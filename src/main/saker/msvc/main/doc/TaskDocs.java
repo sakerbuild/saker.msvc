@@ -86,6 +86,14 @@ public class TaskDocs {
 			+ "as specifying files here may result in incorrect incremental builds.\n"
 			+ "The parameters should be singular, meaning that arguments that require multiple command line options shouldn't be "
 			+ "specified here. The order of the specified arguments are irrelevant, and may be changed by the task.";
+	public static final String LINK_GENERATE_WINMD = "Sets if Windows Metadata (.winmd) should be generated as part of the linking process.\n"
+			+ "If set to true, this option causes the /WINMD flag to be passed for the linker. Windows Metadata file will be generated "
+			+ "alongside the output product.\n"
+			+ "Setting the option to false will cause /WINMD:NO flag to be passed to the linker.";
+	public static final String LINK_BINARY_NAME = "Specifies the file name of the link product without the extension.\n"
+			+ "The specified string will be used as the name part of the generated executable or library. The extension \n"
+			+ "is determined automatically.\n"
+			+ "If not specified, the file name will be generated based on the compilation Identifier.";
 
 	public static final String OPTIONS_IDENTIFIER = "Specifies the Identifier to which the options should be merged into.\n"
 			+ "The associated options will only be merged into the target configuration if the target Identifier "
@@ -144,6 +152,10 @@ public class TaskDocs {
 			type = @NestTypeUsage(SakerPath.class),
 			info = @NestInformation("Contains the path to the link operation output.\n"
 					+ "The type of the file is based on the configuration of the linker task."))
+	@NestFieldInformation(value = "OutputWinmdPath",
+			type = @NestTypeUsage(SakerPath.class),
+			info = @NestInformation("The output path to the generated Windows Metadata (.winmd) file.\n"
+					+ "This path is available only when GenerateWinmd option is set to true for the linker process."))
 	@NestFieldInformation(value = "Architecture",
 			type = @NestTypeUsage(ArchitectureType.class),
 			info = @NestInformation("Contains the target Architecture for which the link operation was done.\n"
@@ -153,7 +165,7 @@ public class TaskDocs {
 			type = @NestTypeUsage(CompilationIdentifierTaskOption.class),
 			info = @NestInformation("Contains the Identifier that the linker task was assigned "
 					+ "with when linking the inputs."))
-	@NestTypeInformation(qualifiedName = "saker.msvc.CLinkerWorkerTaskOutput")
+	@NestTypeInformation(qualifiedName = "saker.msvc.MSVCLinkerWorkerTaskOutput")
 	public interface DocCLinkerWorkerTaskOutput {
 	}
 
@@ -180,7 +192,7 @@ public class TaskDocs {
 					elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class, DocSDKDescription.class }),
 			info = @NestInformation("Contains the SDKs that were used for compiling the inputs.\n"
 					+ "The map contains all SDKs (explicit or implicit) that was used during the configuration of the compilation."))
-	@NestTypeInformation(qualifiedName = "saker.msvc.CCompilerWorkerTaskOutput")
+	@NestTypeInformation(qualifiedName = "saker.msvc.MSVCCompilerWorkerTaskOutput")
 	public interface DocCCompilerWorkerTaskOutput {
 	}
 

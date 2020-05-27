@@ -7,3 +7,13 @@ build {
 		],
 	)
 }
+uppercase {
+	$compile = saker.msvc.ccompile([*.c, *.cpp])
+	saker.msvc.clink(
+		$compile,
+		SimpleParameters: [
+			/DLL
+		],
+		Identifier: upper
+	)
+}

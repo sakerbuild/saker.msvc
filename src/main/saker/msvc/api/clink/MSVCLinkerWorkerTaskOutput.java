@@ -32,6 +32,17 @@ public interface MSVCLinkerWorkerTaskOutput {
 	public SakerPath getOutputPath();
 
 	/**
+	 * Gets the output path of the generated <code>.winmd</code> file.
+	 * <p>
+	 * The result may be <code>null</code> if the linking operation was not explicitly configured to generate Windows
+	 * Metadata.
+	 * 
+	 * @return The absolute execution path to the Windows Metadata file or <code>null</code> if none.
+	 * @since saker.msvc 0.8.5
+	 */
+	public SakerPath getOutputWinmdPath();
+
+	/**
 	 * Gets the target architecture that was the compilation done for.
 	 * 
 	 * @return The target architecture.

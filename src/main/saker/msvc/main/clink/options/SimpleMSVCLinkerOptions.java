@@ -31,6 +31,8 @@ public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 	private Collection<CompilationPathTaskOption> libraryPath;
 	private Map<String, SDKDescriptionTaskOption> sdks;
 	private Collection<String> simpleParameters;
+	private Boolean generateWinmd;
+	private String binaryName;
 
 	public SimpleMSVCLinkerOptions() {
 	}
@@ -43,6 +45,8 @@ public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 		this.sdks = ObjectUtils.cloneTreeMap(copy.getSDKs(), Functionals.identityFunction(),
 				SDKDescriptionTaskOption::clone);
 		this.simpleParameters = ObjectUtils.cloneArrayList(copy.getSimpleLinkerParameters());
+		this.generateWinmd = copy.getGenerateWinmd();
+		this.binaryName = copy.getBinaryName();
 	}
 
 	@Override
@@ -78,6 +82,16 @@ public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 	@Override
 	public Collection<String> getSimpleLinkerParameters() {
 		return simpleParameters;
+	}
+
+	@Override
+	public Boolean getGenerateWinmd() {
+		return generateWinmd;
+	}
+
+	@Override
+	public String getBinaryName() {
+		return binaryName;
 	}
 
 	@Override
