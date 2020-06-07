@@ -90,7 +90,45 @@ public class MSVCCompilerWorkerTaskOutputImpl implements MSVCCompilerWorkerTaskO
 		objectFilePaths = SerialUtils.readExternalSortedImmutableNavigableSet(in);
 		architecture = (String) in.readObject();
 		compilationIdentifier = (CompilationIdentifier) in.readObject();
-		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in, SDKSupportUtils.getSDKNameComparator());
+		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
+				SDKSupportUtils.getSDKNameComparator());
+	}
+
+	@Override
+	public int hashCode() {
+		return (compilationIdentifier == null) ? 0 : compilationIdentifier.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		MSVCCompilerWorkerTaskOutputImpl other = (MSVCCompilerWorkerTaskOutputImpl) obj;
+		if (architecture == null) {
+			if (other.architecture != null)
+				return false;
+		} else if (!architecture.equals(other.architecture))
+			return false;
+		if (compilationIdentifier == null) {
+			if (other.compilationIdentifier != null)
+				return false;
+		} else if (!compilationIdentifier.equals(other.compilationIdentifier))
+			return false;
+		if (objectFilePaths == null) {
+			if (other.objectFilePaths != null)
+				return false;
+		} else if (!objectFilePaths.equals(other.objectFilePaths))
+			return false;
+		if (sdkDescriptions == null) {
+			if (other.sdkDescriptions != null)
+				return false;
+		} else if (!sdkDescriptions.equals(other.sdkDescriptions))
+			return false;
+		return true;
 	}
 
 }

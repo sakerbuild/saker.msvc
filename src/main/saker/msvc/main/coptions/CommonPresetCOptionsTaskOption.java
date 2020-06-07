@@ -16,12 +16,14 @@
 package saker.msvc.main.coptions;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
 import saker.msvc.main.clink.options.MSVCLinkerOptions;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 
 public final class CommonPresetCOptionsTaskOption implements MSVCLinkerOptions, MSVCCompilerOptions {
@@ -47,7 +49,7 @@ public final class CommonPresetCOptionsTaskOption implements MSVCLinkerOptions, 
 	}
 
 	@Override
-	public String getLanguage() {
+	public Collection<String> getLanguage() {
 		return null;
 	}
 
@@ -67,7 +69,7 @@ public final class CommonPresetCOptionsTaskOption implements MSVCLinkerOptions, 
 	}
 
 	@Override
-	public Collection<String> getSimpleCompilerParameters() {
+	public List<SimpleParameterTaskOption> getSimpleCompilerParameters() {
 		return null;
 	}
 }

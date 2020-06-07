@@ -54,6 +54,7 @@ import saker.msvc.impl.ccompile.MSVCCCompileWorkerTaskIdentifier;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.impl.coptions.preset.PresetCOptions;
 import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.SimpleParameterOption;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.options.CompilationInputPassOption;
 import saker.msvc.main.ccompile.options.CompilationInputPassTaskOption;
@@ -66,6 +67,7 @@ import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.DocCCompilerWorkerTaskOutput;
 import saker.msvc.main.options.CompilationPathTaskOption;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.msvc.main.util.TaskTags;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestParameterInformation;
@@ -80,11 +82,11 @@ import saker.std.api.file.location.FileLocation;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 import saker.std.main.file.utils.TaskOptionUtils;
 
+@NestTaskInformation(returnType = @NestTypeUsage(DocCCompilerWorkerTaskOutput.class))
 @NestInformation("Compiles C/C++ sources using the Microsoft Visual C++ toolchain.\n"
 		+ "The task provides access to the MSVC compiler (cl.exe). It can be used to compile C/C++ source files which "
 		+ "can be later linked using the " + MSVCCLinkTaskFactory.TASK_NAME + "() task.\n"
 		+ "The task supports distributing its workload using build clusters.")
-@NestTaskInformation(returnType = @NestTypeUsage(DocCCompilerWorkerTaskOutput.class))
 
 @NestParameterInformation(value = "Input",
 		aliases = { "" },
@@ -92,7 +94,7 @@ import saker.std.main.file.utils.TaskOptionUtils;
 		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationInputPassTaskOption.class),
 		info = @NestInformation("Specifies one or more inputs for the compilation.\n"
 				+ "The inputs may be either simple paths, wildcards, file locations, file collections or complex configuration specifying the "
-				+ "input source files passed to the backed compiler.\n"
+				+ "input source files passed to the backend compiler.\n"
 				+ "If not specified, the compilation language will be determined based on the extension of an input file. "
 				+ "If the file extension ends with \"pp\" or \"xx\", C++ is used by default. In any other cases, the file is "
 				+ "compiled for the C language."))
@@ -214,7 +216,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 					}
 				}
 
-				Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculatedincludediroptions = new HashMap<>();
+				Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculateddiroptions = new HashMap<>();
 				Map<FileCompilationProperties, String> precompiledheaderoutnamesconfigurations = new HashMap<>();
 
 				//ignore-case comparison of possible output names of the files
@@ -265,16 +267,19 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 									}
 
 									Map<String, String> macrodefinitions = input.getMacroDefinitions();
-									List<String> simpleparamoption = ImmutableUtils
-											.makeImmutableList(input.getSimpleParameters());
+									List<SimpleParameterOption> simpleparamoption = new ArrayList<>();
+									MSVCCLinkTaskFactory.addSimpleParameters(simpleparamoption,
+											input.getSimpleParameters());
 									String passlang = input.getLanguage();
 									FileLocation pchfilelocation = TaskOptionUtils
 											.toFileLocation(input.getPrecompiledHeader(), taskcontext);
 
 									Set<CompilationPathOption> inputincludedirs = toIncludePathOptions(taskcontext,
-											calculatedincludediroptions, input.getIncludeDirectories());
+											calculateddiroptions, input.getIncludeDirectories());
 									Set<CompilationPathOption> inputforceincludes = toIncludePathOptions(taskcontext,
-											calculatedincludediroptions, input.getForceInclude());
+											calculateddiroptions, input.getForceInclude());
+									Set<CompilationPathOption> inputforceusings = toIncludePathOptions(taskcontext,
+											calculateddiroptions, input.getForceUsing());
 									Boolean forceincludepch = input.getForceIncludePrecompiledHeader();
 
 									CompilationIdentifierTaskOption passsubidopt = input.getSubIdentifier();
@@ -296,6 +301,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 											nproperties.setIncludeDirectories(inputincludedirs);
 											nproperties.setMacroDefinitions(macrodefinitions);
 											nproperties.setForceInclude(inputforceincludes);
+											nproperties.setForceUsing(inputforceusings);
 
 											FileCompilationConfiguration nconfig = createConfigurationForProperties(
 													nproperties, passsubid, passlang);
@@ -346,7 +352,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 												: options.getIdentifier().getIdentifier())) {
 									return;
 								}
-								if (!CompilerUtils.canMergeLanguages(configlanguage, options.getLanguage())) {
+								Collection<String> optionslang = options.getLanguage();
+								if (!canMergeLanguages(configlanguage, optionslang)) {
 									return;
 								}
 								if (!MSVCCompilerOptions.canMergeArchitectures(architecture,
@@ -363,7 +370,8 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 											preset.getIdentifier())) {
 										continue;
 									}
-									if (!CompilerUtils.canMergeLanguages(configlanguage, preset.getLanguage())) {
+									String optionslang = preset.getLanguage();
+									if (!CompilerUtils.canMergeLanguages(configlanguage, optionslang)) {
 										continue;
 									}
 									if (!MSVCCompilerOptions.canMergeArchitectures(architecture,
@@ -379,12 +387,15 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 									FileCompilationProperties compilationproperties, TaskContext taskcontext,
 									NavigableMap<String, SDKDescription> sdkdescriptions) {
 								mergeIncludeDirectories(compilationproperties, toIncludePathOptions(taskcontext,
-										calculatedincludediroptions, options.getIncludeDirectories()));
+										calculateddiroptions, options.getIncludeDirectories()));
 								mergeForceIncludes(compilationproperties, toIncludePathOptions(taskcontext,
-										calculatedincludediroptions, options.getForceInclude()));
+										calculateddiroptions, options.getForceInclude()));
+								mergeForceUsings(compilationproperties, toIncludePathOptions(taskcontext,
+										calculateddiroptions, options.getForceUsing()));
 								mergeSDKDescriptionOptions(taskcontext, sdkdescriptions, options.getSDKs());
 								mergeMacroDefinitions(compilationproperties, options.getMacroDefinitions());
-								mergeSimpleParameters(compilationproperties, options.getSimpleCompilerParameters());
+								mergeSimpleParameterOptions(compilationproperties,
+										options.getSimpleCompilerParameters());
 
 								mergePrecompiledHeader(configholder,
 										TaskOptionUtils.toFileLocation(options.getPrecompiledHeader(), taskcontext));
@@ -398,6 +409,7 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 									NavigableMap<String, SDKDescription> sdkdescriptions) {
 								mergeIncludeDirectories(compilationproperties, preset.getIncludeDirectories());
 								mergeForceIncludes(compilationproperties, preset.getForceInclude());
+								mergeForceUsings(compilationproperties, preset.getForceUsing());
 								mergePresetSDKDescriptions(sdkdescriptions, preset);
 								mergeMacroDefinitions(compilationproperties, preset.getMacroDefinitions());
 								mergeSimpleParameters(compilationproperties, preset.getSimpleCompilerParameters());
@@ -438,14 +450,6 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 								precompiledheaderoutnamesconfigurations.put(pchprops, pchoutfilename);
 							}
 							configholder.config.setPrecompiledHeader(configholder.precompiledHeader, pchoutfilename);
-						}
-						List<String> sparams = configholder.config.getProperties().getSimpleParameters();
-						for (String sp : sparams) {
-							if (MSVCCCompileWorkerTaskFactory.ALWAYS_PRESENT_CL_PARAMETERS.contains(sp)) {
-								sparams = new ArrayList<>(sparams);
-								sparams.removeAll(MSVCCCompileWorkerTaskFactory.ALWAYS_PRESENT_CL_PARAMETERS);
-								break;
-							}
 						}
 
 						files.add(configholder.config);
@@ -505,12 +509,22 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 		}
 	}
 
-	private static void mergeSimpleParameters(FileCompilationProperties config, Collection<String> simpleparams) {
+	private static void mergeSimpleParameterOptions(FileCompilationProperties config,
+			Collection<SimpleParameterTaskOption> simpleparams) {
 		if (ObjectUtils.isNullOrEmpty(simpleparams)) {
 			return;
 		}
-		//do not deduplicate
-		List<String> result = ObjectUtils.newArrayList(config.getSimpleParameters());
+		List<SimpleParameterOption> result = ObjectUtils.newArrayList(config.getSimpleParameters());
+		MSVCCLinkTaskFactory.addSimpleParameters(result, simpleparams);
+		config.setSimpleParameters(result);
+	}
+
+	private static void mergeSimpleParameters(FileCompilationProperties config,
+			Collection<SimpleParameterOption> simpleparams) {
+		if (ObjectUtils.isNullOrEmpty(simpleparams)) {
+			return;
+		}
+		List<SimpleParameterOption> result = ObjectUtils.newArrayList(config.getSimpleParameters());
 		result.addAll(simpleparams);
 		config.setSimpleParameters(result);
 	}
@@ -548,6 +562,26 @@ public class MSVCCCompileTaskFactory extends FrontendTaskFactory<Object> {
 		}
 		config.setForceInclude(
 				ObjectUtils.addAll(ObjectUtils.newLinkedHashSet(config.getForceInclude()), includeoptions));
+	}
+
+	private static void mergeForceUsings(FileCompilationProperties config,
+			Collection<CompilationPathOption> usingoptions) {
+		if (ObjectUtils.isNullOrEmpty(usingoptions)) {
+			return;
+		}
+		config.setForceUsing(ObjectUtils.addAll(ObjectUtils.newLinkedHashSet(config.getForceUsing()), usingoptions));
+	}
+
+	private static boolean canMergeLanguages(String targetlang, Collection<String> optionslang) {
+		if (ObjectUtils.isNullOrEmpty(optionslang)) {
+			return true;
+		}
+		for (String lang : optionslang) {
+			if (CompilerUtils.canMergeLanguages(targetlang, lang)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static void mergePrecompiledHeader(ConfigSetupHolder configholder, FileLocation pch) {

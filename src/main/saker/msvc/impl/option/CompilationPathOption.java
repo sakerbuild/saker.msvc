@@ -15,7 +15,7 @@
  */
 package saker.msvc.impl.option;
 
-import saker.sdk.support.api.SDKPathReference;
+import saker.sdk.support.api.SDKPathCollectionReference;
 
 public interface CompilationPathOption {
 	public void accept(Visitor visitor);
@@ -28,11 +28,11 @@ public interface CompilationPathOption {
 
 	public interface Visitor {
 		public default void visit(FileCompilationPathOption includepath) {
-			throw new UnsupportedOperationException("Unsupported include path: " + includepath);
+			throw new UnsupportedOperationException("Unsupported path: " + includepath);
 		}
 
-		public default void visit(SDKPathReference includepath) {
-			throw new UnsupportedOperationException("Unsupported include path: " + includepath);
+		public default void visit(SDKPathCollectionReference includepath) {
+			throw new UnsupportedOperationException("Unsupported path: " + includepath);
 		}
 	}
 

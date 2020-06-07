@@ -28,25 +28,14 @@ import testing.saker.msvc.tests.MSVCTestCase;
 
 public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 	private Map<String, Set<TestMSVCSDKConfig>> defaultClusterMSVCSDKs = new HashMap<>();
-	private Map<String, Set<TestWindowsKitsSDKConfig>> defaultClusterWindowsKits = new HashMap<>();
 
 	public EnvironmentSDKMockingMSVCTestMetric(Path testsdkdirectory) {
 		super(testsdkdirectory);
 		addMSVCDefaultSDK(MSVCTestCase.DEFAULT_CLUSTER_NAME, MockingMSVCTestMetric.DEFAULT_VERSION, false);
-		addWindowsKitsDefaultSDK(MSVCTestCase.DEFAULT_CLUSTER_NAME, MockingMSVCTestMetric.DEFAULT_VERSION);
 	}
 
 	public void clearSDKs() {
 		clearMSVCSDKs();
-		clearWindowsKitsSDKs();
-	}
-
-	public void clearWindowsKitsSDKs() {
-		defaultClusterWindowsKits.clear();
-	}
-
-	public void clearWindowsKitsSDKs(String clustername) {
-		defaultClusterWindowsKits.remove(clustername);
 	}
 
 	public void clearMSVCSDKs() {
@@ -55,11 +44,6 @@ public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 
 	public void clearMSVCSDKs(String clustername) {
 		defaultClusterMSVCSDKs.remove(clustername);
-	}
-
-	public void addWindowsKitsDefaultSDK(String clustername, String version) {
-		defaultClusterWindowsKits.computeIfAbsent(clustername, Functionals.linkedHashSetComputer())
-				.add(new TestWindowsKitsSDKConfig(version));
 	}
 
 	public void addMSVCDefaultSDK(String clustername, String version, boolean legacyLayout) {
@@ -79,35 +63,6 @@ public class EnvironmentSDKMockingMSVCTestMetric extends MockingMSVCTestMetric {
 			result.add(s.version);
 		}
 		return result;
-	}
-
-	@Override
-	public Set<String> getPresentWindowsKitsSDKVersions(SakerEnvironment environment) {
-		String clustername = environment.getUserParameters().get(MSVCTestCase.TEST_CLUSTER_NAME_ENV_PARAM);
-		Set<TestWindowsKitsSDKConfig> sdk = defaultClusterWindowsKits.get(clustername);
-		if (sdk == null) {
-			throw new RuntimeException("SDK not found: " + clustername);
-		}
-		Set<String> result = new LinkedHashSet<>();
-		for (TestWindowsKitsSDKConfig s : sdk) {
-			result.add(s.version);
-		}
-		return result;
-	}
-
-	@Override
-	public SakerPath getWindowsKitsSDKBasePath(SakerEnvironment environment, String version) {
-		String clustername = environment.getUserParameters().get(MSVCTestCase.TEST_CLUSTER_NAME_ENV_PARAM);
-		Set<TestWindowsKitsSDKConfig> sdk = defaultClusterWindowsKits.get(clustername);
-		if (sdk == null) {
-			throw new RuntimeException("SDK not found: " + clustername);
-		}
-		for (TestWindowsKitsSDKConfig s : sdk) {
-			if (version.equals(s.version)) {
-				return SakerPath.valueOf(testSDKDirectory).resolve("windowskits");
-			}
-		}
-		throw new RuntimeException("SDK not found: " + clustername + " - " + version);
 	}
 
 	@Override

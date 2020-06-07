@@ -21,6 +21,7 @@ import java.util.Map;
 
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.std.main.file.option.FileLocationTaskOption;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 
@@ -35,7 +36,7 @@ public interface OptionCompilationInputPass {
 
 	public Map<String, String> getMacroDefinitions();
 
-	public List<String> getSimpleParameters();
+	public List<SimpleParameterTaskOption> getSimpleParameters();
 
 	public Collection<MSVCCompilerOptions> getCompilerOptions();
 
@@ -44,4 +45,6 @@ public interface OptionCompilationInputPass {
 	public Collection<CompilationPathTaskOption> getForceInclude();
 
 	public Boolean getForceIncludePrecompiledHeader();
+
+	public Collection<CompilationPathTaskOption> getForceUsing();
 }

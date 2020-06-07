@@ -17,6 +17,7 @@ package saker.msvc.main.ccompile.options;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import saker.build.file.path.SakerPath;
@@ -28,13 +29,11 @@ import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
-import saker.msvc.main.doc.TaskDocs.CompilationLanguage;
-import saker.msvc.main.doc.TaskDocs.DocIncludeDirectoryPathTaskOption;
-import saker.msvc.main.doc.TaskDocs.DocIncludeFilePathTaskOption;
+import saker.msvc.main.doc.TaskDocs.DocCompilationLanguage;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionKeyOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionValueOption;
-import saker.msvc.main.doc.TaskDocs.SimpleCompilerParameterOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
@@ -44,7 +43,7 @@ import saker.std.api.file.location.FileLocation;
 import saker.std.main.file.option.FileLocationTaskOption;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 
-@NestInformation("Represents an input configuration for the " + MSVCCCompileTaskFactory.TASK_NAME + "() task.\n"
+@NestInformation("Input configuration for the " + MSVCCCompileTaskFactory.TASK_NAME + "() task.\n"
 		+ "The configuration specifies which files should be compiled, in what manner.\n"
 		+ "The Files field defines the inputs to the compilation task. "
 		+ "The target architecture is determined by the direct Architecture parameter of the compiler task.")
@@ -55,12 +54,12 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 				+ "The specified files are directly passed to the backend compiler (cl.exe)."))
 
 @NestFieldInformation(value = "IncludeDirectories",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeDirectoryPathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationPathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
 @NestFieldInformation(value = "CompilerOptions",
 		type = @NestTypeUsage(value = Collection.class, elementTypes = MSVCCompilerOptions.class),
 		info = @NestInformation("Specifies one or more option specifications that are merged with the configuration when applicable.\n"
-				+ "Simplar to the CompilerOption parameter in " + MSVCCCompileTaskFactory.TASK_NAME
+				+ "Similar to the CompilerOption parameter in " + MSVCCCompileTaskFactory.TASK_NAME
 				+ "(), but only affects this input configuration. Mergeability is determined the same way, but with the "
 				+ "SubIdentifier field appended to the task compilation identifier.\n" + "Output from the "
 				+ COptionsPresetTaskFactory.TASK_NAME + "() task can be passed as a value to this field."))
@@ -74,15 +73,15 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 				elementTypes = { MacroDefinitionKeyOption.class, MacroDefinitionValueOption.class }),
 		info = @NestInformation(TaskDocs.COMPILE_MACRO_DEFINITIONS))
 @NestFieldInformation(value = "SimpleParameters",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleCompilerParameterOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleParameterTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_SIMPLE_PARAMETERS))
 @NestFieldInformation(value = "Language",
-		type = @NestTypeUsage(CompilationLanguage.class),
+		type = @NestTypeUsage(DocCompilationLanguage.class),
 		info = @NestInformation("Specifies the programming language that should be used for the compilation of the specified files.\n"
 				+ "If not specified, the language will be determined based on the extension of each file. "
 				+ "If the file extension ends with \"pp\" or \"xx\", C++ is used by default. In any other cases, the file is "
 				+ "compiled for the C language.\n"
-				+ "The language is also used to determine if fiven CompilerOptions configuration should be merged. "
+				+ "The language is also used to determine if the given CompilerOptions configuration should be merged. "
 				+ "The languages are treated in an case-insensitive way.\n"
 				+ "Corresponds to the /Tc or /Tp command line options accordingly for cl.exe."))
 
@@ -90,11 +89,15 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 		type = @NestTypeUsage(FileLocationTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_PRECOMPILED_HEADER))
 @NestFieldInformation(value = "ForceInclude",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeFilePathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationPathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE))
 @NestFieldInformation(value = "ForceIncludePrecompiledHeader",
 		type = @NestTypeUsage(boolean.class),
 		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE_PRECOMPILED_HEADER))
+
+@NestFieldInformation(value = "ForceUsing",
+		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationPathTaskOption.class),
+		info = @NestInformation(TaskDocs.COMPILE_FORCE_USING))
 public interface CompilationInputPassTaskOption {
 	public default CompilationInputPassTaskOption clone() {
 		return new OptionCompilationInputPassOption(this);
@@ -106,7 +109,7 @@ public interface CompilationInputPassTaskOption {
 		return null;
 	}
 
-	public default Collection<CompilationPathTaskOption> getIncludeDirectories() {
+	public default List<CompilationPathTaskOption> getIncludeDirectories() {
 		return null;
 	}
 
@@ -122,7 +125,7 @@ public interface CompilationInputPassTaskOption {
 		return null;
 	}
 
-	public default Collection<String> getSimpleParameters() {
+	public default List<SimpleParameterTaskOption> getSimpleParameters() {
 		return null;
 	}
 
@@ -134,11 +137,15 @@ public interface CompilationInputPassTaskOption {
 		return null;
 	}
 
-	public default Collection<CompilationPathTaskOption> getForceInclude() {
+	public default List<CompilationPathTaskOption> getForceInclude() {
 		return null;
 	}
 
 	public default Boolean getForceIncludePrecompiledHeader() {
+		return null;
+	}
+
+	public default List<CompilationPathTaskOption> getForceUsing() {
 		return null;
 	}
 

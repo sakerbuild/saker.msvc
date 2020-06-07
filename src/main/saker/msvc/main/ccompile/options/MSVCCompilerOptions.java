@@ -16,6 +16,7 @@
 package saker.msvc.main.ccompile.options;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import saker.build.thirdparty.saker.util.ObjectUtils;
@@ -25,20 +26,18 @@ import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.coptions.CommonPresetCOptionsTaskOption;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
-import saker.msvc.main.doc.TaskDocs.CompilationLanguage;
-import saker.msvc.main.doc.TaskDocs.DocIncludeDirectoryPathTaskOption;
-import saker.msvc.main.doc.TaskDocs.DocIncludeFilePathTaskOption;
+import saker.msvc.main.doc.TaskDocs.DocCompilationLanguage;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionKeyOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionValueOption;
-import saker.msvc.main.doc.TaskDocs.SimpleCompilerParameterOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 import saker.std.main.file.option.FileLocationTaskOption;
 
-@NestInformation("Represents an options configuration to be used with " + MSVCCCompileTaskFactory.TASK_NAME + "().\n"
+@NestInformation("Options configuration to be used with " + MSVCCCompileTaskFactory.TASK_NAME + "().\n"
 		+ "The described options will be merged with the compilation input configuration based on the option qualifiers. "
 		+ "The Identifier, Language, and Architecture fields are considered to be used as qualifiers for the option merging, "
 		+ "in which case they are tested for mergeability with the input configuration.")
@@ -47,13 +46,13 @@ import saker.std.main.file.option.FileLocationTaskOption;
 		type = @NestTypeUsage(CompilationIdentifierTaskOption.class),
 		info = @NestInformation(TaskDocs.OPTIONS_IDENTIFIER))
 @NestFieldInformation(value = "Language",
-		type = @NestTypeUsage(CompilationLanguage.class),
+		type = @NestTypeUsage(DocCompilationLanguage.class),
 		info = @NestInformation(TaskDocs.OPTIONS_LANGUAGE))
 @NestFieldInformation(value = "Architecture",
 		type = @NestTypeUsage(ArchitectureType.class),
 		info = @NestInformation(TaskDocs.OPTIONS_ARCHITECTURE))
 @NestFieldInformation(value = "IncludeDirectories",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeDirectoryPathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationPathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_INCLUDE_DIRECTORIES))
 @NestFieldInformation(value = "MacroDefinitions",
 		type = @NestTypeUsage(value = Map.class,
@@ -61,7 +60,7 @@ import saker.std.main.file.option.FileLocationTaskOption;
 		info = @NestInformation(TaskDocs.COMPILE_MACRO_DEFINITIONS + "\n"
 				+ "When merging, the macro definitions won't overwrite macro definitions specified previously."))
 @NestFieldInformation(value = "SimpleCompilerParameters",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleCompilerParameterOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleParameterTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_SIMPLE_PARAMETERS + "\n"
 				+ "When merging, duplicate parameters are removed automatically."))
 @NestFieldInformation(value = "SDKs",
@@ -77,12 +76,16 @@ import saker.std.main.file.option.FileLocationTaskOption;
 				+ "When merging, only a single precompiled header may be used. An exception "
 				+ "is thrown in case of conflict."))
 @NestFieldInformation(value = "ForceInclude",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = DocIncludeFilePathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationPathTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE))
 @NestFieldInformation(value = "ForceIncludePrecompiledHeader",
 		type = @NestTypeUsage(boolean.class),
 		info = @NestInformation(TaskDocs.COMPILE_FORCE_INCLUDE_PRECOMPILED_HEADER + "\n"
 				+ "When merging, true will take precedence for this option."))
+
+@NestFieldInformation(value = "ForceUsing",
+		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationPathTaskOption.class),
+		info = @NestInformation(TaskDocs.COMPILE_FORCE_USING))
 public interface MSVCCompilerOptions {
 	public void accept(Visitor visitor);
 
@@ -94,7 +97,7 @@ public interface MSVCCompilerOptions {
 		return null;
 	}
 
-	public default String getLanguage() {
+	public default Collection<String> getLanguage() {
 		return null;
 	}
 
@@ -110,7 +113,7 @@ public interface MSVCCompilerOptions {
 		return null;
 	}
 
-	public default Collection<String> getSimpleCompilerParameters() {
+	public default List<SimpleParameterTaskOption> getSimpleCompilerParameters() {
 		return null;
 	}
 
@@ -127,6 +130,10 @@ public interface MSVCCompilerOptions {
 	}
 
 	public default Boolean getForceIncludePrecompiledHeader() {
+		return null;
+	}
+
+	public default Collection<CompilationPathTaskOption> getForceUsing() {
 		return null;
 	}
 

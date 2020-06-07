@@ -34,20 +34,12 @@ public interface MSVCTestMetric {
 		return Collections.emptySet();
 	}
 
-	public default Set<String> getPresentWindowsKitsSDKVersions(SakerEnvironment environment) {
-		return Collections.emptySet();
-	}
-
 	public default SakerPath getMSVCSDKBasePath(SakerEnvironment environment, String version) {
 		throw new UnsupportedOperationException();
 	}
 
 	public default boolean isMSVCSDKLegacy(SakerEnvironment environment, String version) {
 		throw new UnsupportedOperationException();
-	}
-
-	public default SakerPath getWindowsKitsSDKBasePath(SakerEnvironment environment, String version) {
-		return null;
 	}
 
 	public default String getSystemArchitecture() {

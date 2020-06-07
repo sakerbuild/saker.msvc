@@ -24,21 +24,23 @@ import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.std.main.file.option.FileLocationTaskOption;
 import saker.std.main.file.option.MultiFileLocationTaskOption;
 
 public class OptionCompilationInputPassOption
 		implements OptionCompilationInputPass, CompilationInputPassOption, CompilationInputPassTaskOption {
 	private Collection<MultiFileLocationTaskOption> files;
-	private Collection<CompilationPathTaskOption> includeDirectories;
+	private List<CompilationPathTaskOption> includeDirectories;
 	private CompilationIdentifierTaskOption subIdentifier;
 	private Map<String, String> macroDefinitions;
-	private List<String> simpleParameters;
+	private List<SimpleParameterTaskOption> simpleParameters;
 	private Collection<MSVCCompilerOptions> compilerOptions;
 	private String language;
 	private FileLocationTaskOption precompiledHeader;
-	private Collection<CompilationPathTaskOption> forceInclude;
+	private List<CompilationPathTaskOption> forceInclude;
 	private Boolean forceIncludePrecompiledHeader;
+	private List<CompilationPathTaskOption> forceUsing;
 
 	public OptionCompilationInputPassOption(CompilationInputPassTaskOption copy) {
 		this.files = ObjectUtils.cloneArrayList(copy.getFiles(), MultiFileLocationTaskOption::clone);
@@ -52,6 +54,7 @@ public class OptionCompilationInputPassOption
 		this.precompiledHeader = ObjectUtils.clone(copy.getPrecompiledHeader(), FileLocationTaskOption::clone);
 		this.forceInclude = ObjectUtils.cloneArrayList(copy.getForceInclude(), CompilationPathTaskOption::clone);
 		this.forceIncludePrecompiledHeader = copy.getForceIncludePrecompiledHeader();
+		this.forceUsing = ObjectUtils.cloneArrayList(copy.getForceUsing(), CompilationPathTaskOption::clone);
 	}
 
 	@Override
@@ -75,7 +78,7 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public Collection<CompilationPathTaskOption> getIncludeDirectories() {
+	public List<CompilationPathTaskOption> getIncludeDirectories() {
 		return includeDirectories;
 	}
 
@@ -90,7 +93,7 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public List<String> getSimpleParameters() {
+	public List<SimpleParameterTaskOption> getSimpleParameters() {
 		return simpleParameters;
 	}
 
@@ -105,13 +108,18 @@ public class OptionCompilationInputPassOption
 	}
 
 	@Override
-	public Collection<CompilationPathTaskOption> getForceInclude() {
+	public List<CompilationPathTaskOption> getForceInclude() {
 		return forceInclude;
 	}
 
 	@Override
 	public Boolean getForceIncludePrecompiledHeader() {
 		return forceIncludePrecompiledHeader;
+	}
+
+	@Override
+	public List<CompilationPathTaskOption> getForceUsing() {
+		return forceUsing;
 	}
 
 	@Override

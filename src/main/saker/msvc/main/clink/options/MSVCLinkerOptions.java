@@ -16,6 +16,7 @@
 package saker.msvc.main.clink.options;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
@@ -24,15 +25,14 @@ import saker.msvc.main.clink.MSVCCLinkTaskFactory;
 import saker.msvc.main.coptions.CommonPresetCOptionsTaskOption;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
-import saker.msvc.main.doc.TaskDocs.DocLibraryPathTaskOption;
-import saker.msvc.main.doc.TaskDocs.SimpleLinkerParameterOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 
-@NestInformation("Represents an options configuration to be used with " + MSVCCLinkTaskFactory.TASK_NAME + "().\n"
+@NestInformation("Options configuration to be used with " + MSVCCLinkTaskFactory.TASK_NAME + "().\n"
 		+ "The described options will be merged with the linker input configuration based on the option qualifiers. "
 		+ "The Identifier and Architecture fields are considered to be used as qualifiers for the option merging, "
 		+ "in which case they are tested for mergeability with the input configuration.")
@@ -49,7 +49,7 @@ import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 		info = @NestInformation(TaskDocs.LINK_INPUT))
 
 @NestFieldInformation(value = "LibraryPath",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = DocLibraryPathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationPathTaskOption.class),
 		info = @NestInformation(TaskDocs.LINK_LIBRARY_PATH))
 @NestFieldInformation(value = "SDKs",
 		type = @NestTypeUsage(value = Map.class,
@@ -58,7 +58,7 @@ import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 		info = @NestInformation(TaskDocs.OPTION_SDKS + "\n"
 				+ "When merging, duplicate SDK definitions are not overwritten."))
 @NestFieldInformation(value = "SimpleLinkerParameters",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleLinkerParameterOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleParameterTaskOption.class),
 		info = @NestInformation(TaskDocs.LINK_SIMPLE_PARAMETERS + "\n"
 				+ "When merging, duplicate parameters are removed automatically."))
 @NestFieldInformation(value = "GenerateWinmd",
@@ -94,7 +94,7 @@ public interface MSVCLinkerOptions {
 		return null;
 	}
 
-	public default Collection<String> getSimpleLinkerParameters() {
+	public default List<SimpleParameterTaskOption> getSimpleLinkerParameters() {
 		return null;
 	}
 

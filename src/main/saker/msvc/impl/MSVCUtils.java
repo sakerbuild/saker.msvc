@@ -16,6 +16,7 @@
 package saker.msvc.impl;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -31,29 +32,30 @@ import java.util.function.Predicate;
 import saker.build.file.path.SakerPath;
 import saker.build.file.provider.FileEntry;
 import saker.build.file.provider.LocalFileProvider;
+import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.StringUtils;
 import saker.build.thirdparty.saker.util.function.Functionals;
+import saker.msvc.impl.option.SimpleParameterOption;
 import saker.msvc.impl.sdk.AbstractVCToolsSDKReference;
 import saker.msvc.impl.sdk.LegacyLayoutVCToolsSDKReference;
 import saker.msvc.impl.sdk.RegularLayoutVCToolsSDKReference;
 import saker.msvc.impl.sdk.VersionsMSVCSDKDescription;
-import saker.msvc.impl.sdk.VersionsWindowsKitsSDKDescription;
-import saker.msvc.impl.sdk.WindowsKitsSDKReference;
 import saker.nest.bundle.BundleIdentifier;
 import saker.process.api.ProcessIOConsumer;
 import saker.process.api.SakerProcess;
 import saker.process.api.SakerProcessBuilder;
 import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKPathCollectionReference;
+import saker.sdk.support.api.SDKPathReference;
+import saker.sdk.support.api.SDKPropertyCollectionReference;
+import saker.sdk.support.api.SDKPropertyReference;
 import saker.sdk.support.api.SDKReference;
-import saker.std.api.file.location.ExecutionFileLocation;
+import saker.sdk.support.api.exc.SDKPathNotFoundException;
 import saker.std.api.file.location.FileLocation;
-import saker.std.api.file.location.FileLocationVisitor;
-import saker.std.api.file.location.LocalFileLocation;
+import saker.std.api.util.SakerStandardUtils;
 import testing.saker.msvc.TestFlag;
 
 public class MSVCUtils {
-	public static final String SDK_NAME_WINDOWS_KITS = WindowsKitsSDKReference.SDK_NAME;
-
 	public static final String SDK_NAME_MSVC = AbstractVCToolsSDKReference.SDK_NAME;
 
 	public static final String VC_EXECUTABLE_NAME_CL = "cl";
@@ -67,8 +69,6 @@ public class MSVCUtils {
 			.valueOf("c:/Program Files (x86)/Microsoft Visual Studio/");
 
 	public static final SDKDescription DEFAULT_MSVC_SDK_DESCRIPTION = VersionsMSVCSDKDescription.create(null, null);
-	public static final SDKDescription DEFAULT_WINDOWS_KITS_SDK_DESCRIPTION = VersionsWindowsKitsSDKDescription
-			.create(null);
 
 	public static void removeEnvironmentVariablesFromProcess(ProcessBuilder pb) {
 		Map<String, String> env = pb.environment();
@@ -86,18 +86,6 @@ public class MSVCUtils {
 		env.remove("LIB");
 		//https://docs.microsoft.com/en-us/cpp/build/reference/linkrepro?view=vs-2019
 		env.remove("link_repro");
-	}
-
-	/**
-	 * @param versions
-	 *            The suitable versions or <code>null</code> if any.
-	 * @return
-	 */
-	public static SDKDescription getWindowsKitsSDKDescription(Set<String> versions) {
-		if (versions == null) {
-			return DEFAULT_WINDOWS_KITS_SDK_DESCRIPTION;
-		}
-		return VersionsWindowsKitsSDKDescription.create(versions);
 	}
 
 	/**
@@ -289,71 +277,6 @@ public class MSVCUtils {
 		return null;
 	}
 
-	public static WindowsKitsSDKReference searchWindowsKitsInProgramFiles(SakerPath programfiles,
-			Predicate<? super String> versionpredicate) {
-		LocalFileProvider fp = LocalFileProvider.getInstance();
-
-		SakerPath winkitsdir = programfiles.resolve("Windows Kits");
-		NavigableMap<String, ? extends FileEntry> entries;
-		try {
-			//Expected to contain version numbers directories. E.g. 10, 8.1
-			entries = fp.getDirectoryEntries(winkitsdir);
-		} catch (IOException e) {
-			return null;
-		}
-		NavigableSet<String> descendingverdirectories = new TreeSet<>(
-				Collections.reverseOrder(BundleIdentifier::compareVersionNumbers));
-		for (Entry<String, ? extends FileEntry> verentry : entries.entrySet()) {
-			if (!verentry.getValue().isDirectory()) {
-				continue;
-			}
-			String dirname = verentry.getKey();
-			//same version number semantics as bundle identifiers
-			if (!BundleIdentifier.isValidVersionNumber(dirname)) {
-				continue;
-			}
-			descendingverdirectories.add(dirname);
-		}
-		//Search for Windows.h to validate the SDK install.
-		//expect it to be at Include/<sdkversion>/um/Windows.h
-		for (String versiondir : descendingverdirectories) {
-			SakerPath versionedwinkitsdir = winkitsdir.resolve(versiondir);
-			SakerPath includedir = versionedwinkitsdir.resolve("Include");
-			NavigableMap<String, ? extends FileEntry> includedirentries;
-			try {
-				includedirentries = fp.getDirectoryEntries(includedir);
-			} catch (IOException e) {
-				continue;
-			}
-			NavigableSet<String> descendingincludeverdirectories = new TreeSet<>(
-					Collections.reverseOrder(BundleIdentifier::compareVersionNumbers));
-			for (Entry<String, ? extends FileEntry> incdirentry : includedirentries.entrySet()) {
-				if (!incdirentry.getValue().isDirectory()) {
-					continue;
-				}
-				String version = incdirentry.getKey();
-				if (!BundleIdentifier.isValidVersionNumber(version)) {
-					continue;
-				}
-				if (!versionpredicate.test(version)) {
-					continue;
-				}
-				descendingincludeverdirectories.add(version);
-			}
-			for (String includeverdir : descendingincludeverdirectories) {
-				SakerPath winhpath = includedir.resolve(includeverdir, "um", "Windows.h");
-				try {
-					if (fp.getFileAttributes(winhpath).isRegularFile()) {
-						return new WindowsKitsSDKReference(versionedwinkitsdir, includeverdir);
-					}
-				} catch (IOException e) {
-					continue;
-				}
-			}
-		}
-		return null;
-	}
-
 	public static Predicate<? super String> getSDKVersionsPredicate(Set<String> versions) {
 		if (versions == null) {
 			return Functionals.alwaysPredicate();
@@ -362,32 +285,78 @@ public class MSVCUtils {
 	}
 
 	public static String getFileName(FileLocation fl) {
-		//TODO use SakerStandardUtils from saker.standard 0.8.1
-		if (fl == null) {
-			return null;
-		}
-		FileLocationFileNameVisitor visitor = new FileLocationFileNameVisitor();
-		fl.accept(visitor);
-		return visitor.result;
+		return SakerStandardUtils.getFileLocationFileName(fl);
 	}
 
-	@Deprecated
-	private static class FileLocationFileNameVisitor implements FileLocationVisitor {
-		public String result;
-
-		public FileLocationFileNameVisitor() {
+	public static void evaluateSimpleParameters(List<String> result, List<? extends SimpleParameterOption> params,
+			Map<String, ? extends SDKReference> sdks) throws Exception {
+		if (params == null) {
+			return;
 		}
+		SimpleParameterOption.Visitor visitor = new SimpleParameterOption.Visitor() {
+			@Override
+			public void visit(String value) {
+				result.add(value);
+			}
 
-		@Override
-		public void visit(LocalFileLocation loc) {
-			result = loc.getLocalPath().getFileName();
+			@Override
+			public void visit(SDKPathCollectionReference value) {
+				try {
+					Collection<SakerPath> paths = value.getValue(sdks);
+					if (paths == null) {
+						throw new SDKPathNotFoundException("No SDK paths found for: " + value);
+					}
+					for (SakerPath p : paths) {
+						result.add(p.toString());
+					}
+				} catch (Exception e) {
+					throw ObjectUtils.sneakyThrow(e);
+				}
+			}
+
+			@Override
+			public void visit(SDKPropertyCollectionReference value) {
+				try {
+					Collection<String> props = value.getValue(sdks);
+					if (props == null) {
+						throw new SDKPathNotFoundException("No SDK paths found for: " + value);
+					}
+					result.addAll(props);
+				} catch (Exception e) {
+					throw ObjectUtils.sneakyThrow(e);
+				}
+			}
+
+			@Override
+			public void visit(SDKPathReference value) {
+				try {
+					SakerPath p = value.getValue(sdks);
+					if (p == null) {
+						throw new SDKPathNotFoundException("No SDK paths found for: " + value);
+					}
+					result.add(p.toString());
+				} catch (Exception e) {
+					throw ObjectUtils.sneakyThrow(e);
+				}
+			}
+
+			@Override
+			public void visit(SDKPropertyReference value) {
+				try {
+					String prop = value.getValue(sdks);
+					if (prop == null) {
+						throw new SDKPathNotFoundException("No SDK paths found for: " + value);
+					}
+					result.add(prop);
+				} catch (Exception e) {
+					throw ObjectUtils.sneakyThrow(e);
+				}
+			}
+
+		};
+		for (SimpleParameterOption p : params) {
+			p.accept(visitor);
 		}
-
-		@Override
-		public void visit(ExecutionFileLocation loc) {
-			result = loc.getPath().getFileName();
-		}
-
 	}
 
 }

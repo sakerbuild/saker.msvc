@@ -50,6 +50,7 @@ import saker.msvc.impl.clink.MSVCCLinkWorkerTaskIdentifier;
 import saker.msvc.impl.coptions.preset.COptionsPresetTaskOutput;
 import saker.msvc.impl.coptions.preset.PresetCOptions;
 import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.SimpleParameterOption;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
@@ -62,9 +63,8 @@ import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.DocCLinkerWorkerTaskOutput;
-import saker.msvc.main.doc.TaskDocs.DocLibraryPathTaskOption;
-import saker.msvc.main.doc.TaskDocs.SimpleLinkerParameterOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
 import saker.nest.scriptinfo.reflection.annot.NestParameterInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTaskInformation;
@@ -114,16 +114,15 @@ import saker.std.api.file.location.FileLocation;
 				+ "If not specified, the identifier is determined based on the current working directory, "
 				+ "or assigned to \"default\", however, it won't be subject to option merging."))
 @NestParameterInformation(value = "LibraryPath",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = DocLibraryPathTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = CompilationPathTaskOption.class),
 		info = @NestInformation(TaskDocs.LINK_LIBRARY_PATH))
 @NestParameterInformation(value = "SDKs",
 		type = @NestTypeUsage(value = Map.class,
 				elementTypes = { saker.sdk.support.main.TaskDocs.DocSdkNameOption.class,
 						SDKDescriptionTaskOption.class }),
-		info = @NestInformation(TaskDocs.OPTION_SDKS + "\n"
-				+ "Any SDKs that were used in any of the compilation task inputs will be added to the set of used SDKs."))
+		info = @NestInformation(TaskDocs.OPTION_SDKS))
 @NestParameterInformation(value = "SimpleParameters",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleLinkerParameterOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleParameterTaskOption.class),
 		info = @NestInformation(TaskDocs.LINK_SIMPLE_PARAMETERS))
 @NestParameterInformation(value = "GenerateWinmd",
 		type = @NestTypeUsage(boolean.class),
@@ -170,7 +169,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 			public Map<String, SDKDescriptionTaskOption> sdksOption;
 
 			@SakerInput(value = "SimpleParameters")
-			public Collection<String> simpleParametersOption;
+			public Collection<SimpleParameterTaskOption> simpleParametersOption;
 
 			@SakerInput(value = { "LinkerOptions" })
 			public Collection<MSVCLinkerOptions> linkerOptionsOption;
@@ -192,7 +191,9 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				Collection<CompilationPathTaskOption> libpathoptions = new ArrayList<>();
 				Map<String, SDKDescriptionTaskOption> sdkoptions = new TreeMap<>(
 						SDKSupportUtils.getSDKNameComparator());
-				List<String> simpleparams = ObjectUtils.newArrayList(this.simpleParametersOption);
+				List<SimpleParameterOption> simpleparams = new ArrayList<>();
+				Collection<SimpleParameterTaskOption> simpleparamsoption = this.simpleParametersOption;
+				addSimpleParameters(simpleparams, simpleparamsoption);
 				CompilationIdentifierTaskOption identifieropt = ObjectUtils.clone(this.identifierOption,
 						CompilationIdentifierTaskOption::clone);
 
@@ -322,7 +323,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 							}
 							MSVCCCompileTaskFactory.mergeSDKDescriptionOptions(taskcontext, nullablesdkdescriptions,
 									options.getSDKs());
-							ObjectUtils.addAll(simpleparams, options.getSimpleLinkerParameters());
+							addSimpleParameters(simpleparams, options.getSimpleLinkerParameters());
 							Collection<LinkerInputPassTaskOption> optinput = options.getLinkerInput();
 							if (!ObjectUtils.isNullOrEmpty(optinput)) {
 								for (LinkerInputPassTaskOption opttaskin : optinput) {
@@ -354,12 +355,13 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 								ObjectUtils.addAll(librarypath, preset.getLibraryPath());
 								MSVCCCompileTaskFactory.mergePresetSDKDescriptions(nullablesdkdescriptions, preset);
 								ObjectUtils.addAll(simpleparams, preset.getSimpleLinkerParameters());
+								if (Boolean.TRUE.equals(preset.getGenerateWinmd())) {
+									genwinmd[0] = Boolean.TRUE;
+								}
 							}
 						}
 					});
 				}
-
-				simpleparams.removeAll(MSVCCLinkWorkerTaskFactory.ALWAYS_PRESENT_LINK_PARAMETERS);
 
 				//XXX try to infer the MSVC SDK from input compilation task outputs?
 				nullablesdkdescriptions.putIfAbsent(MSVCUtils.SDK_NAME_MSVC, MSVCUtils.DEFAULT_MSVC_SDK_DESCRIPTION);
@@ -479,4 +481,18 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 			}
 		});
 	}
+
+	public static void addSimpleParameters(List<SimpleParameterOption> simpleparams,
+			Collection<SimpleParameterTaskOption> simpleparamsoption) {
+		if (simpleparamsoption == null) {
+			return;
+		}
+		for (SimpleParameterTaskOption sp : simpleparamsoption) {
+			if (sp == null) {
+				continue;
+			}
+			simpleparams.add(sp.getParameter());
+		}
+	}
+
 }

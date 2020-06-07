@@ -19,10 +19,16 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Map;
+import java.util.NavigableMap;
 
 import saker.build.file.path.SakerPath;
+import saker.build.thirdparty.saker.util.ImmutableUtils;
+import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.api.clink.MSVCLinkerWorkerTaskOutput;
+import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKSupportUtils;
 
 public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutput, Externalizable {
 	private static final long serialVersionUID = 1L;
@@ -31,6 +37,7 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 	private String architecture;
 	private SakerPath outputPath;
 	private SakerPath outputWinmdPath;
+	private NavigableMap<String, SDKDescription> sdkDescriptions;
 
 	/**
 	 * For {@link Externalizable}.
@@ -39,11 +46,12 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 	}
 
 	public MSVCLinkerWorkerTaskOutputImpl(CompilationIdentifier compilationIdentifier, String architecture,
-			SakerPath outputPath, SakerPath outputWinmdPath) {
+			SakerPath outputPath, SakerPath outputWinmdPath, NavigableMap<String, SDKDescription> sdkDescriptions) {
 		this.compilationIdentifier = compilationIdentifier;
 		this.architecture = architecture;
 		this.outputPath = outputPath;
 		this.outputWinmdPath = outputWinmdPath;
+		this.sdkDescriptions = ImmutableUtils.unmodifiableNavigableMap(sdkDescriptions);
 	}
 
 	@Override
@@ -67,11 +75,17 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 	}
 
 	@Override
+	public Map<String, SDKDescription> getSDKs() {
+		return sdkDescriptions;
+	}
+
+	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		out.writeObject(compilationIdentifier);
 		out.writeObject(architecture);
 		out.writeObject(outputPath);
 		out.writeObject(outputWinmdPath);
+		SerialUtils.writeExternalMap(out, sdkDescriptions);
 	}
 
 	@Override
@@ -80,6 +94,8 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 		architecture = (String) in.readObject();
 		outputPath = (SakerPath) in.readObject();
 		outputWinmdPath = (SakerPath) in.readObject();
+		sdkDescriptions = SerialUtils.readExternalSortedImmutableNavigableMap(in,
+				SDKSupportUtils.getSDKNameComparator());
 	}
 
 	@Override
@@ -115,6 +131,11 @@ public class MSVCLinkerWorkerTaskOutputImpl implements MSVCLinkerWorkerTaskOutpu
 			if (other.outputWinmdPath != null)
 				return false;
 		} else if (!outputWinmdPath.equals(other.outputWinmdPath))
+			return false;
+		if (sdkDescriptions == null) {
+			if (other.sdkDescriptions != null)
+				return false;
+		} else if (!sdkDescriptions.equals(other.sdkDescriptions))
 			return false;
 		return true;
 	}

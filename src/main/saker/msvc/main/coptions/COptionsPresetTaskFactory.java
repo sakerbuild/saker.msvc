@@ -97,6 +97,10 @@ public class COptionsPresetTaskFactory extends FrontendTaskFactory<Object> {
 							presets.addAll(COptionPresets.getConsolePresets());
 							break;
 						}
+						case COptionsPresetType.WIN32: {
+							presets.addAll(COptionPresets.getWin32Presets());
+							break;
+						}
 						case COptionsPresetType.DLL: {
 							presets.addAll(COptionPresets.getDLLPresets());
 							break;
@@ -107,6 +111,10 @@ public class COptionsPresetTaskFactory extends FrontendTaskFactory<Object> {
 						}
 						case COptionsPresetType.OPTIMIZE_DEBUG: {
 							presets.addAll(COptionPresets.getOptimizeDebug());
+							break;
+						}
+						case COptionsPresetType.UAP: {
+							presets.addAll(COptionPresets.getUap());
 							break;
 						}
 						default: {

@@ -76,9 +76,6 @@ public class DifferentClusterDefaultSDKTest extends MSVCTestCase {
 		metric.addMSVCDefaultSDK(null, "1.0", false);
 		metric.addMSVCDefaultSDK(SimpleClusterCompileTest.DEFAULT_CLUSTER_NAME, "2.0", false);
 		metric.addMSVCDefaultSDK(SimpleClusterCompileTest.DEFAULT_CLUSTER_NAME, "1.0", false);
-
-		metric.addWindowsKitsDefaultSDK(null, "1.0");
-		metric.addWindowsKitsDefaultSDK(SimpleClusterCompileTest.DEFAULT_CLUSTER_NAME, "1.0");
 	}
 
 	@Override

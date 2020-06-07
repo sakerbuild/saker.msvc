@@ -97,6 +97,7 @@ import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.build.thirdparty.saker.util.io.UnsyncByteArrayOutputStream;
 import saker.build.trace.BuildTrace;
 import saker.compiler.utils.api.CompilationIdentifier;
+import saker.msvc.api.ccompile.MSVCCompilerWorkerTaskOutput;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.ccompile.CompilerState.CompiledFileState;
 import saker.msvc.impl.ccompile.CompilerState.PrecompiledHeaderState;
@@ -107,7 +108,7 @@ import saker.msvc.impl.util.InnerTaskMirrorHandler;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.sdk.support.api.SDKDescription;
-import saker.sdk.support.api.SDKPathReference;
+import saker.sdk.support.api.SDKPathCollectionReference;
 import saker.sdk.support.api.SDKReference;
 import saker.sdk.support.api.SDKSupportUtils;
 import saker.sdk.support.api.exc.SDKManagementException;
@@ -119,7 +120,8 @@ import saker.std.api.file.location.LocalFileLocation;
 import saker.std.api.util.SakerStandardUtils;
 import testing.saker.msvc.TestFlag;
 
-public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<Object>, Externalizable {
+public class MSVCCCompileWorkerTaskFactory
+		implements TaskFactory<MSVCCompilerWorkerTaskOutput>, Task<MSVCCompilerWorkerTaskOutput>, Externalizable {
 	private static final long serialVersionUID = 1L;
 
 	private static final NavigableSet<String> WORKER_TASK_CAPABILITIES = ImmutableUtils
@@ -188,12 +190,12 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 	}
 
 	@Override
-	public Task<? extends Object> createTask(ExecutionContext executioncontext) {
+	public Task<? extends MSVCCompilerWorkerTaskOutput> createTask(ExecutionContext executioncontext) {
 		return this;
 	}
 
 	@Override
-	public Object run(TaskContext taskcontext) throws Exception {
+	public MSVCCompilerWorkerTaskOutput run(TaskContext taskcontext) throws Exception {
 		if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_006) {
 			BuildTrace.classifyTask(BuildTrace.CLASSIFICATION_WORKER);
 		}
@@ -223,7 +225,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 		TaskExecutionEnvironmentSelector envselector = SDKSupportUtils
 				.getSDKBasedClusterExecutionEnvironmentSelector(sdkDescriptions.values());
-		NavigableMap<String, SDKDescription> compilerinnertasksdkdescriptions = sdkDescriptions;
+		NavigableMap<String, SDKDescription> compilerinnertasksdkdescriptions;
 		EnvironmentSelectionResult envselectionresult;
 		if (envselector != null) {
 			try {
@@ -237,8 +239,10 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			envselector = SDKSupportUtils
 					.getSDKBasedClusterExecutionEnvironmentSelector(compilerinnertasksdkdescriptions.values());
 		} else {
-			//TODO in this case we probably should report a dependency on the resolved sdks
 			envselectionresult = null;
+			NavigableMap<String, SDKReference> resolvedsdks = SDKSupportUtils.resolveSDKReferences(taskcontext,
+					sdkDescriptions);
+			compilerinnertasksdkdescriptions = SDKSupportUtils.pinSDKSelection(sdkDescriptions, resolvedsdks);
 		}
 
 		CompilerState prevoutput = taskcontext.getPreviousTaskOutput(CompilerState.class, CompilerState.class);
@@ -466,7 +470,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 						}
 
 						@Override
-						public void visit(SDKPathReference includedir) {
+						public void visit(SDKPathCollectionReference includedir) {
 							//ignore dependency wise
 						}
 					});
@@ -498,7 +502,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		}
 
 		MSVCCompilerWorkerTaskOutputImpl result = new MSVCCompilerWorkerTaskOutputImpl(passidentifier, architecture,
-				sdkDescriptions);
+				compilerinnertasksdkdescriptions);
 		result.setObjectFilePaths(nstate.getOutputObjectFilePaths());
 		return result;
 	}
@@ -1010,10 +1014,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 		protected SakerDirectory outputDir;
 
 		private transient InnerTaskMirrorHandler mirrorHandler = new InnerTaskMirrorHandler();
-		private transient NavigableMap<String, Supplier<SDKReference>> referencedSDKCache = new ConcurrentSkipListMap<>(
-				SDKSupportUtils.getSDKNameComparator());
-		private transient NavigableMap<String, Object> sdkCacheLocks = new ConcurrentSkipListMap<>(
-				SDKSupportUtils.getSDKNameComparator());
 
 		private transient ConcurrentHashMap<FileCompilationConfiguration, Object> precompiledHeaderCreationLocks = new ConcurrentHashMap<>();
 		private transient ConcurrentHashMap<FileCompilationConfiguration, Optional<PrecompiledHeaderDependencyInfo>> precompiledHeaderCreationResults = new ConcurrentHashMap<>();
@@ -1132,10 +1132,15 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				BuildTrace.setDisplayInformation(compilefilepath.getFileName().toString(), null);
 			}
 
-			List<Path> includedirpaths = getIncludePaths(taskutilities, environment,
-					compilationentryproperties.getIncludeDirectories(), true);
-			List<Path> forceincludepaths = getIncludePaths(taskutilities, environment,
-					compilationentryproperties.getForceInclude(), false);
+			NavigableMap<String, SDKReference> sdks = SDKSupportUtils
+					.resolveSDKReferences(taskcontext.getExecutionContext().getEnvironment(), sdkDescriptions);
+
+			List<Path> includedirpaths = getIncludePaths(taskutilities,
+					compilationentryproperties.getIncludeDirectories(), true, sdks);
+			List<Path> forceincludepaths = getIncludePaths(taskutilities, compilationentryproperties.getForceInclude(),
+					false, sdks);
+			List<Path> forceusingpaths = getIncludePaths(taskutilities, compilationentryproperties.getForceUsing(),
+					false, sdks);
 			boolean forceincludepch = compilationentry.isPrecompiledHeaderForceInclude();
 
 			FileCompilationConfiguration compilationconfiguration = compilationentry;
@@ -1151,7 +1156,7 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			String hostarchitecture = environment
 					.getEnvironmentPropertyCurrentValue(SystemArchitectureEnvironmentProperty.INSTANCE);
 
-			SDKReference vcsdk = getSDKReferenceForName(environment, MSVCUtils.SDK_NAME_MSVC);
+			SDKReference vcsdk = SDKSupportUtils.requireSDK(sdks, MSVCUtils.SDK_NAME_MSVC);
 
 			SakerPath clexepath = MSVCUtils.getVCSDKExecutablePath(vcsdk, hostarchitecture, this.architecture,
 					MSVCUtils.VC_EXECUTABLE_NAME_CL);
@@ -1201,13 +1206,14 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 							} else {
 								List<String> commands = new ArrayList<>();
 								commands.add(clexepath.toString());
-								commands.addAll(pchproperties.getSimpleParameters());
+								MSVCUtils.evaluateSimpleParameters(commands, pchproperties.getSimpleParameters(), sdks);
 								addAlwaysPresentParameters(commands);
 								commands.add(
 										getLanguageCommandLineOption(pchproperties.getLanguage()) + pchcompilefilepath);
 								commands.add("/Fo" + pchobjpath);
 								addIncludeDirectoryCommands(commands, includedirpaths);
 								addForceIncludeCommands(commands, forceincludepaths);
+								addForceUsingCommands(commands, forceusingpaths);
 								addMacroDefinitionCommands(commands, pchproperties.getMacroDefinitions());
 
 								commands.add("/Yc");
@@ -1259,12 +1265,13 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 
 			List<String> commands = new ArrayList<>();
 			commands.add(clexepath.toString());
-			commands.addAll(compilationentryproperties.getSimpleParameters());
+			MSVCUtils.evaluateSimpleParameters(commands, compilationentryproperties.getSimpleParameters(), sdks);
 			addAlwaysPresentParameters(commands);
 			commands.add(getLanguageCommandLineOption(compilationentryproperties.getLanguage()) + compilefilepath);
 			commands.add("/Fo" + objoutpath);
 			addIncludeDirectoryCommands(commands, includedirpaths);
 			addForceIncludeCommands(commands, forceincludepaths);
+			addForceUsingCommands(commands, forceusingpaths);
 			addMacroDefinitionCommands(commands, compilationentryproperties.getMacroDefinitions());
 			if (pchoutpath != null) {
 				commands.add("/Fp" + pchoutpath);
@@ -1303,24 +1310,23 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			return result;
 		}
 
-		private List<Path> getIncludePaths(TaskExecutionUtilities taskutilities, SakerEnvironment environment,
-				Collection<CompilationPathOption> includeoptions, boolean directories) {
+		private List<Path> getIncludePaths(TaskExecutionUtilities taskutilities,
+				Collection<CompilationPathOption> includeoptions, boolean directories,
+				Map<String, ? extends SDKReference> sdks) {
 			if (ObjectUtils.isNullOrEmpty(includeoptions)) {
 				return Collections.emptyList();
 			}
 			List<Path> includepaths = new ArrayList<>();
 			if (!ObjectUtils.isNullOrEmpty(includeoptions)) {
 				for (CompilationPathOption incopt : includeoptions) {
-					Path incpath = getIncludePath(taskutilities, environment, incopt, directories);
-					includepaths.add(incpath);
+					getIncludePath(taskutilities, incopt, directories, includepaths, sdks);
 				}
 			}
 			return includepaths;
 		}
 
-		private Path getIncludePath(TaskExecutionUtilities taskutilities, SakerEnvironment environment,
-				CompilationPathOption includediroption, boolean directories) {
-			Path[] includepath = { null };
+		private void getIncludePath(TaskExecutionUtilities taskutilities, CompilationPathOption includediroption,
+				boolean directories, List<Path> includepaths, Map<String, ? extends SDKReference> sdks) {
 			includediroption.accept(new CompilationPathOption.Visitor() {
 				@Override
 				public void visit(FileCompilationPathOption includedir) {
@@ -1329,12 +1335,14 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 						public void visit(ExecutionFileLocation loc) {
 							SakerPath path = loc.getPath();
 							try {
+								Path incpath;
 								if (directories) {
-									includepath[0] = mirrorHandler.mirrorDirectory(taskutilities, path);
+									incpath = mirrorHandler.mirrorDirectory(taskutilities, path);
 								} else {
 									//XXX handle mirrored force include contents?
-									includepath[0] = mirrorHandler.mirrorFile(taskutilities, path).getPath();
+									incpath = mirrorHandler.mirrorFile(taskutilities, path).getPath();
 								}
+								includepaths.add(incpath);
 							} catch (FileMirroringUnavailableException | IOException e) {
 								throw ObjectUtils.sneakyThrow(e);
 							}
@@ -1349,31 +1357,25 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 				}
 
 				@Override
-				public void visit(SDKPathReference includedir) {
+				public void visit(SDKPathCollectionReference includedir) {
 					//XXX duplicated code with linker worker
-					String sdkname = includedir.getSDKName();
-					if (ObjectUtils.isNullOrEmpty(sdkname)) {
-						throw new SDKPathNotFoundException("Include directory returned empty sdk name: " + includedir);
-					}
-					SDKReference sdkref = getSDKReferenceForName(environment, sdkname);
-					if (sdkref == null) {
-						throw new SDKPathNotFoundException("SDK configuration not found for name: " + sdkname
-								+ " required by include directory: " + includedir);
-					}
 					try {
-						SakerPath sdkdirpath = includedir.getPath(sdkref);
-						if (sdkdirpath == null) {
-							throw new SDKPathNotFoundException("No SDK include directory found for: " + includedir
-									+ " in SDK: " + sdkname + " as " + sdkref);
+						Collection<SakerPath> paths = includedir.getValue(sdks);
+						if (paths == null) {
+							throw new SDKPathNotFoundException(
+									"No SDK include directory path found for: " + includedir);
 						}
-						includepath[0] = LocalFileProvider.toRealPath(sdkdirpath);
+						for (SakerPath sdkdirpath : paths) {
+							includepaths.add(LocalFileProvider.toRealPath(sdkdirpath));
+						}
+					} catch (SDKManagementException e) {
+						throw e;
 					} catch (Exception e) {
-						throw new SDKPathNotFoundException("Failed to retrieve SDK include directory for: " + includedir
-								+ " in SDK: " + sdkname + " as " + sdkref, e);
+						throw new SDKPathNotFoundException(
+								"Failed to retrieve include directory path from SDKs: " + includedir);
 					}
 				}
 			});
-			return includepath[0];
 		}
 
 		private static void addIncludeDirectoryCommands(List<String> commands, List<Path> includedirpaths) {
@@ -1389,8 +1391,17 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			if (ObjectUtils.isNullOrEmpty(forceincludepaths)) {
 				return;
 			}
-			for (Path fipath : forceincludepaths) {
-				commands.add("/FI" + fipath);
+			for (Path fpath : forceincludepaths) {
+				commands.add("/FI" + fpath);
+			}
+		}
+
+		private static void addForceUsingCommands(List<String> commands, List<Path> forceusingpaths) {
+			if (ObjectUtils.isNullOrEmpty(forceusingpaths)) {
+				return;
+			}
+			for (Path fpath : forceusingpaths) {
+				commands.add("/FU" + fpath);
 			}
 		}
 
@@ -1537,36 +1548,6 @@ public class MSVCCCompileWorkerTaskFactory implements TaskFactory<Object>, Task<
 			}
 		}
 
-		//XXX somewhat duplicated with linker worker factory
-		private SDKReference getSDKReferenceForName(SakerEnvironment environment, String sdkname) {
-			Supplier<SDKReference> sdkref = referencedSDKCache.get(sdkname);
-			if (sdkref != null) {
-				return sdkref.get();
-			}
-			synchronized (sdkCacheLocks.computeIfAbsent(sdkname, Functionals.objectComputer())) {
-				sdkref = referencedSDKCache.get(sdkname);
-				if (sdkref != null) {
-					return sdkref.get();
-				}
-				SDKDescription desc = sdkDescriptions.get(sdkname);
-				if (desc == null) {
-					sdkref = () -> {
-						throw new SDKNotFoundException("SDK not found for name: " + sdkname);
-					};
-				} else {
-					try {
-						SDKReference refresult = SDKSupportUtils.resolveSDKReference(environment, desc);
-						sdkref = Functionals.valSupplier(refresult);
-					} catch (Exception e) {
-						sdkref = () -> {
-							throw new SDKManagementException("Failed to resolve SDK: " + sdkname + " as " + desc, e);
-						};
-					}
-				}
-				referencedSDKCache.put(sdkname, sdkref);
-			}
-			return sdkref.get();
-		}
 	}
 
 	private static String getLanguageCommandLineOption(String language) {

@@ -13,6 +13,7 @@ import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.SimpleParameterOption;
 import saker.std.api.file.location.FileLocation;
 
 public final class FileCompilationProperties implements Externalizable {
@@ -23,8 +24,9 @@ public final class FileCompilationProperties implements Externalizable {
 	//store include directories as a list, as their order matters
 	protected List<CompilationPathOption> includeDirectories;
 	protected List<CompilationPathOption> forceInclude;
+	protected List<CompilationPathOption> forceUsing;
 	protected Map<String, String> macroDefinitions;
-	protected List<String> simpleParameters = Collections.emptyList();
+	protected List<SimpleParameterOption> simpleParameters = Collections.emptyList();
 
 	/**
 	 * For {@link Externalizable}.
@@ -51,6 +53,7 @@ public final class FileCompilationProperties implements Externalizable {
 		this.language = config.language;
 		this.includeDirectories = config.includeDirectories;
 		this.forceInclude = config.forceInclude;
+		this.forceUsing = config.forceUsing;
 		this.macroDefinitions = config.macroDefinitions;
 		this.simpleParameters = config.simpleParameters;
 	}
@@ -73,7 +76,16 @@ public final class FileCompilationProperties implements Externalizable {
 		}
 	}
 
-	public void setSimpleParameters(List<String> simpleParameters) {
+	public void setForceUsing(Collection<? extends CompilationPathOption> usingDirectories) {
+		if (ObjectUtils.isNullOrEmpty(usingDirectories)) {
+			this.forceUsing = null;
+		} else {
+			this.forceUsing = ImmutableUtils
+					.makeImmutableList(ImmutableUtils.makeImmutableLinkedHashSet(usingDirectories));
+		}
+	}
+
+	public void setSimpleParameters(List<SimpleParameterOption> simpleParameters) {
 		if (simpleParameters == null) {
 			this.simpleParameters = Collections.emptyList();
 		} else {
@@ -101,12 +113,16 @@ public final class FileCompilationProperties implements Externalizable {
 		return macroDefinitions;
 	}
 
-	public List<String> getSimpleParameters() {
+	public List<SimpleParameterOption> getSimpleParameters() {
 		return simpleParameters;
 	}
 
 	public List<CompilationPathOption> getForceInclude() {
 		return forceInclude;
+	}
+
+	public List<CompilationPathOption> getForceUsing() {
+		return forceUsing;
 	}
 
 	public void setMacroDefinitions(Map<String, String> macroDefinitions) {
@@ -123,6 +139,7 @@ public final class FileCompilationProperties implements Externalizable {
 		out.writeObject(language);
 		SerialUtils.writeExternalCollection(out, includeDirectories);
 		SerialUtils.writeExternalCollection(out, forceInclude);
+		SerialUtils.writeExternalCollection(out, forceUsing);
 		SerialUtils.writeExternalMap(out, macroDefinitions);
 		SerialUtils.writeExternalCollection(out, simpleParameters);
 	}
@@ -133,6 +150,7 @@ public final class FileCompilationProperties implements Externalizable {
 		language = (String) in.readObject();
 		includeDirectories = SerialUtils.readExternalImmutableList(in);
 		forceInclude = SerialUtils.readExternalImmutableList(in);
+		forceUsing = SerialUtils.readExternalImmutableList(in);
 		macroDefinitions = SerialUtils.readExternalImmutableLinkedHashMap(in);
 		simpleParameters = SerialUtils.readExternalImmutableList(in);
 	}
@@ -162,6 +180,11 @@ public final class FileCompilationProperties implements Externalizable {
 				return false;
 		} else if (!forceInclude.equals(other.forceInclude))
 			return false;
+		if (forceUsing == null) {
+			if (other.forceUsing != null)
+				return false;
+		} else if (!forceUsing.equals(other.forceUsing))
+			return false;
 		if (includeDirectories == null) {
 			if (other.includeDirectories != null)
 				return false;
@@ -190,6 +213,8 @@ public final class FileCompilationProperties implements Externalizable {
 		return "FileCompilationProperties[" + (fileLocation != null ? "fileLocation=" + fileLocation + ", " : "")
 				+ (language != null ? "language=" + language + ", " : "")
 				+ (includeDirectories != null ? "includeDirectories=" + includeDirectories + ", " : "")
+				+ (forceInclude != null ? "forceInclude=" + forceInclude + ", " : "")
+				+ (forceUsing != null ? "forceUsing=" + forceUsing + ", " : "")
 				+ (macroDefinitions != null ? "macroDefinitions=" + macroDefinitions + ", " : "")
 				+ (simpleParameters != null ? "simpleParameters=" + simpleParameters : "") + "]";
 	}

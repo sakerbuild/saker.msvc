@@ -1,0 +1,4 @@
+build {
+	$compile = saker.msvc.ccompile([*.cpp])
+	saker.msvc.clink($compile, GenerateWinmd: true, BinaryName: "My Executable")
+}

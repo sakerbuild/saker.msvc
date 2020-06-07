@@ -54,8 +54,8 @@ public interface MSVCCompilerWorkerTaskOutput {
 	/**
 	 * Gets the SDKs that were used during the compilation.
 	 * <p>
-	 * The result contains all SDKs that were specified by the user, even if they weren't actually used for the
-	 * compilation.
+	 * The result contains the resolved SDK descriptions with their configuration pinned to the ones that were used
+	 * during compilation.
 	 * 
 	 * @return The SDKs.
 	 */

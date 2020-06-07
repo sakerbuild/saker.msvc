@@ -4,6 +4,7 @@ global(DEPENDENCIES_saker.msvc) = [
 	saker.compiler.utils,
 	saker.sdk.support,
 	saker.process-api,
+	saker.windows-api,
 ]
 
 static(VERSION_saker.build) = nest.dependency.resolve(
@@ -36,7 +37,6 @@ compile(
 		],
 		Identifier: "saker.msvc{ $testapicompile[enabled] ? "-testing" : "" }",	
 	)
-	
 }
 export(
 	in compile = include(compile),

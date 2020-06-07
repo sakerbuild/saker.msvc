@@ -83,7 +83,7 @@ public class VersionsMSVCSDKReferenceEnvironmentProperty implements EnvironmentP
 				}
 				String verstr = key.substring(VERSIONED_INSTALL_LOCATION_ENV_PARAMETER_PREFIX.length());
 				if (versionpredicate.test(verstr)) {
-					SakerPath installdir = SakerPath.valueOf(entry.getKey());
+					SakerPath installdir = SakerPath.valueOf(entry.getValue());
 					return new RegularLayoutVCToolsSDKReference(verstr, installdir);
 				}
 			}
@@ -108,7 +108,7 @@ public class VersionsMSVCSDKReferenceEnvironmentProperty implements EnvironmentP
 				}
 				String verstr = key.substring(VERSIONED_INSTALL_LOCATION_ENV_PARAMETER_PREFIX.length());
 				if (versionpredicate.test(verstr)) {
-					SakerPath installdir = SakerPath.valueOf(entry.getKey());
+					SakerPath installdir = SakerPath.valueOf(entry.getValue());
 					return new LegacyLayoutVCToolsSDKReference(verstr, installdir);
 				}
 			}

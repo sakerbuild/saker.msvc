@@ -118,7 +118,8 @@ public class RegularLayoutVCToolsSDKReference extends AbstractVCToolsSDKReferenc
 				return baseDirectory.resolve("lib", "arm64", "store");
 			}
 			case STORE_REFERENCES_PLATFORM_WINMD: {
-				return baseDirectory.resolve("lib", "store", "references", "platform.winmd");
+				//it's always in the x86 subdirectory in an architecture independent manner
+				return baseDirectory.resolve("lib", "x86", "store", "references", "platform.winmd");
 			}
 
 			case INCLUDE: {

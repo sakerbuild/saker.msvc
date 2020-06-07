@@ -16,12 +16,14 @@
 package saker.msvc.main.clink.options;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.function.Functionals;
 import saker.compiler.utils.main.CompilationIdentifierTaskOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
+import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 
 public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
@@ -30,7 +32,7 @@ public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 	private Collection<LinkerInputPassTaskOption> input;
 	private Collection<CompilationPathTaskOption> libraryPath;
 	private Map<String, SDKDescriptionTaskOption> sdks;
-	private Collection<String> simpleParameters;
+	private List<SimpleParameterTaskOption> simpleParameters;
 	private Boolean generateWinmd;
 	private String binaryName;
 
@@ -80,7 +82,7 @@ public class SimpleMSVCLinkerOptions implements MSVCLinkerOptions {
 	}
 
 	@Override
-	public Collection<String> getSimpleLinkerParameters() {
+	public List<SimpleParameterTaskOption> getSimpleLinkerParameters() {
 		return simpleParameters;
 	}
 

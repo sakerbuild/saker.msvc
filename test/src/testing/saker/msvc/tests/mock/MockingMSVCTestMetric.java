@@ -84,16 +84,6 @@ public class MockingMSVCTestMetric extends CollectingTestMetric implements MSVCT
 	}
 
 	@Override
-	public Set<String> getPresentWindowsKitsSDKVersions(SakerEnvironment environment) {
-		return Collections.singleton(DEFAULT_VERSION);
-	}
-
-	@Override
-	public SakerPath getWindowsKitsSDKBasePath(SakerEnvironment environment, String version) {
-		return SakerPath.valueOf(testSDKDirectory).resolve("windowskits");
-	}
-
-	@Override
 	public SakerPath getMSVCSDKBasePath(SakerEnvironment environment, String version) {
 		return SakerPath.valueOf(testSDKDirectory.resolve("msvc").resolve(version));
 	}

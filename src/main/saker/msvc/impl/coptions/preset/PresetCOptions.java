@@ -15,11 +15,12 @@
  */
 package saker.msvc.impl.coptions.preset;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.SimpleParameterOption;
 import saker.sdk.support.api.SDKDescription;
 import saker.std.api.file.location.FileLocation;
 
@@ -36,22 +37,26 @@ public interface PresetCOptions {
 	//for option merging
 	public String getArchitecture();
 
-	public Set<CompilationPathOption> getIncludeDirectories();
+	public List<CompilationPathOption> getIncludeDirectories();
 
 	public Map<String, SDKDescription> getSDKs();
 
 	public Map<String, String> getMacroDefinitions();
 
-	public Set<String> getSimpleCompilerParameters();
+	public List<SimpleParameterOption> getSimpleCompilerParameters();
 
-	public Set<CompilationPathOption> getLibraryPath();
+	public List<CompilationPathOption> getLibraryPath();
 
-	public Set<String> getSimpleLinkerParameters();
+	public List<SimpleParameterOption> getSimpleLinkerParameters();
+
+	public Boolean getGenerateWinmd();
 
 	public FileLocation getPrecompiledHeader();
 
-	public Set<CompilationPathOption> getForceInclude();
+	public List<CompilationPathOption> getForceInclude();
 
 	public Boolean getForceIncludePrecompiledHeader();
+
+	public List<CompilationPathOption> getForceUsing();
 
 }

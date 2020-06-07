@@ -34,7 +34,7 @@ import saker.std.api.file.location.FileCollection;
 import saker.std.api.file.location.FileLocation;
 import saker.std.main.file.option.FileLocationTaskOption;
 
-@NestInformation("Represents an input for the " + MSVCCLinkTaskFactory.TASK_NAME + "() task.\n"
+@NestInformation("Input for the " + MSVCCLinkTaskFactory.TASK_NAME + "() task.\n"
 		+ "The configuration specifies which files should be added to the input files for the link.exe invocation.\n"
 		+ "The configuration accepts simple paths, wildcards, file locations, file collections, and outputs of the "
 		+ MSVCCCompileTaskFactory.TASK_NAME + "() task.")

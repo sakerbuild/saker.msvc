@@ -19,14 +19,15 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.Set;
 
 import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.SimpleParameterOption;
 import saker.sdk.support.api.SDKDescription;
 import saker.sdk.support.api.SDKSupportUtils;
 import saker.std.api.file.location.FileLocation;
@@ -40,15 +41,17 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	private String language;
 	private String architecture;
 
-	private Set<CompilationPathOption> libraryPaths;
-	private Set<CompilationPathOption> includeDirectories;
+	private List<CompilationPathOption> libraryPaths;
+	private List<CompilationPathOption> includeDirectories;
 	private NavigableMap<String, SDKDescription> sdks;
 	private Map<String, String> macroDefinitions;
-	private Set<String> linkSimpleParameters;
-	private Set<String> compileSimpleParameters;
+	private List<SimpleParameterOption> linkSimpleParameters;
+	private Boolean generateWinmd;
+	private List<SimpleParameterOption> compileSimpleParameters;
 	private FileLocation precompiledHeader;
-	private Set<CompilationPathOption> forceInclude;
+	private List<CompilationPathOption> forceInclude;
 	private Boolean forceIncludePrecompiledHeader;
+	private List<CompilationPathOption> forceUsing;
 
 	/**
 	 * For {@link Externalizable}.
@@ -86,12 +89,12 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	@Override
-	public Set<CompilationPathOption> getLibraryPath() {
+	public List<CompilationPathOption> getLibraryPath() {
 		return libraryPaths;
 	}
 
 	@Override
-	public Set<CompilationPathOption> getIncludeDirectories() {
+	public List<CompilationPathOption> getIncludeDirectories() {
 		return includeDirectories;
 	}
 
@@ -106,12 +109,17 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	@Override
-	public Set<String> getSimpleLinkerParameters() {
+	public List<SimpleParameterOption> getSimpleLinkerParameters() {
 		return linkSimpleParameters;
 	}
 
 	@Override
-	public Set<String> getSimpleCompilerParameters() {
+	public Boolean getGenerateWinmd() {
+		return generateWinmd;
+	}
+
+	@Override
+	public List<SimpleParameterOption> getSimpleCompilerParameters() {
 		return compileSimpleParameters;
 	}
 
@@ -121,13 +129,18 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	}
 
 	@Override
-	public Set<CompilationPathOption> getForceInclude() {
+	public List<CompilationPathOption> getForceInclude() {
 		return forceInclude;
 	}
 
 	@Override
 	public Boolean getForceIncludePrecompiledHeader() {
 		return forceIncludePrecompiledHeader;
+	}
+
+	@Override
+	public List<CompilationPathOption> getForceUsing() {
+		return forceUsing;
 	}
 
 	public void setPresetIdentifier(String presetIdentifier) {
@@ -146,11 +159,11 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.architecture = architecture;
 	}
 
-	public void setLibraryPaths(Set<CompilationPathOption> libraryPaths) {
+	public void setLibraryPaths(List<CompilationPathOption> libraryPaths) {
 		this.libraryPaths = libraryPaths;
 	}
 
-	public void setIncludeDirectories(Set<CompilationPathOption> includeDirectories) {
+	public void setIncludeDirectories(List<CompilationPathOption> includeDirectories) {
 		this.includeDirectories = includeDirectories;
 	}
 
@@ -163,11 +176,15 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.macroDefinitions = macroDefinitions;
 	}
 
-	public void setLinkSimpleParameters(Set<String> simpleParameters) {
+	public void setLinkSimpleParameters(List<SimpleParameterOption> simpleParameters) {
 		this.linkSimpleParameters = simpleParameters;
 	}
 
-	public void setCompileSimpleParameters(Set<String> compileSimpleParameters) {
+	public void setGenerateWinmd(Boolean generateWinmd) {
+		this.generateWinmd = generateWinmd;
+	}
+
+	public void setCompileSimpleParameters(List<SimpleParameterOption> compileSimpleParameters) {
 		this.compileSimpleParameters = compileSimpleParameters;
 	}
 
@@ -175,12 +192,16 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.precompiledHeader = precompiledHeader;
 	}
 
-	public void setForceInclude(Set<CompilationPathOption> forceInclude) {
+	public void setForceInclude(List<CompilationPathOption> forceInclude) {
 		this.forceInclude = forceInclude;
 	}
 
 	public void setForceIncludePrecompiledHeader(Boolean forceIncludePrecompiledHeader) {
 		this.forceIncludePrecompiledHeader = forceIncludePrecompiledHeader;
+	}
+
+	public void setForceUsing(List<CompilationPathOption> forceUsing) {
+		this.forceUsing = forceUsing;
 	}
 
 	@Override
@@ -191,6 +212,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		out.writeObject(architecture);
 		out.writeObject(precompiledHeader);
 		out.writeObject(forceIncludePrecompiledHeader);
+		out.writeObject(generateWinmd);
 		SerialUtils.writeExternalCollection(out, libraryPaths);
 		SerialUtils.writeExternalCollection(out, includeDirectories);
 		SerialUtils.writeExternalMap(out, sdks);
@@ -198,6 +220,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		SerialUtils.writeExternalCollection(out, linkSimpleParameters);
 		SerialUtils.writeExternalCollection(out, compileSimpleParameters);
 		SerialUtils.writeExternalCollection(out, forceInclude);
+		SerialUtils.writeExternalCollection(out, forceUsing);
 	}
 
 	@Override
@@ -208,13 +231,15 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		architecture = (String) in.readObject();
 		precompiledHeader = (FileLocation) in.readObject();
 		forceIncludePrecompiledHeader = (Boolean) in.readObject();
-		libraryPaths = SerialUtils.readExternalImmutableLinkedHashSet(in);
-		includeDirectories = SerialUtils.readExternalImmutableLinkedHashSet(in);
+		generateWinmd = (Boolean) in.readObject();
+		libraryPaths = SerialUtils.readExternalImmutableList(in);
+		includeDirectories = SerialUtils.readExternalImmutableList(in);
 		sdks = SerialUtils.readExternalSortedImmutableNavigableMap(in, SDKSupportUtils.getSDKNameComparator());
 		macroDefinitions = SerialUtils.readExternalImmutableLinkedHashMap(in);
-		linkSimpleParameters = SerialUtils.readExternalImmutableNavigableSet(in);
-		compileSimpleParameters = SerialUtils.readExternalImmutableNavigableSet(in);
-		forceInclude = SerialUtils.readExternalImmutableLinkedHashSet(in);
+		linkSimpleParameters = SerialUtils.readExternalImmutableList(in);
+		compileSimpleParameters = SerialUtils.readExternalImmutableList(in);
+		forceInclude = SerialUtils.readExternalImmutableList(in);
+		forceUsing = SerialUtils.readExternalImmutableList(in);
 	}
 
 	@Override
@@ -226,6 +251,8 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		result = prime * result + ((forceInclude == null) ? 0 : forceInclude.hashCode());
 		result = prime * result
 				+ ((forceIncludePrecompiledHeader == null) ? 0 : forceIncludePrecompiledHeader.hashCode());
+		result = prime * result + ((forceUsing == null) ? 0 : forceUsing.hashCode());
+		result = prime * result + ((generateWinmd == null) ? 0 : generateWinmd.hashCode());
 		result = prime * result + ((identifier == null) ? 0 : identifier.hashCode());
 		result = prime * result + ((includeDirectories == null) ? 0 : includeDirectories.hashCode());
 		result = prime * result + ((language == null) ? 0 : language.hashCode());
@@ -265,6 +292,16 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 			if (other.forceIncludePrecompiledHeader != null)
 				return false;
 		} else if (!forceIncludePrecompiledHeader.equals(other.forceIncludePrecompiledHeader))
+			return false;
+		if (forceUsing == null) {
+			if (other.forceUsing != null)
+				return false;
+		} else if (!forceUsing.equals(other.forceUsing))
+			return false;
+		if (generateWinmd == null) {
+			if (other.generateWinmd != null)
+				return false;
+		} else if (!generateWinmd.equals(other.generateWinmd))
 			return false;
 		if (identifier == null) {
 			if (other.identifier != null)

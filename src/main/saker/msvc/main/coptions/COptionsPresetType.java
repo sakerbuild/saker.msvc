@@ -31,11 +31,18 @@ import saker.nest.scriptinfo.reflection.annot.NestTypeInformation;
 								+ "The preset includes the /SUBSYSTEM:CONSOLE simple linker parameter, and adds "
 								+ "appropriate include directories and library paths to access the Windows SDK.\n"
 								+ "The _CONSOLE preprocessor definition is added.")),
+				@NestFieldInformation(value = COptionsPresetType.WIN32,
+				info = @NestInformation("Preset type for Windows based applications.\n"
+						+ "The preset includes the /SUBSYSTEM:WINDOWS simple linker parameter, and adds "
+						+ "appropriate include directories and library paths to access the Windows SDK.\n"
+						+ "The _WINDOWS preprocessor definition is added.")),
 				@NestFieldInformation(value = COptionsPresetType.DLL,
 						info = @NestInformation("Preset type for DLL (Dynamic Link Library) creation.\n"
 								+ "The preset includes the /DLL /SUBSYSTEM:WINDOWS simple linker parameters and adds "
 								+ "appropriate include directories and library paths to access the Windows SDK.\n"
 								+ "The _WINDOWS, _WINDLL prepreocessor definitions are added.")),
+				@NestFieldInformation(value = COptionsPresetType.UAP,
+						info = @NestInformation("Preset type for developing against the Universal Application Platform (also known as UWP, Universal Windows Platofmr).\n")),
 				@NestFieldInformation(value = COptionsPresetType.OPTIMIZE_RELEASE,
 						info = @NestInformation("Preset that includes command line arguments for release optimization.\n"
 								+ "The /GL /Gy /O2 /Oi simple parameters are added for compilation. Also defines the "
@@ -50,7 +57,9 @@ import saker.nest.scriptinfo.reflection.annot.NestTypeInformation;
 		})
 public class COptionsPresetType {
 	public static final String CONSOLE = "console";
+	public static final String WIN32 = "win32";
 	public static final String DLL = "dll";
+	public static final String UAP = "uap";
 	public static final String OPTIMIZE_RELEASE = "optimize-release";
 	public static final String OPTIMIZE_DEBUG = "optimize-debug";
 }

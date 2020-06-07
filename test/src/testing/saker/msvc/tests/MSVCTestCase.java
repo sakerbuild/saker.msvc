@@ -21,11 +21,17 @@ import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Objects;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
 
 import saker.build.file.path.SakerPath;
+import saker.build.thirdparty.saker.util.ObjectUtils;
 import saker.build.thirdparty.saker.util.StringUtils;
 import saker.build.thirdparty.saker.util.io.UnsyncByteArrayOutputStream;
+import testing.saker.build.tests.EnvironmentTestCaseConfiguration;
 import testing.saker.msvc.tests.mock.CLMockProcess;
 import testing.saker.msvc.tests.mock.MockingMSVCTestMetric;
 import testing.saker.nest.util.RepositoryLoadingVariablesMetricEnvironmentTestCase;
@@ -49,6 +55,25 @@ public abstract class MSVCTestCase extends RepositoryLoadingVariablesMetricEnvir
 	@Override
 	protected MockingMSVCTestMetric createMetricImpl() {
 		return new MockingMSVCTestMetric(getTestSDKDirectory());
+	}
+
+	@Override
+	protected Set<EnvironmentTestCaseConfiguration> getTestConfigurations() {
+		Path testsdkdir = getTestSDKDirectory();
+		if (testsdkdir == null) {
+			return super.getTestConfigurations();
+		}
+		testsdkdir = testsdkdir.resolve("windowskits");
+		ArrayList<EnvironmentTestCaseConfiguration> configs = ObjectUtils.newArrayList(super.getTestConfigurations());
+		for (ListIterator<EnvironmentTestCaseConfiguration> it = configs.listIterator(); it.hasNext();) {
+			EnvironmentTestCaseConfiguration c = it.next();
+			EnvironmentTestCaseConfiguration.Builder builder = EnvironmentTestCaseConfiguration.builder(c);
+			TreeMap<String, String> envparams = ObjectUtils.newTreeMap(c.getEnvironmentUserParameters());
+			envparams.put("saker.windows.sdk.windowskits.install.location.1.0", testsdkdir.toString());
+			builder.setEnvironmentUserParameters(envparams);
+			it.set(builder.build());
+		}
+		return ObjectUtils.newLinkedHashSet(configs);
 	}
 
 	protected Path getTestSDKDirectory() {
