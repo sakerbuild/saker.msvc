@@ -131,6 +131,7 @@ public class TaskDocs {
 
 	@NestInformation("Represents the programming language that should be used for compilation.")
 	@NestTypeInformation(kind = TypeInformationKind.ENUM,
+			qualifiedName = "CompilationLanguage",
 			enumValues = {
 
 					@NestFieldInformation(value = DocCompilationLanguage.C,
