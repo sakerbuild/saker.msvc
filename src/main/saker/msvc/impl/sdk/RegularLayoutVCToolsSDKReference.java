@@ -41,7 +41,13 @@ public class RegularLayoutVCToolsSDKReference extends AbstractVCToolsSDKReferenc
 
 	@Override
 	public SakerPath getPath(String identifier) throws Exception {
+		if (identifier == null) {
+			return null;
+		}
 		switch (identifier.toLowerCase(Locale.ENGLISH)) {
+			case HOME: {
+				return baseDirectory;
+			}
 			case EXE_CL_X86_X86: {
 				return baseDirectory.resolve("bin", "Hostx86", "x86", "cl.exe");
 			}
@@ -135,6 +141,17 @@ public class RegularLayoutVCToolsSDKReference extends AbstractVCToolsSDKReferenc
 
 	@Override
 	public String getProperty(String identifier) throws Exception {
+		if (identifier == null) {
+			return null;
+		}
+		switch (identifier) {
+			case PROPERTY_VERSION: {
+				return version;
+			}
+			default: {
+				break;
+			}
+		}
 		return null;
 	}
 }

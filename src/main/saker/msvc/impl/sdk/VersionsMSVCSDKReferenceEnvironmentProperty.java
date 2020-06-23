@@ -20,19 +20,24 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import saker.build.exception.PropertyComputationFailedException;
 import saker.build.file.path.SakerPath;
-import saker.build.runtime.environment.EnvironmentProperty;
 import saker.build.runtime.environment.SakerEnvironment;
+import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
+import saker.build.trace.BuildTrace;
+import saker.build.trace.TraceContributorEnvironmentProperty;
 import saker.msvc.impl.MSVCUtils;
 import saker.sdk.support.api.SDKReference;
 import testing.saker.msvc.TestFlag;
 
-public class VersionsMSVCSDKReferenceEnvironmentProperty implements EnvironmentProperty<SDKReference>, Externalizable {
+public class VersionsMSVCSDKReferenceEnvironmentProperty
+		implements TraceContributorEnvironmentProperty<SDKReference>, Externalizable {
 	private static final long serialVersionUID = 1L;
 
 	public static final String VERSIONED_INSTALL_LOCATION_ENV_PARAMETER_PREFIX = "saker.msvc.sdk.install.location.";
@@ -125,6 +130,46 @@ public class VersionsMSVCSDKReferenceEnvironmentProperty implements EnvironmentP
 		}
 		throw new FileNotFoundException("MSVC SDK not found for regular versions: " + regularVersions
 				+ " and legacy versions: " + legacyVersions);
+	}
+
+	@Override
+	public void contributeBuildTraceInformation(SDKReference propertyvalue,
+			PropertyComputationFailedException thrownexception) {
+		if (propertyvalue != null) {
+			try {
+				LinkedHashMap<Object, Object> values = new LinkedHashMap<>();
+				LinkedHashMap<Object, Object> props = new LinkedHashMap<>();
+
+				values.put("MSVC " + propertyvalue.getProperty(AbstractVCToolsSDKReference.PROPERTY_VERSION), props);
+				props.put("Install location", propertyvalue.getPath(AbstractVCToolsSDKReference.HOME).toString());
+				BuildTrace.setValues(values, BuildTrace.VALUE_CATEGORY_ENVIRONMENT);
+			} catch (Exception e) {
+				if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_014) {
+					BuildTrace.ignoredException(e);
+				}
+			}
+		} else {
+			//exceptions as values supported since 0.8.14
+			if (saker.build.meta.Versions.VERSION_FULL_COMPOUND >= 8_014) {
+				if (regularVersions == null && legacyVersions == null) {
+					BuildTrace.setValues(ImmutableUtils.singletonMap("MSVC", thrownexception.getCause()),
+							BuildTrace.VALUE_CATEGORY_ENVIRONMENT);
+				} else {
+					if (legacyVersions != null) {
+						for (String v : legacyVersions) {
+							BuildTrace.setValues(ImmutableUtils.singletonMap("MSVC " + v, thrownexception.getCause()),
+									BuildTrace.VALUE_CATEGORY_ENVIRONMENT);
+						}
+					}
+					if (regularVersions != null) {
+						for (String v : regularVersions) {
+							BuildTrace.setValues(ImmutableUtils.singletonMap("MSVC " + v, thrownexception.getCause()),
+									BuildTrace.VALUE_CATEGORY_ENVIRONMENT);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	@Override

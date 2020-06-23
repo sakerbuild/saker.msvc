@@ -31,6 +31,8 @@ public abstract class AbstractVCToolsSDKReference implements SDKReference, Exter
 	public static final String PREFIX_WORKING_DIRECTORY = "workdir.";
 	public static final String PREFIX_EXE = "exe.";
 
+	public static final String HOME = "home";
+	
 	public static final String EXE_CL_X86_X86 = PREFIX_EXE + "cl.x86.x86";
 	public static final String EXE_CL_X86_X64 = PREFIX_EXE + "cl.x86.x64";
 	public static final String EXE_CL_X86_ARM = PREFIX_EXE + "cl.x86.arm";
@@ -78,6 +80,8 @@ public abstract class AbstractVCToolsSDKReference implements SDKReference, Exter
 	public static final String LIB_STORE_X64 = "lib.store.x64";
 
 	public static final String INCLUDE = "include";
+	
+	public static final String PROPERTY_VERSION = "version";
 
 	public static final String STORE_REFERENCES_PLATFORM_WINMD = "lib.store.references.platform.winmd";
 

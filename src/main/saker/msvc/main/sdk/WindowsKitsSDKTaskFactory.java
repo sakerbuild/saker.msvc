@@ -36,7 +36,7 @@ import saker.sdk.support.main.TaskDocs.DocSDKDescription;
 import saker.windows.api.SakerWindowsUtils;
 
 @NestTaskInformation(returnType = @NestTypeUsage(DocSDKDescription.class))
-@NestInformation("Depretaced. Use saker.windows.sdk.windowskits().\n"
+@NestInformation("Deprecated. Use saker.windows.sdk.windowskits().\n"
 		+ "Gets an SDK description for the Windows Kits that matches the given versions.\n"
 		+ "This task will create an SDK description that references the Windows operating system SDK with "
 		+ "any of the specified versions.\n"
