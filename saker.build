@@ -70,6 +70,7 @@ export(
 				Nest-Bundle-Format-Version: 1,
 				Nest-Bundle-Identifier: "saker.msvc-v{ global(VERSION_saker.msvc) }",
 				Nest-Bundle-Source: "saker.msvc-sources-v{ global(VERSION_saker.msvc) }",
+				Nest-ClassPath-Supported-Build-System-Versions: "[0.8.9)",
 			},
 		},
 	)
@@ -90,6 +91,7 @@ export(
 				Nest-Bundle-Format-Version: 1,
 				Nest-Bundle-Identifier: "saker.msvc-api-v{ global(VERSION_saker.msvc) }",
 				Nest-Bundle-Source: "saker.msvc-sources-v{ global(VERSION_saker.msvc) }",
+				Nest-ClassPath-Supported-Build-System-Versions: "[0.8.9)",
 			},
 		},
 	)
@@ -114,6 +116,7 @@ export(
 				Nest-Bundle-Format-Version: 1,
 				Nest-Bundle-Identifier: "saker.msvc-impl-v{ global(VERSION_saker.msvc) }",
 				Nest-Bundle-Source: "saker.msvc-sources-v{ global(VERSION_saker.msvc) }",
+				Nest-ClassPath-Supported-Build-System-Versions: "[0.8.9)",
 			},
 		},
 	)

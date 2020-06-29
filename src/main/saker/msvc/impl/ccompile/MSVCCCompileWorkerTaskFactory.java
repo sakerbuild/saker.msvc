@@ -1136,7 +1136,7 @@ public class MSVCCCompileWorkerTaskFactory
 			}
 
 			NavigableMap<String, SDKReference> sdks = SDKSupportUtils
-					.resolveSDKReferences(taskcontext.getExecutionContext().getEnvironment(), sdkDescriptions);
+					.resolveSDKReferences(executioncontext.getEnvironment(), sdkDescriptions);
 
 			List<Path> includedirpaths = getIncludePaths(taskutilities,
 					compilationentryproperties.getIncludeDirectories(), true, sdks);
@@ -1248,8 +1248,7 @@ public class MSVCCCompileWorkerTaskFactory
 								}
 								headerprecompileresult.dependencyInfo = depinfo;
 								coordinator.headerPrecompiled(headerprecompileresult,
-										LocalFileProvider.getPathKeyStatic(pchcompilesakerfilepath),
-										taskcontext.getExecutionContext()
+										LocalFileProvider.getPathKeyStatic(pchcompilesakerfilepath), executioncontext
 												.getContentDescriptor(localfp.getPathKey(pchcompilesakerfilepath)));
 							}
 							precompiledHeaderCreationResults.put(entrypch, headerres);

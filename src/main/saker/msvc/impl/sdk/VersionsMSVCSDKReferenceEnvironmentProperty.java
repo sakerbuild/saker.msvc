@@ -29,6 +29,7 @@ import saker.build.exception.PropertyComputationFailedException;
 import saker.build.file.path.SakerPath;
 import saker.build.runtime.environment.SakerEnvironment;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
+import saker.build.thirdparty.saker.util.StringUtils;
 import saker.build.thirdparty.saker.util.io.SerialUtils;
 import saker.build.trace.BuildTrace;
 import saker.build.trace.TraceContributorEnvironmentProperty;
@@ -128,8 +129,10 @@ public class VersionsMSVCSDKReferenceEnvironmentProperty
 				return sdkref;
 			}
 		}
-		throw new FileNotFoundException("MSVC SDK not found for regular versions: " + regularVersions
-				+ " and legacy versions: " + legacyVersions);
+		throw new FileNotFoundException("MSVC SDK not found for regular versions: "
+				+ (regularVersions == null ? "any" : StringUtils.toStringJoin(", ", regularVersions))
+				+ " and legacy versions: "
+				+ (legacyVersions == null ? "any" : StringUtils.toStringJoin(", ", legacyVersions)));
 	}
 
 	@Override
