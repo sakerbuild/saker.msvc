@@ -172,9 +172,9 @@ public class COptionPresets {
 		SimplePresetCOptions x64 = new SimplePresetCOptions();
 		x64.setArchitecture("x64");
 		x64.setLibraryPaths(ImmutableUtils.makeImmutableList(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_X64),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC,
 						AbstractVCToolsSDKReference.LIB_STORE_X64),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_X64),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_X64_UCRT),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
@@ -183,9 +183,9 @@ public class COptionPresets {
 		SimplePresetCOptions x86 = new SimplePresetCOptions();
 		x86.setArchitecture("x86");
 		x86.setLibraryPaths(ImmutableUtils.makeImmutableList(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_X86),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC,
 						AbstractVCToolsSDKReference.LIB_STORE_X86),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_X86),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_X86_UCRT),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
@@ -194,9 +194,9 @@ public class COptionPresets {
 		SimplePresetCOptions arm = new SimplePresetCOptions();
 		arm.setArchitecture("ARM");
 		arm.setLibraryPaths(ImmutableUtils.makeImmutableList(new CompilationPathOption[] {
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_ARM),
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC,
 						AbstractVCToolsSDKReference.LIB_STORE_ARM),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC, AbstractVCToolsSDKReference.LIB_ARM),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_ARM_UCRT),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
@@ -241,8 +241,8 @@ public class COptionPresets {
 						AbstractVCToolsSDKReference.STORE_REFERENCES_PLATFORM_WINMD),
 				new SDKPathReferenceCompilationPathOption(
 						SakerWindowsUtils.getWindowsUapApiContractsWinmdSDKPathCollectionReference()) }));
-		cpppreset.setCompileSimpleParameters(ImmutableUtils
-				.makeImmutableList(new SimpleParameterOption[] { SimpleParameterOption.create("/ZW"),
+		cpppreset.setCompileSimpleParameters(
+				ImmutableUtils.makeImmutableList(new SimpleParameterOption[] { SimpleParameterOption.create("/ZW"),
 						SimpleParameterOption.create("/EHsc"), SimpleParameterOption.create("/ZW:nostdlib") }));
 
 		TreeMap<String, String> macrodefs = new TreeMap<>();
@@ -254,9 +254,8 @@ public class COptionPresets {
 		basepreset.setMacroDefinitions(ImmutableUtils.unmodifiableNavigableMap(macrodefs));
 
 		basepreset.setLinkSimpleParameters(ImmutableUtils.makeImmutableList(new SimpleParameterOption[] {
-				SimpleParameterOption.create("/SUBSYSTEM:WINDOWS"),
-				SimpleParameterOption.create("/APPCONTAINER"), SimpleParameterOption.create("/DYNAMICBASE"),
-				SimpleParameterOption.create("/NXCOMPAT"), }));
+				SimpleParameterOption.create("/SUBSYSTEM:WINDOWS"), SimpleParameterOption.create("/APPCONTAINER"),
+				SimpleParameterOption.create("/DYNAMICBASE"), SimpleParameterOption.create("/NXCOMPAT"), }));
 		basepreset.setGenerateWinmd(true);
 
 		x86.setPresetIdentifier(COptionsPresetType.UAP + "-x86");
