@@ -59,4 +59,5 @@ public interface PresetCOptions {
 
 	public List<CompilationPathOption> getForceUsing();
 
+	public List<CompilationPathOption> getLinkerInput();
 }

@@ -27,12 +27,12 @@ public interface CompilationPathOption {
 	public int hashCode();
 
 	public interface Visitor {
-		public default void visit(FileCompilationPathOption includepath) {
-			throw new UnsupportedOperationException("Unsupported path: " + includepath);
+		public default void visit(FileCompilationPathOption path) {
+			throw new UnsupportedOperationException("Unsupported path: " + path);
 		}
 
-		public default void visit(SDKPathCollectionReference includepath) {
-			throw new UnsupportedOperationException("Unsupported path: " + includepath);
+		public default void visit(SDKPathCollectionReference path) {
+			throw new UnsupportedOperationException("Unsupported path: " + path);
 		}
 	}
 

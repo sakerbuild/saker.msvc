@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import saker.build.file.path.SakerPath;
 import saker.build.thirdparty.saker.util.ImmutableUtils;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.option.CompilationPathOption;
@@ -27,10 +28,12 @@ import saker.msvc.impl.sdk.AbstractVCToolsSDKReference;
 import saker.msvc.impl.util.option.SDKPathReferenceCompilationPathOption;
 import saker.msvc.main.coptions.COptionsPresetType;
 import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKPathReference;
 import saker.sdk.support.api.SDKSupportUtils;
 import saker.windows.api.SakerWindowsUtils;
 
 public class COptionPresets {
+	private static final SakerPath PATH_WINDOWSAPP_LIB = SakerPath.valueOf("WindowsApp.lib");
 	private static final Collection<SimplePresetCOptions> CONSOLE_PRESETS;
 	static {
 		SimplePresetCOptions x64 = new SimplePresetCOptions();
@@ -179,6 +182,10 @@ public class COptionPresets {
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_X64_UCRT),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_X64_UM), }));
+		x64.setLinkerInput(ImmutableUtils
+				.makeImmutableList(new CompilationPathOption[] { new SDKPathReferenceCompilationPathOption(
+						SDKPathReference.create(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
+								SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_X64_UM, PATH_WINDOWSAPP_LIB)), }));
 
 		SimplePresetCOptions x86 = new SimplePresetCOptions();
 		x86.setArchitecture("x86");
@@ -190,6 +197,10 @@ public class COptionPresets {
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_X86_UCRT),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_X86_UM), }));
+		x86.setLinkerInput(ImmutableUtils
+				.makeImmutableList(new CompilationPathOption[] { new SDKPathReferenceCompilationPathOption(
+						SDKPathReference.create(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
+								SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_X86_UM, PATH_WINDOWSAPP_LIB)), }));
 
 		SimplePresetCOptions arm = new SimplePresetCOptions();
 		arm.setArchitecture("ARM");
@@ -201,18 +212,26 @@ public class COptionPresets {
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_ARM_UCRT),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_ARM_UM), }));
+		arm.setLinkerInput(ImmutableUtils
+				.makeImmutableList(new CompilationPathOption[] { new SDKPathReferenceCompilationPathOption(
+						SDKPathReference.create(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
+								SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_ARM_UM, PATH_WINDOWSAPP_LIB)), }));
 
 		SimplePresetCOptions arm64 = new SimplePresetCOptions();
 		arm64.setArchitecture("ARM64");
 		arm64.setLibraryPaths(ImmutableUtils.makeImmutableList(new CompilationPathOption[] {
 				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC,
-						AbstractVCToolsSDKReference.LIB_ARM64),
-				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC,
 						AbstractVCToolsSDKReference.LIB_STORE_ARM64),
+				new SDKPathReferenceCompilationPathOption(MSVCUtils.SDK_NAME_MSVC,
+						AbstractVCToolsSDKReference.LIB_ARM64),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_ARM64_UCRT),
 				new SDKPathReferenceCompilationPathOption(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
 						SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_ARM64_UM), }));
+		arm64.setLinkerInput(ImmutableUtils
+				.makeImmutableList(new CompilationPathOption[] { new SDKPathReferenceCompilationPathOption(
+						SDKPathReference.create(SakerWindowsUtils.SDK_NAME_WINDOWSKITS,
+								SakerWindowsUtils.SDK_WINDOWSKITS_PATH_LIB_ARM64_UM, PATH_WINDOWSAPP_LIB)), }));
 
 		SimplePresetCOptions basepreset = new SimplePresetCOptions();
 		TreeMap<String, SDKDescription> sdks = new TreeMap<>(SDKSupportUtils.getSDKNameComparator());

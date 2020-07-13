@@ -29,6 +29,8 @@ import saker.msvc.api.ccompile.MSVCCompilerWorkerTaskOutput;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.clink.MSVCCLinkTaskFactory;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
+import saker.sdk.support.api.SDKPathCollectionReference;
+import saker.sdk.support.api.SDKPathReference;
 import saker.std.api.file.location.ExecutionFileLocation;
 import saker.std.api.file.location.FileCollection;
 import saker.std.api.file.location.FileLocation;
@@ -74,5 +76,28 @@ public interface LinkerInputPassTaskOption {
 
 	public static LinkerInputPassTaskOption valueOf(String path) {
 		return valueOf(WildcardPath.valueOf(path));
+	}
+
+	public static LinkerInputPassTaskOption valueOf(SDKPathReference path) {
+		return valueOf(SDKPathCollectionReference.valueOf(path));
+	}
+
+	public static LinkerInputPassTaskOption valueOf(SDKPathCollectionReference path) {
+		return new LinkerInputPassTaskOption() {
+			@Override
+			public LinkerInputPassTaskOption clone() {
+				return this;
+			}
+
+			@Override
+			public LinkerInputPassOption toLinkerInputPassOption(TaskContext taskcontext) {
+				return new LinkerInputPassOption() {
+					@Override
+					public void accept(Visitor visitor) {
+						visitor.visit(path);
+					}
+				};
+			}
+		};
 	}
 }

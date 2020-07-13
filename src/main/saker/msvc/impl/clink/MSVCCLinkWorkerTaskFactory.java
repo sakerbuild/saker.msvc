@@ -59,6 +59,7 @@ import saker.compiler.utils.api.CompilationIdentifier;
 import saker.msvc.api.clink.MSVCLinkerWorkerTaskOutput;
 import saker.msvc.impl.MSVCUtils;
 import saker.msvc.impl.option.CompilationPathOption;
+import saker.msvc.impl.option.CompilationPathOption.Visitor;
 import saker.msvc.impl.option.FileCompilationPathOption;
 import saker.msvc.impl.option.SimpleParameterOption;
 import saker.msvc.impl.util.ByteSinkProcessIOConsumer;
@@ -91,7 +92,7 @@ public class MSVCCLinkWorkerTaskFactory
 
 			});
 
-	private Set<FileLocation> inputs;
+	private Set<CompilationPathOption> inputs;
 	private Set<CompilationPathOption> libraryPath;
 	private NavigableMap<String, SDKDescription> sdkDescriptions;
 	private List<SimpleParameterOption> simpleParameters;
@@ -105,7 +106,7 @@ public class MSVCCLinkWorkerTaskFactory
 	public MSVCCLinkWorkerTaskFactory() {
 	}
 
-	public void setInputs(Set<FileLocation> inputs) {
+	public void setInputs(Set<CompilationPathOption> inputs) {
 		this.inputs = inputs;
 	}
 
@@ -358,7 +359,7 @@ public class MSVCCLinkWorkerTaskFactory
 		private static final long serialVersionUID = 1L;
 
 		private TaskExecutionEnvironmentSelector environmentSelector;
-		private Set<FileLocation> inputs;
+		private Set<CompilationPathOption> inputs;
 		private Set<CompilationPathOption> libraryPath;
 		private NavigableMap<String, SDKDescription> sdkDescriptions;
 		private List<SimpleParameterOption> simpleParameters;
@@ -373,10 +374,10 @@ public class MSVCCLinkWorkerTaskFactory
 		public LinkerInnerTaskFactory() {
 		}
 
-		public LinkerInnerTaskFactory(TaskExecutionEnvironmentSelector environmentSelector, Set<FileLocation> inputs,
-				Set<CompilationPathOption> libraryPath, NavigableMap<String, SDKDescription> sdkDescriptions,
-				List<SimpleParameterOption> simpleParameters, String architecture, SakerPath outdirpath,
-				Boolean generateWinmd, String binaryName) {
+		public LinkerInnerTaskFactory(TaskExecutionEnvironmentSelector environmentSelector,
+				Set<CompilationPathOption> inputs, Set<CompilationPathOption> libraryPath,
+				NavigableMap<String, SDKDescription> sdkDescriptions, List<SimpleParameterOption> simpleParameters,
+				String architecture, SakerPath outdirpath, Boolean generateWinmd, String binaryName) {
 			this.environmentSelector = environmentSelector;
 			this.inputs = inputs;
 			this.libraryPath = libraryPath;
@@ -390,32 +391,55 @@ public class MSVCCLinkWorkerTaskFactory
 
 		@Override
 		public LinkerInnerTaskFactoryResult run(TaskContext taskcontext) throws Exception {
+			NavigableMap<String, SDKReference> sdks = SDKSupportUtils
+					.resolveSDKReferences(taskcontext.getExecutionContext().getEnvironment(), sdkDescriptions);
+
 			NavigableMap<SakerPath, ContentDescriptor> inputdescriptors = new TreeMap<>();
 
 			Collection<Path> inputfilepaths = new LinkedHashSet<>();
 			Collection<Path> libpaths = new LinkedHashSet<>();
-			for (FileLocation inputfilelocation : inputs) {
-				inputfilelocation.accept(new FileLocationVisitor() {
+			for (CompilationPathOption inputfilelocation : inputs) {
+				inputfilelocation.accept(new CompilationPathOption.Visitor() {
 					@Override
-					public void visit(ExecutionFileLocation loc) {
-						SakerPath path = loc.getPath();
-						SakerFile inputfile = taskcontext.getTaskUtilities().resolveFileAtPath(path);
-						if (inputfile == null) {
-							throw ObjectUtils
-									.sneakyThrow(new FileNotFoundException("Linker input file not found: " + path));
-						}
-						inputdescriptors.put(path, inputfile.getContentDescriptor());
+					public void visit(FileCompilationPathOption cpath) {
+						cpath.getFileLocation().accept(new FileLocationVisitor() {
+							@Override
+							public void visit(ExecutionFileLocation loc) {
+								SakerPath path = loc.getPath();
+								SakerFile inputfile = taskcontext.getTaskUtilities().resolveFileAtPath(path);
+								if (inputfile == null) {
+									throw ObjectUtils.sneakyThrow(
+											new FileNotFoundException("Linker input file not found: " + path));
+								}
+								inputdescriptors.put(path, inputfile.getContentDescriptor());
+								try {
+									inputfilepaths.add(taskcontext.mirror(inputfile));
+								} catch (FileMirroringUnavailableException | NullPointerException | IOException e) {
+									throw ObjectUtils.sneakyThrow(e);
+								}
+							}
+						});
+					}
+
+					@Override
+					public void visit(SDKPathCollectionReference sdkpath) {
+						//XXX duplicated code 
 						try {
-							inputfilepaths.add(taskcontext.mirror(inputfile));
-						} catch (FileMirroringUnavailableException | NullPointerException | IOException e) {
-							throw ObjectUtils.sneakyThrow(e);
+							Collection<SakerPath> paths = sdkpath.getValue(sdks);
+							if (paths == null) {
+								throw new SDKPathNotFoundException("No SDK path found for: " + sdkpath);
+							}
+							for (SakerPath sdkdirpath : paths) {
+								inputfilepaths.add(LocalFileProvider.toRealPath(sdkdirpath));
+							}
+						} catch (SDKManagementException e) {
+							throw e;
+						} catch (Exception e) {
+							throw new SDKPathNotFoundException("Failed to retrieve path from SDKs: " + sdkpath);
 						}
 					}
 				});
 			}
-
-			NavigableMap<String, SDKReference> sdks = SDKSupportUtils
-					.resolveSDKReferences(taskcontext.getExecutionContext().getEnvironment(), sdkDescriptions);
 
 			SakerEnvironment environment = taskcontext.getExecutionContext().getEnvironment();
 			if (!ObjectUtils.isNullOrEmpty(this.libraryPath)) {
@@ -454,12 +478,12 @@ public class MSVCCLinkWorkerTaskFactory
 						}
 
 						@Override
-						public void visit(SDKPathCollectionReference libpath) {
+						public void visit(SDKPathCollectionReference sdkpath) {
 							//XXX duplicated code with compiler worker
 							try {
-								Collection<SakerPath> paths = libpath.getValue(sdks);
+								Collection<SakerPath> paths = sdkpath.getValue(sdks);
 								if (paths == null) {
-									throw new SDKPathNotFoundException("No SDK library path found for: " + libpath);
+									throw new SDKPathNotFoundException("No SDK library path found for: " + sdkpath);
 								}
 								for (SakerPath sdkdirpath : paths) {
 									libpaths.add(LocalFileProvider.toRealPath(sdkdirpath));
@@ -468,7 +492,7 @@ public class MSVCCLinkWorkerTaskFactory
 								throw e;
 							} catch (Exception e) {
 								throw new SDKPathNotFoundException(
-										"Failed to retrieve library path from SDKs: " + libpath);
+										"Failed to retrieve library path from SDKs: " + sdkpath);
 							}
 						}
 					});

@@ -52,6 +52,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 	private List<CompilationPathOption> forceInclude;
 	private Boolean forceIncludePrecompiledHeader;
 	private List<CompilationPathOption> forceUsing;
+	private List<CompilationPathOption> linkerInput;
 
 	/**
 	 * For {@link Externalizable}.
@@ -143,6 +144,11 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		return forceUsing;
 	}
 
+	@Override
+	public List<CompilationPathOption> getLinkerInput() {
+		return linkerInput;
+	}
+
 	public void setPresetIdentifier(String presetIdentifier) {
 		this.presetIdentifier = presetIdentifier;
 	}
@@ -204,6 +210,10 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		this.forceUsing = forceUsing;
 	}
 
+	public void setLinkerInput(List<CompilationPathOption> linkerInput) {
+		this.linkerInput = linkerInput;
+	}
+
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		out.writeObject(presetIdentifier);
@@ -221,6 +231,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		SerialUtils.writeExternalCollection(out, compileSimpleParameters);
 		SerialUtils.writeExternalCollection(out, forceInclude);
 		SerialUtils.writeExternalCollection(out, forceUsing);
+		SerialUtils.writeExternalCollection(out, linkerInput);
 	}
 
 	@Override
@@ -240,6 +251,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		compileSimpleParameters = SerialUtils.readExternalImmutableList(in);
 		forceInclude = SerialUtils.readExternalImmutableList(in);
 		forceUsing = SerialUtils.readExternalImmutableList(in);
+		linkerInput = SerialUtils.readExternalImmutableList(in);
 	}
 
 	@Override
@@ -258,6 +270,7 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 		result = prime * result + ((language == null) ? 0 : language.hashCode());
 		result = prime * result + ((libraryPaths == null) ? 0 : libraryPaths.hashCode());
 		result = prime * result + ((linkSimpleParameters == null) ? 0 : linkSimpleParameters.hashCode());
+		result = prime * result + ((linkerInput == null) ? 0 : linkerInput.hashCode());
 		result = prime * result + ((macroDefinitions == null) ? 0 : macroDefinitions.hashCode());
 		result = prime * result + ((precompiledHeader == null) ? 0 : precompiledHeader.hashCode());
 		result = prime * result + ((sdks == null) ? 0 : sdks.hashCode());
@@ -327,6 +340,11 @@ public final class SimplePresetCOptions implements PresetCOptions, Externalizabl
 			if (other.linkSimpleParameters != null)
 				return false;
 		} else if (!linkSimpleParameters.equals(other.linkSimpleParameters))
+			return false;
+		if (linkerInput == null) {
+			if (other.linkerInput != null)
+				return false;
+		} else if (!linkerInput.equals(other.linkerInput))
 			return false;
 		if (macroDefinitions == null) {
 			if (other.macroDefinitions != null)

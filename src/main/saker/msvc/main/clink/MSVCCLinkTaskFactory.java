@@ -52,6 +52,8 @@ import saker.msvc.impl.coptions.preset.PresetCOptions;
 import saker.msvc.impl.option.CompilationPathOption;
 import saker.msvc.impl.option.SimpleParameterOption;
 import saker.msvc.impl.util.SystemArchitectureEnvironmentProperty;
+import saker.msvc.impl.util.option.FileCompilationPathOptionImpl;
+import saker.msvc.impl.util.option.SDKPathReferenceCompilationPathOption;
 import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.ccompile.options.MSVCCompilerOptions;
 import saker.msvc.main.clink.options.CompilerOutputLinkerInputPass;
@@ -71,6 +73,7 @@ import saker.nest.scriptinfo.reflection.annot.NestTaskInformation;
 import saker.nest.scriptinfo.reflection.annot.NestTypeUsage;
 import saker.nest.utils.FrontendTaskFactory;
 import saker.sdk.support.api.SDKDescription;
+import saker.sdk.support.api.SDKPathCollectionReference;
 import saker.sdk.support.api.SDKSupportUtils;
 import saker.sdk.support.api.exc.SDKNameConflictException;
 import saker.sdk.support.main.option.SDKDescriptionTaskOption;
@@ -271,7 +274,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				Boolean[] genwinmd = { generateWinmdOption };
 				String[] binaryname = { binaryNameOption };
 
-				Set<FileLocation> inputfiles = new LinkedHashSet<>();
+				Set<CompilationPathOption> inputfiles = new LinkedHashSet<>();
 
 				Set<CompilationPathOption> librarypath = new LinkedHashSet<>();
 				Map<CompilationPathTaskOption, Collection<CompilationPathOption>> calculatedlibpathoptions = new HashMap<>();
@@ -358,6 +361,7 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 								if (Boolean.TRUE.equals(preset.getGenerateWinmd())) {
 									genwinmd[0] = Boolean.TRUE;
 								}
+								ObjectUtils.addAll(inputfiles, preset.getLinkerInput());
 							}
 						}
 					});
@@ -420,6 +424,10 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				@Override
 				public void visit(FileLinkerInputPass input) {
 				}
+
+				@Override
+				public void visit(SDKPathCollectionReference input) {
+				}
 			});
 			if (result[0] != null) {
 				return result[0];
@@ -441,6 +449,10 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				@Override
 				public void visit(FileLinkerInputPass input) {
 				}
+
+				@Override
+				public void visit(SDKPathCollectionReference input) {
+				}
 			});
 		}
 		if (parts.isEmpty()) {
@@ -450,12 +462,16 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 	}
 
 	private static void addLinkerInputs(LinkerInputPassTaskOption inputoption, TaskContext taskcontext,
-			Set<FileLocation> inputfiles, String architecture) {
+			Set<CompilationPathOption> inputfiles, String architecture) {
 		inputoption.toLinkerInputPassOption(taskcontext).accept(new LinkerInputPassOption.Visitor() {
 			@Override
 			public void visit(FileLinkerInputPass input) {
 				Collection<FileLocation> filelocations = input.toFileLocations(taskcontext);
-				ObjectUtils.addAll(inputfiles, filelocations);
+				if (!ObjectUtils.isNullOrEmpty(filelocations)) {
+					for (FileLocation fl : filelocations) {
+						inputfiles.add(new FileCompilationPathOptionImpl(fl));
+					}
+				}
 			}
 
 			@Override
@@ -473,11 +489,14 @@ public class MSVCCLinkTaskFactory extends FrontendTaskFactory<Object> {
 				if (filepaths == null) {
 					throw new IllegalArgumentException("null object file paths for compiler putput.");
 				}
-				Set<FileLocation> filelocations = new LinkedHashSet<>();
 				for (SakerPath objfilepath : filepaths) {
-					filelocations.add(ExecutionFileLocation.create(objfilepath));
+					inputfiles.add(new FileCompilationPathOptionImpl(ExecutionFileLocation.create(objfilepath)));
 				}
-				inputfiles.addAll(filelocations);
+			}
+
+			@Override
+			public void visit(SDKPathCollectionReference input) {
+				inputfiles.add(new SDKPathReferenceCompilationPathOption(input));
 			}
 		});
 	}

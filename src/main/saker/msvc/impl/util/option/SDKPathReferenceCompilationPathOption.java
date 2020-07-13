@@ -40,8 +40,12 @@ public class SDKPathReferenceCompilationPathOption implements CompilationPathOpt
 		this.pathReference = pathReference;
 	}
 
+	public SDKPathReferenceCompilationPathOption(SDKPathReference pathReference) {
+		this(SDKPathCollectionReference.valueOf(pathReference));
+	}
+
 	public SDKPathReferenceCompilationPathOption(String sdkname, String pathidentifier) {
-		this(SDKPathCollectionReference.valueOf(SDKPathReference.create(sdkname, pathidentifier)));
+		this(SDKPathReference.create(sdkname, pathidentifier));
 	}
 
 	@Override
