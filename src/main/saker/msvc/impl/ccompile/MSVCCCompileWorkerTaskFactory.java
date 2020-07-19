@@ -1462,6 +1462,11 @@ public class MSVCCCompileWorkerTaskFactory
 								try {
 									Path diagpath = Paths.get(file);
 									diagnosticpath = executioncontext.toUnmirrorPath(diagpath);
+									if (diagnosticpath == null) {
+										if (desc != null) {
+											desc = diagpath + ": " + desc;
+										}
+									}
 								} catch (Exception e) {
 									SakerLog.error().verbose()
 											.println("Failed to parse CL output path: " + e + " for " + file);

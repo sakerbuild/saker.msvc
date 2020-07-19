@@ -285,7 +285,7 @@ public class COptionPresets {
 		cpppreset.setPresetIdentifier(COptionsPresetType.UAP + "-cxx");
 
 		UAP_PRESETS = ImmutableUtils
-				.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset, cpppreset, x64, x86 });
+				.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset, cpppreset, x64, x86, arm, arm64 });
 	}
 
 	//based on Visual Studio default command line for console apps
