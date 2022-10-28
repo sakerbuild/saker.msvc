@@ -42,7 +42,7 @@ import saker.nest.scriptinfo.reflection.annot.NestTypeInformation;
 								+ "appropriate include directories and library paths to access the Windows SDK.\n"
 								+ "The _WINDOWS, _WINDLL prepreocessor definitions are added.")),
 				@NestFieldInformation(value = COptionsPresetType.UAP,
-						info = @NestInformation("Preset type for developing against the Universal Application Platform (also known as UWP, Universal Windows Platofmr).\n")),
+						info = @NestInformation("Preset type for developing against the Universal Application Platform (also known as UWP, Universal Windows Platform).\n")),
 				@NestFieldInformation(value = COptionsPresetType.OPTIMIZE_RELEASE,
 						info = @NestInformation("Preset that includes command line arguments for release optimization.\n"
 								+ "The /GL /Gy /O2 /Oi simple parameters are added for compilation. Also defines the "
