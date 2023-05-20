@@ -30,6 +30,7 @@ import saker.msvc.main.ccompile.MSVCCCompileTaskFactory;
 import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.DocCompilationLanguage;
+import saker.msvc.main.doc.TaskDocs.DocSimpleCompilerParameterTaskOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionKeyOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionValueOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
@@ -73,7 +74,7 @@ import saker.std.main.file.option.MultiFileLocationTaskOption;
 				elementTypes = { MacroDefinitionKeyOption.class, MacroDefinitionValueOption.class }),
 		info = @NestInformation(TaskDocs.COMPILE_MACRO_DEFINITIONS))
 @NestFieldInformation(value = "SimpleParameters",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleParameterTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocSimpleCompilerParameterTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_SIMPLE_PARAMETERS))
 @NestFieldInformation(value = "Language",
 		type = @NestTypeUsage(DocCompilationLanguage.class),

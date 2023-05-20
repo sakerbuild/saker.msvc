@@ -25,6 +25,7 @@ import saker.msvc.main.clink.MSVCCLinkTaskFactory;
 import saker.msvc.main.coptions.CommonPresetCOptionsTaskOption;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
+import saker.msvc.main.doc.TaskDocs.DocSimpleLinkerParameterTaskOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestFieldInformation;
@@ -58,7 +59,7 @@ import saker.sdk.support.main.option.SDKDescriptionTaskOption;
 		info = @NestInformation(TaskDocs.OPTION_SDKS + "\n"
 				+ "When merging, duplicate SDK definitions are not overwritten."))
 @NestFieldInformation(value = "SimpleLinkerParameters",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleParameterTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocSimpleLinkerParameterTaskOption.class),
 		info = @NestInformation(TaskDocs.LINK_SIMPLE_PARAMETERS + "\n"
 				+ "When merging, duplicate parameters are removed automatically."))
 @NestFieldInformation(value = "GenerateWinmd",

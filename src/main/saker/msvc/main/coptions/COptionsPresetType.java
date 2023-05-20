@@ -32,15 +32,15 @@ import saker.nest.scriptinfo.reflection.annot.NestTypeInformation;
 								+ "appropriate include directories and library paths to access the Windows SDK.\n"
 								+ "The _CONSOLE preprocessor definition is added.")),
 				@NestFieldInformation(value = COptionsPresetType.WIN32,
-				info = @NestInformation("Preset type for Windows based applications.\n"
-						+ "The preset includes the /SUBSYSTEM:WINDOWS simple linker parameter, and adds "
-						+ "appropriate include directories and library paths to access the Windows SDK.\n"
-						+ "The _WINDOWS preprocessor definition is added.")),
+						info = @NestInformation("Preset type for Windows based applications.\n"
+								+ "The preset includes the /SUBSYSTEM:WINDOWS simple linker parameter, and adds "
+								+ "appropriate include directories and library paths to access the Windows SDK.\n"
+								+ "The _WINDOWS preprocessor definition is added.")),
 				@NestFieldInformation(value = COptionsPresetType.DLL,
 						info = @NestInformation("Preset type for DLL (Dynamic Link Library) creation.\n"
 								+ "The preset includes the /DLL /SUBSYSTEM:WINDOWS simple linker parameters and adds "
 								+ "appropriate include directories and library paths to access the Windows SDK.\n"
-								+ "The _WINDOWS, _WINDLL prepreocessor definitions are added.")),
+								+ "The _WINDOWS, _WINDLL preprocessor definitions are added.")),
 				@NestFieldInformation(value = COptionsPresetType.UAP,
 						info = @NestInformation("Preset type for developing against the Universal Application Platform (also known as UWP, Universal Windows Platform).\n")),
 				@NestFieldInformation(value = COptionsPresetType.OPTIMIZE_RELEASE,
@@ -53,6 +53,10 @@ import saker.nest.scriptinfo.reflection.annot.NestTypeInformation;
 								+ "The /Od simple parameters are added for compilation. Also defines the "
 								+ "_DEBUG macro without any value (/D_DEBUG).\n"
 								+ "The preset doesn't include any linker parameters.")),
+				@NestFieldInformation(value = COptionsPresetType.UNICODE,
+						info = @NestInformation("Preset that adds the UNICODE and _UNICODE preprocessor definitions.\n"
+								+ "This allows using wide characters with the functions defined in the Windows header files.\n"
+								+ "E.g. CreateFile maps to CreateFileW instead of CreatefileA.")),
 
 		})
 public class COptionsPresetType {
@@ -62,4 +66,8 @@ public class COptionsPresetType {
 	public static final String UAP = "uap";
 	public static final String OPTIMIZE_RELEASE = "optimize-release";
 	public static final String OPTIMIZE_DEBUG = "optimize-debug";
+	//Related:
+	//	https://devblogs.microsoft.com/oldnewthing/20040212-00/?p=40643
+	//	https://learn.microsoft.com/en-us/previous-versions/cc194799(v=msdn.10)?redirectedfrom=MSDN
+	public static final String UNICODE = "unicode";
 }

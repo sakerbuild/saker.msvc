@@ -335,6 +335,17 @@ public class COptionPresets {
 		OPTIMIZE_RELEASE_PRESETS = ImmutableUtils.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset });
 	}
 
+	private static final Collection<SimplePresetCOptions> UNICODE_PRESETS;
+	static {
+		SimplePresetCOptions basepreset = new SimplePresetCOptions();
+		basepreset.setPresetIdentifier(COptionsPresetType.UNICODE);
+		TreeMap<String, String> macrodefs = new TreeMap<>();
+		macrodefs.put("UNICODE", "");
+		macrodefs.put("_UNICODE", "");
+		basepreset.setMacroDefinitions(ImmutableUtils.unmodifiableNavigableMap(macrodefs));
+		UNICODE_PRESETS = ImmutableUtils.makeImmutableHashSet(new SimplePresetCOptions[] { basepreset });
+	}
+
 	public static Collection<? extends SimplePresetCOptions> getConsolePresets() {
 		return CONSOLE_PRESETS;
 	}
@@ -357,6 +368,10 @@ public class COptionPresets {
 
 	public static Collection<? extends SimplePresetCOptions> getUap() {
 		return UAP_PRESETS;
+	}
+
+	public static Collection<SimplePresetCOptions> getUnicode() {
+		return UNICODE_PRESETS;
 	}
 
 	private COptionPresets() {

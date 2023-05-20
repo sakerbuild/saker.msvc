@@ -27,6 +27,7 @@ import saker.msvc.main.coptions.CommonPresetCOptionsTaskOption;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.DocCompilationLanguage;
+import saker.msvc.main.doc.TaskDocs.DocSimpleCompilerParameterTaskOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionKeyOption;
 import saker.msvc.main.doc.TaskDocs.MacroDefinitionValueOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
@@ -60,7 +61,7 @@ import saker.std.main.file.option.FileLocationTaskOption;
 		info = @NestInformation(TaskDocs.COMPILE_MACRO_DEFINITIONS + "\n"
 				+ "When merging, the macro definitions won't overwrite macro definitions specified previously."))
 @NestFieldInformation(value = "SimpleCompilerParameters",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleParameterTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocSimpleCompilerParameterTaskOption.class),
 		info = @NestInformation(TaskDocs.COMPILE_SIMPLE_PARAMETERS + "\n"
 				+ "When merging, duplicate parameters are removed automatically."))
 @NestFieldInformation(value = "SDKs",

@@ -117,6 +117,10 @@ public class COptionsPresetTaskFactory extends FrontendTaskFactory<Object> {
 							presets.addAll(COptionPresets.getUap());
 							break;
 						}
+						case COptionsPresetType.UNICODE: {
+							presets.addAll(COptionPresets.getUnicode());
+							break;
+						}
 						default: {
 							taskcontext.abortExecution(
 									new IllegalArgumentException("Unrecognized C options preset type: " + presetNames));

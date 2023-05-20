@@ -331,9 +331,9 @@ public class MSVCCCompileWorkerTaskFactory
 					architecture, compilerinnertasksdkdescriptions, envselector, outdir);
 			InnerTaskResults<CompilerInnerTaskResult> innertaskresults = taskcontext.startInnerTask(innertask,
 					innertaskparams);
-			InnerTaskResultHolder<CompilerInnerTaskResult> resultholder;
 
-			while ((resultholder = innertaskresults.getNext()) != null) {
+			for (InnerTaskResultHolder<CompilerInnerTaskResult> resultholder; (resultholder = innertaskresults
+					.getNext()) != null;) {
 				CompilerInnerTaskResult compilationresult = resultholder.getResult();
 				if (compilationresult == null) {
 					//may be if the inner task doesn't receive a compilation entry as there are no more

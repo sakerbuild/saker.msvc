@@ -65,6 +65,7 @@ import saker.msvc.main.coptions.COptionsPresetTaskFactory;
 import saker.msvc.main.doc.TaskDocs;
 import saker.msvc.main.doc.TaskDocs.ArchitectureType;
 import saker.msvc.main.doc.TaskDocs.DocCLinkerWorkerTaskOutput;
+import saker.msvc.main.doc.TaskDocs.DocSimpleLinkerParameterTaskOption;
 import saker.msvc.main.options.CompilationPathTaskOption;
 import saker.msvc.main.options.SimpleParameterTaskOption;
 import saker.nest.scriptinfo.reflection.annot.NestInformation;
@@ -125,7 +126,7 @@ import saker.std.api.file.location.FileLocation;
 						SDKDescriptionTaskOption.class }),
 		info = @NestInformation(TaskDocs.OPTION_SDKS))
 @NestParameterInformation(value = "SimpleParameters",
-		type = @NestTypeUsage(value = Collection.class, elementTypes = SimpleParameterTaskOption.class),
+		type = @NestTypeUsage(value = Collection.class, elementTypes = DocSimpleLinkerParameterTaskOption.class),
 		info = @NestInformation(TaskDocs.LINK_SIMPLE_PARAMETERS))
 @NestParameterInformation(value = "GenerateWinmd",
 		type = @NestTypeUsage(boolean.class),
